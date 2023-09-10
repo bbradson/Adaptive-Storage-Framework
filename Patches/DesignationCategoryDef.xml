@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+	<Operation Class="PatchOperationConditional">
+		<xpath>Defs[DesignationCategoryDef/defName="LWM_DS_Storage" or not(ThingDef[not(@Abstract="True")]/designationCategory="ASFstorage" or ThingDef/@ParentName="AdaptiveStorageBase")]</xpath>
+		<match Class="PatchOperationReplace">
+			<xpath>Defs/ThingDef/designationCategory[text()="ASFstorage"]/text()</xpath>
+			<value>LWM_DS_Storage</value>
+		</match>
+		<nomatch Class="PatchOperationAdd">
+			<xpath>Defs</xpath>
+			<value>
+				<DesignationCategoryDef>
+					<defName>ASFstorage</defName>
+					<label>storage</label>
+					<order>503</order>
+					<specialDesignatorClasses>
+						<li>Designator_Cancel</li>
+						<li>Designator_Deconstruct</li>
+					</specialDesignatorClasses>
+				</DesignationCategoryDef>
+			</value>
+		</nomatch>
+	</Operation>
+</Patch>

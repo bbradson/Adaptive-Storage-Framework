@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Authors>Bradson</Authors>
+		<Copyright>Copyright (c) 2023 Bradson</Copyright>
+		<Version>1.0.0</Version>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<OutDir>..\Assemblies\</OutDir>
+		<Nullable>enable</Nullable>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Optimize>true</Optimize>
+		<EnableNETAnalyzers>True</EnableNETAnalyzers>
+		<AnalysisLevel>preview-all</AnalysisLevel>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>5</WarningLevel>
+		<AssemblyName>AdaptiveStorageFramework</AssemblyName>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.4.*" />
+		<PackageReference Include="Lib.Harmony" Version="2.*" ExcludeAssets="runtime" />
+		<PackageReference Include="PolySharp" Version="1.*" />
+		<PackageReference Include="Krafs.Publicizer" Version="2.*" IncludeVirtualMembers="false" />
+		<Publicize Include="Assembly-CSharp" />
+	</ItemGroup>
+</Project>

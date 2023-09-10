@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<ThingDef Name="AdaptiveStorageBase" ParentName="BuildingBase" Abstract="True">
+		<thingClass>AdaptiveStorage.ThingClass</thingClass>
+		<drawerType>MapMeshAndRealTime</drawerType>
+		<designationCategory>ASFstorage</designationCategory>
+		<altitudeLayer>Building</altitudeLayer>
+		<passability>PassThroughOnly</passability>
+		<fillPercent>0.4</fillPercent>
+		<castEdgeShadows>false</castEdgeShadows>
+		<pathCost>50</pathCost>
+		<pathCostIgnoreRepeat>true</pathCostIgnoreRepeat>
+		<defaultPlacingRot>South</defaultPlacingRot>
+		<inspectorTabs>
+			<li>ITab_Storage</li>
+		</inspectorTabs>
+		<surfaceType>Item</surfaceType>
+		<canOverlapZones>false</canOverlapZones>
+		<drawGUIOverlay>True</drawGUIOverlay>
+		<building>
+			<storageGroupTag>Shelf</storageGroupTag>
+			<ignoreStoredThingsBeauty>true</ignoreStoredThingsBeauty>
+			<defaultStorageSettings>
+				<priority>Important</priority>
+				<filter />
+			</defaultStorageSettings>
+			<blueprintClass>Blueprint_Storage</blueprintClass>
+		</building>
+	</ThingDef>
+</Defs>

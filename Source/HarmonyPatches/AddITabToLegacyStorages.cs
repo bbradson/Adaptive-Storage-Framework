@@ -1,0 +1,19 @@
+﻿// Copyright (c) 2023 bradson
+// This Source Code Form is subject to the terms of the MIT license.
+// If a copy of the license was not distributed with this file,
+// You can obtain one at https://opensource.org/licenses/MIT/.
+
+using HarmonyLib;
+
+namespace AdaptiveStorage.HarmonyPatches;
+
+[HarmonyPatch(typeof(Thing), nameof(Thing.GetInspectTabs))]
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public static class AddITabToLegacyStorages
+{
+	[HarmonyPostfix]
+	public static IEnumerable<InspectTabBase> Postfix(IEnumerable<InspectTabBase> __result, Thing __instance)
+		=> __instance is not Building_Storage storage || storage is ThingClass
+			? __result
+			: InspectTabUtility.Modify(__result);
+}

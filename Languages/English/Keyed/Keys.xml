@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+	<ASF_XStacks>{0} stacks</ASF_XStacks><!-- displayed in parentheses as eg. 1 / 3 stacks -->
+	<ASF_Empty>empty</ASF_Empty>
+	<ASF_MapFilled>You have filled the map.</ASF_MapFilled>
+	<ASF_SettingContentsTabSelection>Contents tab to display on adaptive storage buildings:</ASF_SettingContentsTabSelection>
+	<ASF_MaxNumStacks>maximum number of stacks per cell</ASF_MaxNumStacks> <!-- identical to LWM's https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/_Mod/LWM.DeepStorage/Languages/English/Keyed/LWM.DeepStorage.Keys.xml -->
+	<ASF_MaxNumStacksDesc>The maximum number of stacks that can go in a single space.  Buildings two-cells large will have twice as much storage capacity.\n\nNote that other factors may reduce storage capacity.</ASF_MaxNumStacksDesc>
+</LanguageData>

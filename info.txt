@@ -1,0 +1,123 @@
+<AdaptiveStorage.GraphicsDef>
+
+	<defName>NAME_OF_THIS_DEF</defName><!-- this is not the name of the building this gets assigned to, and is only used internally -->
+
+	<targetDef>DEFNAME</targetDef><!-- the name of the storage to use this graphicsDef on -->
+	<!-- OR -->
+	<targetDefs><!-- multiple buildings -->
+		<li>DEFNAME1</li>
+		<li>DEFNAME2</li>
+		<li>ETC</li>
+	</targetDefs>
+
+	<!-- storage graphics, required -->
+	<graphics>
+		<li>
+			<graphicData>
+				<!-- texPath etc goes here -->
+			</graphicData>
+			<!-- OR -->
+			<graphicDatas>
+				<li>
+					<texPath>etc</texPath>
+				</li>
+			</graphicDatas>
+
+			<!-- optional. In case of multiple layers defining the same field, the most specific layer takes precedence, ie item over graphic over graphicsDef -->
+			<showContainedItems>true</showContainedItems>
+			<useDominantContentColor>false</useDominantContentColor> <!-- replace the color of the texture with the most common color of storage contents. Note that this only works for items that themselves declare colors, it does not (yet) try counting pixels of textures -->
+
+			<!-- The number of stored stacks required to switch to this texture. ASF always picks the texture with the highest currently valid minimumStackCount -->
+			<minimumStackCount>0</minimumStackCount>
+		</li>
+	</graphics>
+
+	<!-- individual item offsets, scaling, etc, optional -->
+	<itemGraphics>
+			<columns><!-- 0,0 is on the bottom left -->
+				<c0><!-- must have a format of a single letter followed by the index to apply these settings on -->
+					<rows>
+						<r0>
+							<!-- everything optional. Scaling and rotation only work for simple things. Dynamically rendered objects like corpses don't respect those fields -->
+							<visible>true</visible>
+							<drawShadow>false</drawShadow><!-- requires a shadow graphic too. Items often don't have that, buildings do, refer to those for xml examples -->
+							<drawScale>1.0</drawScale>
+							<rotation>0.0</rotation><!-- shared rotation for all items on this cell -->
+							<stackRotation>0.0</stackRotation><!-- added cumulative rotation for each stacked item -->
+							<textureOrientation>South</textureOrientation><!-- for items with south/west/east/north textures, like corpses. Independent from the building. Currently only works for items other than corpses, ironically. -->
+							<maxDrawSize>(1.0,1.0)</maxDrawSize> <!-- scale down any item texture that is larger than this -->
+							<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour> <!-- default stacks items of matching defs diagonally, items of varying defs in a circle and places weapons horizontally next to each other in alternating heights -->
+							<stackOffset>(0.0,0.0,0.0)</stackOffset><!-- offset inbetween each stacked item when using Stack as stackBehaviour. Defaults are (0.11,0.004054054,0.24). The middle value can be set to 0 to specify the default too -->
+
+							<drawOffset>(0.0,0.0,0.0)</drawOffset><!-- used for any orientation not specified through one of the following fields -->
+							<drawOffsetEast>(0.0,0.0,0.0)</drawOffsetEast>
+							<drawOffsetWest>(0.0,0.0,0.0)</drawOffsetWest>
+							<drawOffsetNorth>(0.0,0.0,0.0)</drawOffsetNorth>
+							<drawOffsetSouth>(0.0,0.0,0.0)</drawOffsetSouth>
+						</r0>
+						<r1>
+							<drawOffset>(0.0,0.0,0.0)</drawOffset>
+							<!-- etc -->
+						</r1>
+						<!-- etc -->
+					</rows>
+				</c0>
+				<c1>
+					<rows>
+						<r0>
+							<!-- could hide items from individual slots for example -->
+							<visible>false</visible>
+						</r0>
+						<r1>
+							<!-- only draw shadows for items in the top right slot -->
+							<drawShadow>true</drawShadow>
+						</r1>
+					</rows>
+				</c1>
+				<!-- etc -->
+			</columns>
+	</itemGraphics>
+
+	<!-- optional -->
+	<showContainedItems>true</showContainedItems>
+
+	<!-- for use with masks, picks up stuff color when empty and item color when storing things -->
+	<useDominantContentColor>false</useDominantContentColor>
+
+	<!-- weight for randomly selecting this GraphicsDef, including all its contents, when building a structure -->
+	<!-- only accepts whole positive numbers and 0, with 0 acting as fallback if all other graphicsDefs turn out invalid -->
+	<randomSelectionWeight>1</randomSelectionWeight>
+
+	<!-- defs of stored items that trigger switching to this graphicsDef. Can be combined with other fields -->
+	<requiredThingDefs>
+		<li>DEFNAME</li>
+		etc
+	</requiredThingDefs>
+
+	<!-- optional toggle to switch whether requiredThingDefs should act as a filter all stored things have to match, or only as requirement for at least one stored item -->
+	<onlyAllowRequiredThingDefs>true</onlyAllowRequiredThingDefs>
+
+	<!-- defs of stored items that trigger disabling this graphicsDef. Can be combined with other fields -->
+	<disallowedThingDefs>
+		<li>DEFNAME</li>
+		etc
+	</disallowedThingDefs>
+
+	<!-- the thing categories all stored things have to match to enable the graphicsdef, if specified -->
+	<allowedThingCategories>
+		<li>etc</li>
+	</allowedThingCategories>
+
+</AdaptiveStorage.GraphicsDef>
+
+<ThingDef>
+	<modExtensions>
+		<li Class="AdaptiveStorage.Extension> <!-- optional mod extension for thing defs -->
+			<lockStorageSettingsToStuff>true</lockStorageSettingsToStuff> <!-- essentially replaces fixed storage settings with the def used as stuff when building the storage -->
+			<graphics>
+				<li>GraphicsDefName</li> <!-- alternative way of specifying targetDefs for graphics -->
+			</graphics>
+			<labelFormat>Default</labelFormat> <!-- alternative formats for label display in the bottom left corner. Supported are StuffAsNoun to display eg Wood pile instead of Wooden pile and NoStuff to hide stuff and simply show pile instead. Currently doesn't affect the architect tab and blueprints -->
+		</li>
+	</modExtensions>
+</ThingDef>
