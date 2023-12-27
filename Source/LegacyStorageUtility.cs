@@ -9,24 +9,24 @@ namespace AdaptiveStorage;
 
 public static class LegacyStorageUtility
 {
-	public static IList<Thing> StoredThings(this Thing? thing)
+	public static IList<Thing> StoredThings(this object? obj)
 	{
-		if (thing is ThingClass adaptive)
+		if (obj is ThingClass adaptive)
 			return adaptive.StoredThings;
 		
 		var list = SimplePool<List<Thing>>.Get();
 		list.Clear();
 
-		switch (thing)
+		switch (obj)
 		{
 			case IThingHolder thingHolder:
 			{
 				AddThingsFromThingHolder(thingHolder, list);
 				break;
 			}
-			case ISlotGroupParent slotGroupParent when thing.Spawned:
+			case ISlotGroupParent slotGroupParent and not Thing { Spawned: not true }:
 			{
-				AddThingsFromSlotGroup(thing, slotGroupParent, list);
+				AddThingsFromSlotGroup(slotGroupParent, list);
 				break;
 			}
 		}
@@ -38,10 +38,10 @@ public static class LegacyStorageUtility
 		return array;
 	}
 
-	private static void AddThingsFromSlotGroup(Thing thing, ISlotGroupParent slotGroupParent, List<Thing> list)
+	private static void AddThingsFromSlotGroup(ISlotGroupParent slotGroupParent, List<Thing> list)
 	{
 		var cellsList = slotGroupParent.AllSlotCellsList();
-		var map = thing.Map;
+		var map = slotGroupParent.Map;
 		for (var i = 0; i < cellsList.Count; i++)
 		{
 			var thingsAtCell = cellsList[i].GetThingListUnchecked(map);
@@ -61,15 +61,26 @@ public static class LegacyStorageUtility
 			list.Add(directlyHeldThings.GetAt(i));
 	}
 
-	public static int TotalSlots(this Thing? thing)
-		=> thing switch
+	public static int TotalSlots(this object? obj)
+	{
+		var thing = obj as Thing;
+
+		if (thing != null)
 		{
-			ThingClass adaptive => adaptive.TotalSlots,
-			ISlotGroupParent slotGroup when thing.Spawned
-				=> slotGroup.AllSlotCellsList().Count
-				* (LWM.Active && LWM.GetCompProperties(thing.def) is { } lwmProps
+			if (thing is ThingClass adaptive)
+				return adaptive.TotalSlots;
+			else if (!thing.Spawned)
+				return 0;
+		}
+
+		if (obj is not ISlotGroupParent slotGroup)
+			return 0;
+
+		return slotGroup.AllSlotCellsList().Count
+			* (thing != null
+				? LWM.Active && LWM.GetCompProperties(thing.def) is { } lwmProps
 					? LWM.GetMaxStacksPerCell(lwmProps)
-					: thing.def.building?.maxItemsInCell ?? 1),
-			_ => 0
-		};
+					: thing.def.building?.maxItemsInCell ?? 1
+				: 1);
+	}
 }

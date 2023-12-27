@@ -14,18 +14,7 @@ public static class StoreUtilityExtensions
 
 	public static bool ContainsStorageBuildingAt(this Map map, in IntVec3 cell)
 		=> cell.GetSlotGroup(map) is { parent: Building_Storage };
-	// {
-	// 	var thingsList = map.thingGrid.ThingsListAtFast(cell);
-	// 	var count = thingsList.Count;
-	// 	for (var i = 0; i < count; i++)
-	// 	{
-	// 		if (thingsList[i] is Building_Storage)
-	// 			return true;
-	// 	}
-	//
-	// 	return false;
-	// }
-
+	
 	public static List<Thing> GetThingListUnchecked(this in IntVec3 cell, Map map)
 		=> map.thingGrid.ThingsListAtFast(map.cellIndices.CellToIndex(cell.x, cell.z));
 

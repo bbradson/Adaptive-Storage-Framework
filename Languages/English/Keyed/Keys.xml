@@ -6,4 +6,5 @@
 	<ASF_SettingContentsTabSelection>Contents tab to display on adaptive storage buildings:</ASF_SettingContentsTabSelection>
 	<ASF_MaxNumStacks>maximum number of stacks per cell</ASF_MaxNumStacks> <!-- identical to LWM's https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/_Mod/LWM.DeepStorage/Languages/English/Keyed/LWM.DeepStorage.Keys.xml -->
 	<ASF_MaxNumStacksDesc>The maximum number of stacks that can go in a single space.  Buildings two-cells large will have twice as much storage capacity.\n\nNote that other factors may reduce storage capacity.</ASF_MaxNumStacksDesc>
+	<ASF_DropSpecificCount>Drop specific count</ASF_DropSpecificCount>
 </LanguageData>

@@ -216,8 +216,8 @@ public class StorageRenderer
 			}
 			else
 			{
-				for (var j = graphicsDef.randomSelectionWeight; j-- > 0;)
-					span[spanIndex++] = i;
+				for (var j = graphicsDef.randomSelectionWeight; j-- > 0;) // TODO: fix this bug
+					span[spanIndex++] = i; // it's going to throw out of bounds exceptions
 			}
 		}
 
@@ -445,11 +445,21 @@ public class StorageRenderer
 		Graphic.TryGetTextureAtlasReplacementInfo(material, thing.def.category.ToAtlasGroup(), flipUv, true,
 			out material, out var uvs, out var vertexColor);
 
-		Printer_Plane.PrintPlane(layer, drawLoc, drawSize, material, rotation, flipUv, uvs,
-			new[] { vertexColor, vertexColor, vertexColor, vertexColor });
+		var colors = SimplePool<ColorsArray>.Get();
+		Array.Fill(colors.Value, vertexColor);
+		
+		Printer_Plane.PrintPlane(layer, drawLoc, drawSize, material, rotation, flipUv, uvs, colors.Value);
+		
+		SimplePool<ColorsArray>.Return(colors);
 
 		if (drawShadow)
 			graphic.ShadowGraphic?.Print(layer, thing, 0f);
+	}
+
+	private readonly struct ColorsArray
+	{
+		public readonly Color32[] Value;
+		public ColorsArray() => Value = new Color32[4];
 	}
 
 	private static void AdjustDrawSize(ref Vector2 drawSize, float drawScale, in Vector2 maxDrawSize)

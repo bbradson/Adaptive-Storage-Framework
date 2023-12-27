@@ -7,14 +7,13 @@ using HarmonyLib;
 
 namespace AdaptiveStorage.HarmonyPatches;
 
-[HarmonyPatch(typeof(SelectionDrawer), nameof(SelectionDrawer.Notify_Selected))]
+[HarmonyPatch(typeof(Zone_Stockpile), nameof(Zone_Stockpile.GetInspectTabs))]
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public static class AutomaticallyOpenTab
+public static class AddITabToStockpileZones
 {
 	[HarmonyPostfix]
-	public static void Postfix(object t)
-	{
-		if (t is ISlotGroupParent and (not ThingClass) and ISelectable selectable)
-			InspectTabUtility.TryOpen(selectable);
-	}
+	public static IEnumerable<InspectTabBase> Postfix(IEnumerable<InspectTabBase> __result, Zone_Stockpile __instance)
+		=> AdaptiveStorageFrameworkSettings.ContentsTab is ContentsITab
+			? InspectTabUtility.Modify(__result)
+			: __result;
 }

@@ -68,11 +68,13 @@ public static class Strings
 			None,
 			DaysUntilRotTip,
 			ConfirmRemoveItemDialog,
+			DropThing,
 		#endregion
 
 		#region This mod
 			ASF_MapFilled,
-			ASF_SettingContentsTabSelection;
+			ASF_SettingContentsTabSelection,
+			ASF_DropSpecificCount;
 	#endregion
 		
 		static Translated() => AssignAllStringFields(typeof(Translated), Translator.TranslateSimple);

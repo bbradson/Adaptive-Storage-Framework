@@ -15,13 +15,13 @@ public class ContentsITab : ITab_ContentsBase
 	
 	public BetterQuickSearchWidget QuickSearchWidget { get; } = new() { MaxSearchTextLength = int.MaxValue };
 	
-	public override IList<Thing> container => SelThing.StoredThings();
+	public override IList<Thing> container => SelObject.StoredThings();
 
 	// this is a confirmation box, not just a message
 	public override bool UseDiscardMessage => false;
 
 	public override bool IsVisible
-		=> SelThing is { } selThing && (selThing.Faction is not { } faction || faction == Faction.OfPlayer);
+		=> SelObject is ISlotGroupParent or (IThingHolder and IHaulDestination);
 
 	public new virtual float ThingRowHeight => 30f;
 
@@ -40,6 +40,11 @@ public class ContentsITab : ITab_ContentsBase
 
 	public override void FillTab()
 	{
+		if (Event.current.type == EventType.Layout) // this gets sent every frame but can only draw behind every window
+			return;
+
+		canRemoveThings = SelObject is Thing { Faction: { } faction } && faction == Faction.OfPlayer;
+		
 		thingsToSelect.Clear();
 		var outRect = new Rect(new(), size).ContractedBy(BORDER_MARGIN);
 		outRect.yMin += TOP_PADDING;
@@ -69,6 +74,8 @@ public class ContentsITab : ITab_ContentsBase
 		
 		var hasAnyStoredThing = false;
 		var filterHasAnyMatches = false;
+		var filter = QuickSearchWidget.Filter;
+		var thingRowHeight = ThingRowHeight;
 
 		for (var i = 0; i < storedThings.Count; i++)
 		{
@@ -77,8 +84,14 @@ public class ContentsITab : ITab_ContentsBase
 
 			hasAnyStoredThing = true;
 
-			if (!QuickSearchWidget.Filter.Matches(thing.def))
+			if (!filter.Matches(thing.GetInnerIfMinified().def))
 				continue;
+
+			if (scrollView.CanCull(thingRowHeight, curY))
+			{
+				curY += thingRowHeight;
+				continue;
+			}
 
 			filterHasAnyMatches = true;
 			
@@ -96,7 +109,7 @@ public class ContentsITab : ITab_ContentsBase
 		using (new GUIScope.FontSize(15))
 		{
 			Widgets.ListSeparator(ref curY, outRect.width, $"{Strings.Translated.ContainedItems} ({
-				Strings.Stacks(storedThings.Count, SelThing.TotalSlots())}, {
+				Strings.Stacks(storedThings.Count, SelObject.TotalSlots())}, {
 					massList.Sum.ToStringMass()})");
 			outRect.yMin += curY;
 		}
@@ -114,8 +127,11 @@ public class ContentsITab : ITab_ContentsBase
 	// https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/Deep_Storage_ITab.cs#L216-L235
 	public override void OnDropThing(Thing t, int count)
 	{
-		var dropCell = SelThing.Position + DropOffset;
-		var map = SelThing.Map;
+		if (SelObject is not Thing thing)
+			return;
+		
+		var dropCell = thing.Position + DropOffset;
+		var map = thing.Map;
 		t = t.SplitOff(count);
 
 		if (!GenDrop.TryDropSpawn(t, dropCell, map, ThingPlaceMode.Near, out var resultingThing, null,
@@ -187,9 +203,8 @@ public class ContentsITab : ITab_ContentsBase
 
 		var labelRect = rect with { x = rect.width, width = CaravanThingsTabUtility.MassColumnWidth };
 
-		using (new GUIScope.TextAnchor(TextAnchor.MiddleLeft))
+		using (new TextBlock(null, TextAnchor.MiddleLeft, false))
 		using (new GUIScope.Color(Color.yellow))
-		using (new GUIScope.WordWrap(false))
 			Widgets.Label(labelRect, (rotTicks / (float)GenDate.TicksPerDay).ToString("0.#"));
 
 		TooltipHandler.TipRegion(labelRect, Strings.Translated.DaysUntilRotTip);
@@ -267,15 +282,14 @@ public class ContentsITab : ITab_ContentsBase
 
 	private void DrawRemoveAllButton(int count, Thing thing, Action<int> discardAction, ref Rect rect)
 	{
-		if (Widgets.ButtonImage(new(rect.width - Widgets.CheckboxSize,
-			rect.y + ((rect.height - Widgets.CheckboxSize) / 2f),
-			Widgets.CheckboxSize, Widgets.CheckboxSize), CaravanThingsTabUtility.AbandonButtonTex))
+		var buttonRect = NextButtonRect(rect);
+		TooltipHandler.TipRegion(buttonRect, Strings.Translated.DropThing);
+		
+		if (Widgets.ButtonImage(buttonRect, CaravanThingsTabUtility.AbandonButtonTex))
 		{
 			if (UseDiscardMessage)
 			{
-				var text = thing.def.label;
-				if (thing is Pawn pawn)
-					text = pawn.LabelShortCap;
+				var text = thing is Pawn pawn ? pawn.LabelShortCap : thing.def.label;
 
 				Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
 					Strings.Translated.ConfirmRemoveItemDialog.Formatted(text), () => discardAction(count)));
@@ -291,17 +305,24 @@ public class ContentsITab : ITab_ContentsBase
 
 	private static void DrawRemoveSpecificCountButton(Def thingDef, int count, Action<int> discardAction, ref Rect rect)
 	{
-		if (count != 1
-			&& Widgets.ButtonImage(new(rect.width - Widgets.CheckboxSize,
-				rect.y + ((rect.height - Widgets.CheckboxSize) / 2f),
-				Widgets.CheckboxSize, Widgets.CheckboxSize), CaravanThingsTabUtility.AbandonSpecificCountButtonTex))
+		if (count != 1)
 		{
-			Find.WindowStack.Add(new Dialog_Slider(Strings.Translated.RemoveSliderText.Formatted(thingDef.label), 1, count,
-				discardAction));
+			var buttonRect = NextButtonRect(rect);
+			TooltipHandler.TipRegion(buttonRect, Strings.Translated.ASF_DropSpecificCount);
+			
+			if (Widgets.ButtonImage(buttonRect, CaravanThingsTabUtility.AbandonSpecificCountButtonTex))
+			{
+				Find.WindowStack.Add(new Dialog_Slider(Strings.Translated.RemoveSliderText.Formatted(thingDef.label), 1,
+					count, discardAction));
+			}
 		}
 
-		rect.width -= 24f;
+		rect.width -= Widgets.CheckboxSize;
 	}
+
+	private static Rect NextButtonRect(in Rect rect)
+		=> new(rect.width - Widgets.CheckboxSize, rect.y + ((rect.height - Widgets.CheckboxSize) / 2f),
+			Widgets.CheckboxSize, Widgets.CheckboxSize);
 
 	private static void DrawInfoCardButton(Thing thing, ref Rect rect)
 	{

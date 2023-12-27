@@ -20,6 +20,7 @@
 		<building>
 			<storageGroupTag>Shelf</storageGroupTag>
 			<ignoreStoredThingsBeauty>true</ignoreStoredThingsBeauty>
+			<preventDeteriorationOnTop>true</preventDeteriorationOnTop>
 			<defaultStorageSettings>
 				<priority>Important</priority>
 				<filter />

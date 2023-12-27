@@ -25,9 +25,9 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 	}
 
 	private static Type InitializeContentsTabType()
-		=> _contentsTabType = (_contentsTabTypeName == typeof(ContentsITab).FullName
+		=> _contentsTabType = _contentsTabTypeName == typeof(ContentsITab).FullName
 			? typeof(ContentsITab)
-			: AccessTools.TypeByName(_contentsTabTypeName) ?? typeof(ContentsITab));
+			: AccessTools.TypeByName(_contentsTabTypeName) ?? typeof(ContentsITab);
 
 	public static bool ShowContentsTab => typeof(InspectTabBase).IsAssignableFrom(ContentsTabType);
 

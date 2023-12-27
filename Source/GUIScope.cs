@@ -18,6 +18,8 @@ public static class GUIScope
 	{
 		private readonly ScrollViewStatus _scrollViewStatus;
 
+		private readonly float _outRectHeight;
+
 		public readonly Rect Rect;
 		
 		public ref float Height => ref _scrollViewStatus.Height;
@@ -25,16 +27,20 @@ public static class GUIScope
 		public ScrollView(Rect outRect, ScrollViewStatus scrollViewStatus, bool showScrollbars = true)
 		{
 			_scrollViewStatus = scrollViewStatus;
-			// var viewRect = outRect with { width = outRect.width - 20f, height = _scrollViewStatus.Height };
-			Rect = new(0f, 0f, outRect.width, Math.Max(_scrollViewStatus.Height, outRect.height));
-			if (_scrollViewStatus.Height - 0.1f >= outRect.height)
+			_outRectHeight = outRect.height;
+			Rect = new(0f, 0f, outRect.width, Math.Max(Height, _outRectHeight));
+			if (Height - 0.1f >= outRect.height)
 				Rect.width -= 16f;
 			
-			scrollViewStatus.Height = 0f;
+			Height = 0f;
 			Widgets.BeginScrollView(outRect, ref _scrollViewStatus.Position, Rect, showScrollbars);
 		}
 
 		public void Dispose() => Widgets.EndScrollView();
+		
+		public bool CanCull(float entryHeight, float entryY)
+			=> entryY + entryHeight < _scrollViewStatus.Position.y
+				|| entryY > _scrollViewStatus.Position.y + _outRectHeight;
 	}
 
 	public class ScrollViewStatus

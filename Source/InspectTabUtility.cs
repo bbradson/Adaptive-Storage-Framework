@@ -22,13 +22,13 @@ public static class InspectTabUtility
 			yield return selectedContentsTab;
 	}
 
-	public static void TryOpen(Building_Storage building) // for automatic tab opening, similar to LWM's
+	public static void TryOpen(ISelectable selectable) // for automatic tab opening, similar to LWM's
 		// https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/Deep_Storage_ITab.cs#L237-L306
 	{
 		if (Find.Selector.NumSelected > 1)
 			return;
 
-		var tabs = building.GetInspectTabs();
+		var tabs = selectable.GetInspectTabs();
 
 		if (tabs.Any(static tab
 			=> InspectPaneUtility.IsOpen(tab, (MainTabWindow_Inspect)MainButtonDefOf.Inspect.TabWindow)))
@@ -38,7 +38,7 @@ public static class InspectTabUtility
 
 		var selectedContentsTab = AdaptiveStorageFrameworkSettings.ContentsTab;
 
-		var tab = selectedContentsTab is null || building.StoredThings().Count < 1
+		var tab = selectedContentsTab is null || selectable.StoredThings().Count < 1
 			? tabs.FirstOrDefault(static tab => tab is ITab_Storage)
 			: selectedContentsTab;
 

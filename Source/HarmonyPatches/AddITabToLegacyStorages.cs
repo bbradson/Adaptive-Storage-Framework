@@ -13,7 +13,7 @@ public static class AddITabToLegacyStorages
 {
 	[HarmonyPostfix]
 	public static IEnumerable<InspectTabBase> Postfix(IEnumerable<InspectTabBase> __result, Thing __instance)
-		=> __instance is not Building_Storage storage || storage is ThingClass
-			? __result
-			: InspectTabUtility.Modify(__result);
+		=> __instance is ISlotGroupParent and not ThingClass
+			? InspectTabUtility.Modify(__result)
+			: __result;
 }
