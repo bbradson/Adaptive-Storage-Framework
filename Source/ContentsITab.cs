@@ -14,6 +14,9 @@ public class ContentsITab : ITab_ContentsBase
 		LabelTranslated = LabelKey.Translate();
 	
 	public BetterQuickSearchWidget QuickSearchWidget { get; } = new() { MaxSearchTextLength = int.MaxValue };
+
+	protected new object SelObject
+		=> base.SelObject is var obj && obj is Thing thing ? thing.GetInnerIfMinified() : obj;
 	
 	public override IList<Thing> container => SelObject.StoredThings();
 
@@ -38,7 +41,7 @@ public class ContentsITab : ITab_ContentsBase
 		containedItemsKey = Strings.Keys.ContainedItems;
 	}
 
-	public override void FillTab()
+	protected override void FillTab()
 	{
 		if (Event.current.type == EventType.Layout) // this gets sent every frame but can only draw behind every window
 			return;
@@ -57,7 +60,7 @@ public class ContentsITab : ITab_ContentsBase
 		TrySelectAndJump();
 	}
 
-	public override void DoItemsLists(Rect outRect, ref float curY)
+	protected override void DoItemsLists(Rect outRect, ref float curY)
 	{
 		var storedThings = container;
 
@@ -66,6 +69,9 @@ public class ContentsITab : ITab_ContentsBase
 		outRect.position = Vector2.zero;
 		
 		DrawHeader(ref outRect, ref curY, storedThings, massList);
+		
+		TryDrawSlider(ref outRect, ref curY);
+		
 		DrawSearchWidget(ref outRect);
 
 		using var scrollView = new GUIScope.ScrollView(outRect, _scrollViewStatus);
@@ -104,12 +110,35 @@ public class ContentsITab : ITab_ContentsBase
 		QuickSearchWidget.NoResultsMatched = !filterHasAnyMatches;
 	}
 
+	private void TryDrawSlider(ref Rect outRect, ref float curY)
+	{
+		if (SelObject is not ThingClass adaptive)
+			return;
+
+		var sliderRect = outRect with { height = Text.LineHeight / 2f };
+		var totalSlots = adaptive.TotalSlots;
+		var currentSlotLimit = Math.Min(adaptive.CurrentSlotLimit, totalSlots);
+		var newSlotLimit = Mathf.RoundToInt(
+#if V1_4
+			Widgets.HorizontalSlider_NewTemp(
+#else
+			Widgets.HorizontalSlider(
+#endif
+				sliderRect, currentSlotLimit, 0f, totalSlots));
+		
+		if (newSlotLimit != currentSlotLimit)
+			adaptive.CurrentSlotLimit = newSlotLimit;
+		
+		curY += sliderRect.height;
+		outRect.yMin += sliderRect.height;
+	}
+
 	private void DrawHeader(ref Rect outRect, ref float curY, IList<Thing> storedThings, ScopedStatList massList)
 	{
 		using (new GUIScope.FontSize(15))
 		{
 			Widgets.ListSeparator(ref curY, outRect.width, $"{Strings.Translated.ContainedItems} ({
-				Strings.Stacks(storedThings.Count, SelObject.TotalSlots())}, {
+				Strings.Stacks(storedThings.Count, SelObject.CurrentSlotLimit())}, {
 					massList.Sum.ToStringMass()})");
 			outRect.yMin += curY;
 		}
@@ -125,7 +154,7 @@ public class ContentsITab : ITab_ContentsBase
 	}
 
 	// https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/Deep_Storage_ITab.cs#L216-L235
-	public override void OnDropThing(Thing t, int count)
+	protected override void OnDropThing(Thing t, int count)
 	{
 		if (SelObject is not Thing thing)
 			return;

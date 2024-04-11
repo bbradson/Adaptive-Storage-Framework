@@ -5,20 +5,21 @@
 
 using System.Diagnostics.CodeAnalysis;
 using AdaptiveStorage.ModCompatibility;
+using AdaptiveStorage.Pools;
 
 namespace AdaptiveStorage;
 
 public class StorageRenderer
 {
 	public ThingClass Parent { get; }
-		
-	public List<GraphicsDef>? AllGraphics { get; set; }
-		
-	public List<Thing> Printables { get; } = new();
 
-	public List<Thing> Drawables { get; } = new();
-		
-	public bool ShowContainedItems { get; private set; }
+	public List<GraphicsDef>? AllGraphics { get; set; }
+
+	public List<PrintData> Printables { get; } = [];
+
+	public List<PrintData> Drawables { get; } = [];
+
+	public bool ShowContainedItems { get; private set; } = true;
 
 	public int CurrentGraphicIndex
 	{
@@ -27,7 +28,7 @@ public class StorageRenderer
 		{
 			if (_currentGraphicIndex == value)
 				return;
-			
+
 			_currentGraphicIndex = value;
 			CurrentGraphicChanged?.Invoke();
 		}
@@ -40,12 +41,12 @@ public class StorageRenderer
 		{
 			if (_currentVariationIndex == value)
 				return;
-			
+
 			_currentVariationIndex = value;
 			CurrentGraphicChanged?.Invoke();
 		}
 	}
-		
+
 	[MemberNotNull(nameof(CurrentVariationGraphics))]
 	public GraphicsDef? CurrentGraphicVariation { get; set; }
 
@@ -55,11 +56,15 @@ public class StorageRenderer
 	public StorageGraphic? CurrentGraphic { get; set; }
 
 	public event Action? CurrentGraphicChanged;
-		
+
+	private bool ShouldRealTimeDraw => Parent.def.drawerType == DrawerType.RealtimeOnly || !Parent.Spawned;
+
 	private int
 		_currentVariationIndex = -1,
 		_currentGraphicIndex = -1,
 		_lastMapMeshDirtyFrame = -1;
+
+	private static Vector2 _drawScale = Vector2.one;
 
 	public StorageRenderer(ThingClass parent)
 	{
@@ -68,67 +73,197 @@ public class StorageRenderer
 		CurrentGraphicChanged += OnCurrentGraphicChanged;
 	}
 
-	public void Draw()
+#if !V1_4
+	public virtual void DynamicDrawPhaseAt(DrawPhase phase, in Vector3 drawLoc, bool flip = false)
 	{
-		if (ShowContainedItems)
+		if (CurrentGraphic is null)
 		{
-			var drawables = Drawables;
-			for (var i = drawables.Count; i-- > 0;)
-				DrawThing(drawables[i]);
+			Parent.BaseDynamicDrawPhaseAt(phase, drawLoc, flip);
+			return;
 		}
+
+		if (phase == DrawPhase.Draw && ShouldRealTimeDraw)
+		{
+			DrawBuilding(drawLoc);
+			DrawPrintableThings(drawLoc, Printables);
+		}
+
+		DynamicDrawPhaseOnThings(phase, drawLoc, flip, Drawables);
+
+		if (phase == DrawPhase.Draw)
+			Parent.Comps_PostDraw();
+	}
+
+	private static void DynamicDrawPhaseOnThings(DrawPhase phase, in Vector3 drawLoc, bool flip,
+		List<PrintData> drawables)
+	{
+		for (var i = drawables.Count; i-- > 0;)
+		{
+			var drawable = drawables[i];
+			drawable.Thing.DynamicDrawPhaseAt(phase, drawLoc + drawable.DrawOffset, flip);
+		}
+	}
+#endif
+
+	public void DrawAt(in Vector3 drawLoc, bool flip = false)
+	{
+		if (CurrentGraphic is null)
+		{
+			Parent.BaseDrawAt(drawLoc, flip);
+			return;
+		}
+
+		if (ShouldRealTimeDraw)
+		{
+			DrawBuilding(drawLoc);
+			DrawPrintableThings(drawLoc, Printables);
+		}
+
+		DrawThings(drawLoc, flip, Drawables);
 
 		Parent.Comps_PostDraw();
 	}
 
-	public void Print(SectionLayer layer)
+	private void DrawBuilding(in Vector3 drawLoc)
 	{
+		GetBuildingDrawColors(out var drawColor, out var drawColorTwo);
+
+		var parent = Parent;
+		var rotation = parent.Rotation;
+		if (!TryGetStyleGraphic(drawColor, drawColorTwo, out var styleGraphic))
+		{
+			var graphicDatas = CurrentGraphic!.graphicDatas;
+			for (var i = 0; i < graphicDatas.Count; i++)
+				graphicDatas[i].GraphicColoredFor(drawColor, drawColorTwo).Draw(drawLoc, rotation, parent);
+		}
+		else
+		{
+			styleGraphic.Draw(drawLoc, rotation, parent);
+		}
+	}
+
+	private static void DrawThings(in Vector3 drawLoc, bool flip, List<PrintData> drawables)
+	{
+		for (var i = drawables.Count; i-- > 0;)
+		{
+			var drawable = drawables[i];
+			drawable.Thing.DrawNowAt(drawLoc + drawable.DrawOffset, flip);
+		}
+	}
+
+	private static void DrawPrintableThings(in Vector3 drawLoc, List<PrintData> printables)
+	{
+		for (var i = printables.Count; i-- > 0;)
+			printables[i].DrawAt(drawLoc);
+	}
+
+	private bool TryGetCurrentDrawSize(out Vector2 drawSize)
+	{
+		drawSize = Vector2.one;
 		if (CurrentGraphic is not { } currentGraphic)
+			return false;
+
+		if (TryGetStyleGraphic(Color.white, Color.white, out var styleGraphic))
+		{
+			var styleDrawSize = styleGraphic.drawSize;
+			if (1f > styleDrawSize.x * styleDrawSize.y)
+				return false;
+
+			drawSize = styleDrawSize;
+			return true;
+		}
+
+		var graphicDatas = currentGraphic.graphicDatas;
+		var i = graphicDatas.Count;
+		if (i == 0)
+			return false;
+
+		var result = false;
+		while (i-- > 0)
+		{
+			var otherDrawSize = graphicDatas[i].drawSize;
+			if (drawSize.x * drawSize.y > otherDrawSize.x * otherDrawSize.y)
+				continue;
+
+			drawSize = otherDrawSize;
+			result = true;
+		}
+
+		return result;
+	}
+
+	public void PrintAt(SectionLayer layer, in Vector3 drawLoc, in Vector2 drawSize)
+	{
+		_drawScale = TryGetCurrentDrawSize(out var size) ? drawSize / size : Vector2.one;
+		PrintAt(layer, drawLoc);
+	}
+
+	public void PrintAt(SectionLayer layer, in Vector3 drawLoc)
+	{
+		if (CurrentGraphic is null)
 		{
 			Parent.BasePrint(layer);
 			return;
 		}
 
-		var drawColor = currentGraphic.useDominantContentColor
-			?? CurrentGraphicVariation.useDominantContentColor
-				? ComputeDominantDrawColor()
-				: Parent.DrawColor;
+		PrintBuilding(layer, drawLoc);
 
-		var drawColorTwo = Parent.DrawColorTwo;
-		var graphicDatas = currentGraphic.graphicDatas;
-		for (var i = 0; i < graphicDatas.Count; i++)
-			GraphicColoredFor(graphicDatas[i], drawColor, drawColorTwo).Print(layer, Parent, 0f);
-
-		if (ShowContainedItems)
-		{
-			for (var i = Printables.Count; i-- > 0;)
-				PrintThing(Printables[i], layer);
-		}
+		UpdateAllPrintDatas(layer);
+		for (var i = Printables.Count; i-- > 0;)
+			Printables[i].PrintAt(drawLoc);
 
 		PostPrintComps(layer);
 	}
 
-	// public void PostPostMake(List<GraphicsDef> graphicsDefs)
-	// {
-	// 	AllGraphics = graphicsDefs;
-	// 	CurrentVariationIndex = GetGraphicVariationIndexForStoredThings();
-	// }
-		
-	public void InitializeStoredThingGraphics()
+	private void PrintBuilding(SectionLayer layer, in Vector3 drawLoc)
+	{
+		GetBuildingDrawColors(out var drawColor, out var drawColorTwo);
+
+		if (!TryGetStyleGraphic(drawColor, drawColorTwo, out var styleGraphic))
+		{
+			var graphicDatas = CurrentGraphic!.graphicDatas;
+			for (var i = 0; i < graphicDatas.Count; i++)
+				PrintGraphicAt(layer, drawLoc, graphicDatas[i].GraphicColoredFor(drawColor, drawColorTwo));
+		}
+		else
+		{
+			PrintGraphicAt(layer, drawLoc, styleGraphic);
+		}
+	}
+
+	private void PrintGraphicAt(SectionLayer layer, in Vector3 drawLoc, Graphic graphic)
+		=> graphic.PrintAt(layer, Parent, drawLoc, graphic.drawSize * _drawScale, 0f);
+
+	private bool TryGetStyleGraphic(Color drawColor, Color drawColorTwo, [NotNullWhen(true)] out Graphic? styleGraphic)
+		=> (styleGraphic = Parent.StyleDef?.graphicData?.GraphicColoredFor(drawColor, drawColorTwo)) != null;
+
+	private void GetBuildingDrawColors(out Color drawColor, out Color drawColorTwo)
+	{
+		drawColor = CurrentGraphic!.useDominantContentColor
+			?? CurrentGraphicVariation.useDominantContentColor
+				? ComputeDominantDrawColor()
+				: Parent.DrawColor;
+
+		drawColorTwo = Parent.DrawColorTwo;
+	}
+
+	public void InitializeStoredThingGraphics(SectionLayer? layer)
 	{
 		Printables.Clear();
 		Drawables.Clear();
-		
-		for (var i = Parent.StoredThings.Count; i-- > 0;)
-			AssignThingGraphic(Parent.StoredThings[i]);
-		
+
+		var storedThings = Parent.StoredThings;
+		for (var i = storedThings.Count; i-- > 0;)
+			AssignThingGraphic(storedThings[i], layer, false);
+
 		UpdateCurrentGraphic();
 	}
-		
+
 	public void RegenerateThingGraphic(Thing thing)
 	{
 		if (!thing.Spawned)
 			return;
-		
+
 		var drawerType = thing.def.drawerType;
 
 		var drawable = drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly;
@@ -151,27 +286,27 @@ public class StorageRenderer
 
 		var lister = Parent.Map.listerThings;
 		var guiOverlayGroup = lister.ThingsInGroup(ThingRequestGroup.HasGUIOverlay);
-		
+
 		if (guiOverlayGroup.Contains(thing))
 			return;
-		
+
 		if (!PerformanceFish.AddToGroupList(lister, thing, ThingRequestGroup.HasGUIOverlay))
 			guiOverlayGroup.Add(thing);
 	}
 
 	internal void NotifyCurrentGraphicChanged() => CurrentGraphicChanged?.Invoke();
-	
+
 	private void OnCurrentGraphicChanged()
 	{
 		if (AllGraphics is null)
 			return;
-		
+
 		CurrentGraphicVariation = AllGraphics[CurrentVariationIndex];
 		CurrentGraphic
 			= CurrentVariationGraphics[Mathf.Clamp(CurrentGraphicIndex, 0, CurrentVariationGraphics.Count - 1)];
 		ShowContainedItems = CurrentGraphic.showContainedItems ?? CurrentGraphicVariation.showContainedItems;
 	}
-		
+
 	private void CalculateGraphicIndex()
 	{
 		CurrentVariationIndex = GetGraphicVariationIndexForStoredThings();
@@ -198,67 +333,178 @@ public class StorageRenderer
 	private int GetGraphicVariationIndexForStoredThings()
 	{
 		var allGraphics = AllGraphics!;
-		Span<int> span = stackalloc int[allGraphics.Count],
-			fallBackSpan = stackalloc int[span.Length];
+		var seed = Parent.RandomSeed;
 		var storedThings = Parent.StoredThings;
-		var spanIndex = 0;
-		var fallBackSpanIndex = 0;
-		
+
+		using var allowedGraphicsPooled = new PooledIList<List<GraphicsDef>>();
+		using var forbiddenGraphicsPooled = new PooledIList<List<GraphicsDef>>();
+		var allowedGraphics = allowedGraphicsPooled.List;
+		var forbiddenGraphics = forbiddenGraphicsPooled.List;
+
 		for (var i = allGraphics.Count; i-- > 0;)
 		{
-			var graphicsDef = allGraphics[i];
-			if (!graphicsDef.Allows(storedThings))
-				continue;
-
-			if (graphicsDef.randomSelectionWeight < 1)
-			{
-				fallBackSpan[fallBackSpanIndex++] = i;
-			}
+			var graphic = allGraphics[i];
+			if (graphic.Allows(storedThings))
+				allowedGraphics.Add(graphic);
 			else
-			{
-				for (var j = graphicsDef.randomSelectionWeight; j-- > 0;) // TODO: fix this bug
-					span[spanIndex++] = i; // it's going to throw out of bounds exceptions
-			}
+				forbiddenGraphics.Add(graphic);
+		}
+		
+		for (var i = 0; i < _weightSelectorsInOrder.Length; i++)
+		{
+			var resultIndex = allowedGraphics.TryGetSeededIndex(seed, _weightSelectorsInOrder[i]);
+			if (resultIndex >= 0)
+				return resultIndex;
 		}
 
-		return spanIndex > 0 ? span[GetSeededIndex(spanIndex)]
-			: fallBackSpanIndex > 0 ? fallBackSpan[GetSeededIndex(fallBackSpanIndex)]
-			: 0;
-	}
-		
-	private int GetSeededIndex(int maxExclusive) => (int)((uint)Parent.RandomSeed % (uint)maxExclusive);
+		for (var i = _weightSelectorsInOrder.Length; i-- > 0;)
+		{
+			var resultIndex = forbiddenGraphics.TryGetSeededIndex(seed, _weightSelectorsInOrder[i]);
+			if (resultIndex >= 0)
+				return resultIndex;
+		}
 
-	private void AssignToDrawables(Thing newItem)
+		return 0;
+	}
+
+	private static readonly Func<GraphicsDef, uint>[] _weightSelectorsInOrder =
+	[
+		GraphicsDef.PositiveWeightSelector, GraphicsDef.NegativeWeightSelector, GraphicsDef.NullWeightSelector
+	];
+
+	private void AssignToDrawables(Thing newItem, SectionLayer? layer)
 	{
-		Drawables.Add(newItem);
+		if (MakePrintData(newItem, layer) is { } printData)
+			Drawables.Add(printData);
+
 		Parent.Map.dynamicDrawManager.DeRegisterDrawable(newItem);
 	}
-	
-	public void AssignThingGraphic(Thing newItem)
+
+	private void AssignToPrintables(Thing newItem, SectionLayer? layer)
+	{
+		if (MakePrintData(newItem, layer) is not { } printData)
+			return;
+
+		Printables.Add(printData);
+		TryDirtyParentMapMesh();
+	}
+
+	public void AssignThingGraphic(Thing newItem, SectionLayer? layer, bool updateOthers = true)
 	{
 		var newItemDef = newItem.def;
 		var drawerType = newItemDef.drawerType;
 
-		var drawable = drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly;
-		var printable = drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime;
+		if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
+			AssignToDrawables(newItem, layer);
 
-		if (drawable)
-			AssignToDrawables(newItem);
+		if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
+			AssignToPrintables(newItem, layer);
 
-		if (printable)
-		{
-			Printables.Add(newItem);
-			TryDirtyParentMapMesh();
-		}
+		if (updateOthers)
+			UpdateAllPrintDatas(layer, newItem);
 
 		if (!ThingRequestGroup.HasGUIOverlay.Includes(newItem.def))
 			return;
 
 		var lister = Parent.Map.listerThings;
-		
+
 		if (!PerformanceFish.RemoveFromGroupList(lister, newItem, ThingRequestGroup.HasGUIOverlay))
 			lister.ThingsInGroup(ThingRequestGroup.HasGUIOverlay).Remove(newItem);
 	}
+
+	private void UpdateAllPrintDatas(SectionLayer? layer, Thing? except = null)
+	{
+		var allStoredThings = Parent.StoredThings;
+		for (var i = allStoredThings.Count; i-- > 0;)
+		{
+			var thing = allStoredThings[i];
+			if (thing == except)
+				continue;
+
+			var drawerType = allStoredThings.DefAt(i).drawerType;
+
+			if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
+				UpdatePrintDataFor(Drawables, layer, thing);
+
+			if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
+				UpdatePrintDataFor(Printables, layer, thing);
+		}
+	}
+
+	private void UpdatePrintDataFor(List<PrintData> printDatas, SectionLayer? layer, Thing thing)
+	{
+		var itemGraphic = GetItemGraphicIfVisible(thing);
+		if (itemGraphic != null)
+		{
+			PrintData? printData;
+			if ((printData = printDatas.TryGet(thing)) != null)
+			{
+				if (UpdatePrintData(printData, layer, itemGraphic))
+					return;
+			}
+			else if ((printData = MakePrintData(thing, layer, itemGraphic)) != null)
+			{
+				printDatas.Add(printData);
+				return;
+			}
+		}
+
+		printDatas.Remove(thing);
+	}
+
+	private PrintData? MakePrintData(Thing thing, SectionLayer? layer)
+	{
+		var itemGraphic = GetItemGraphicIfVisible(thing);
+		return itemGraphic is null ? null : MakePrintData(thing, layer, itemGraphic);
+	}
+
+	private PrintData MakePrintData(Thing thing, SectionLayer? layer, ItemGraphic itemGraphic)
+	{
+		var thingRotation = itemGraphic.textureOrientation ?? thing.Rotation;
+		var parentDrawLoc = Parent.DrawPos;
+
+		var result = new PrintData(thing, parentDrawLoc,
+			DrawOffsetForThing(thing, parentDrawLoc, thingRotation, itemGraphic, out var stackRotation),
+			thingRotation, layer,
+			thing.MultipleItemsPerCellDrawn() ? itemGraphic.drawScale * 0.8f : itemGraphic.drawScale,
+			itemGraphic.rotation + stackRotation, itemGraphic.drawShadow, itemGraphic.maxDrawSize);
+		
+		if (_drawScale != Vector2.one)
+			result.DrawSize *= _drawScale;
+		
+		return result;
+	}
+
+	private bool ParentAccepts(Thing thing) => Parent.GetParentStoreSettings().AllowedToAccept(thing);
+
+	private bool UpdatePrintData(PrintData printData, SectionLayer? layer, ItemGraphic itemGraphic)
+	{
+		var thing = printData.Thing;
+		printData.Layer = layer;
+
+		var thingRotation = printData.ThingRotation = itemGraphic.textureOrientation ?? thing.Rotation;
+		var parentDrawLoc = printData.DrawLoc = Parent.DrawPos;
+
+		printData.DrawOffset
+			= DrawOffsetForThing(thing, parentDrawLoc, thingRotation, itemGraphic, out var stackRotation);
+
+		printData.SetDrawSize(printData.Graphic.drawSize,
+			thing.MultipleItemsPerCellDrawn() ? itemGraphic.drawScale * 0.8f : itemGraphic.drawScale,
+			itemGraphic.maxDrawSize);
+		
+		if (_drawScale != Vector2.one)
+			printData.DrawSize *= _drawScale;
+
+		printData.ExtraRotation = itemGraphic.rotation + stackRotation;
+		printData.DrawShadow = itemGraphic.drawShadow;
+
+		return true;
+	}
+
+	private ItemGraphic? GetItemGraphicIfVisible(Thing thing)
+		=> (ShowContainedItems || !ParentAccepts(thing)) && GetItemGraphicFor(thing) is { visible: true } graphic
+			? graphic
+			: null;
 
 	public void UpdateCurrentGraphic()
 	{
@@ -267,8 +513,8 @@ public class StorageRenderer
 		if (currentIndex != CurrentGraphicIndex)
 			TryDirtyParentMapMesh();
 	}
-		
-	public void FreeThingGraphic(Thing newItem)
+
+	public void FreeThingGraphic(Thing newItem, SectionLayer? layer, bool updateOthers = true)
 	{
 		var newItemDef = newItem.def;
 		var drawerType = newItemDef.drawerType;
@@ -284,6 +530,9 @@ public class StorageRenderer
 			Printables.Remove(newItem);
 			TryDirtyParentMapMesh();
 		}
+
+		if (updateOthers)
+			UpdateAllPrintDatas(layer, newItem);
 	}
 
 	public void TryDirtyParentMapMesh()
@@ -297,9 +546,7 @@ public class StorageRenderer
 
 	private void PostPrintComps(SectionLayer layer)
 	{
-		if (Parent.comps is not { } comps)
-			return;
-
+		var comps = Parent.AllComps;
 		for (var i = comps.Count; i-- > 0;)
 			comps[i].PostPrintOnto(layer);
 	}
@@ -313,10 +560,16 @@ public class StorageRenderer
 		var dict = SimplePool<Dictionary<Color, int>>.Get();
 		dict.Clear();
 
+		var parentStoreSettings = Parent.GetParentStoreSettings();
+		var parentDef = Parent.def;
 		for (var i = storedThings.Count; i-- > 0;)
 		{
-			var color = storedThings.DefAt(i) is { stuffProps: not null } storedThingDef
-				? Parent.def.GetColorForStuff(storedThingDef)
+			var storedThingDef = storedThings.DefAt(i);
+			if (!parentStoreSettings.AllowedToAccept(storedThingDef))
+				continue;
+
+			var color = storedThingDef is { stuffProps: not null }
+				? parentDef.GetColorForStuff(storedThingDef)
 				: storedThings[i].DrawColor;
 
 			dict[color] = dict.TryGetValue(color, out var value) ? value + 1 : 1;
@@ -324,10 +577,17 @@ public class StorageRenderer
 
 		var dominantColorPair = new KeyValuePair<Color, int>(Color.white, 0);
 
-		foreach (var pair in dict)
+		if (dict.Count > 0)
 		{
-			if (pair.Value > dominantColorPair.Value)
-				dominantColorPair = pair;
+			foreach (var pair in dict)
+			{
+				if (pair.Value > dominantColorPair.Value)
+					dominantColorPair = pair;
+			}
+		}
+		else
+		{
+			dominantColorPair = new(GetColorFromIngredients(), 0);
 		}
 
 		dict.Clear();
@@ -345,7 +605,7 @@ public class StorageRenderer
 	{
 		var costList = Parent.def.CostList;
 		if (costList is not [_, ..])
-			goto White;
+			goto DefaultColor;
 
 		var max = costList[0];
 		for (var i = costList.Count; i-- > 0;)
@@ -366,34 +626,13 @@ public class StorageRenderer
 				return graphicData.color;
 		}
 
-	White:
+	DefaultColor:
 		return Color.white;
-	}
-
-	private static Graphic GraphicColoredFor(GraphicData graphicData, in Color drawColor, in Color drawColorTwo)
-		=> drawColor.IndistinguishableFrom(graphicData.Graphic.Color)
-			&& drawColorTwo.IndistinguishableFrom(graphicData.Graphic.ColorTwo)
-				? graphicData.Graphic
-				: graphicData.Graphic.GetColoredVersion(graphicData.Graphic.Shader, drawColor, drawColorTwo);
-
-	private void PrintThing(Thing thing, SectionLayer layer)
-	{
-		var itemGraphic = GetItemGraphicFor(thing);
-
-		if (!itemGraphic.visible)
-			return;
-
-		var thingRotation = itemGraphic.textureOrientation ?? thing.Rotation;
-
-		PrintThingAt(thing, DrawPositionForThing(thing, thingRotation, itemGraphic, out var stackRotation),
-			thingRotation, layer,
-			thing.MultipleItemsPerCellDrawn() ? itemGraphic.drawScale * 0.8f : itemGraphic.drawScale,
-			itemGraphic.rotation + stackRotation, itemGraphic.drawShadow, itemGraphic.maxDrawSize);
 	}
 
 	private ItemGraphic GetItemGraphicFor(Thing thing)
 	{
-		var thingPosition = thing.Position - Parent.AllSlotCellsList()[0];
+		var thingPosition = thing.Position - Parent.BottomLeftCell;
 
 		if (Parent.Rotation.IsHorizontal)
 			(thingPosition.x, thingPosition.z) = (thingPosition.z, thingPosition.x);
@@ -402,83 +641,12 @@ public class StorageRenderer
 			?? ItemGraphic.Default;
 	}
 
-	private void DrawThing(Thing thing) // TODO: scaling and rotation? Not supported through DrawAt
-	{
-		var itemGraphic = GetItemGraphicFor(thing);
-
-		if (!itemGraphic.visible)
-			return;
-
-		thing.DrawAt(DrawPositionForThing(thing, itemGraphic.textureOrientation ?? Parent.Rotation, itemGraphic,
-			out _));
-	}
-
-	private static void PrintThingAt(Thing thing, in Vector3 drawLoc, Rot4 thingRotation, SectionLayer layer,
-		float drawScale, float extraRotation, bool drawShadow, in Vector2 maxDrawSize)
-	{
-		var graphic = thing.Graphic;
-		var drawSize = graphic.drawSize;
-
-		AdjustDrawSize(ref drawSize, drawScale, maxDrawSize);
-
-		var rotation = extraRotation + graphic.AngleFromRot(thingRotation);
-		var flipUv = !graphic.ShouldDrawRotated;
-
-		if (flipUv)
-		{
-			if (thingRotation.IsHorizontal)
-				drawSize = drawSize.Rotated();
-			
-			flipUv = thingRotation.AsInt switch
-			{
-				Rot4.WestInt => graphic.WestFlipped,
-				Rot4.EastInt => graphic.EastFlipped,
-				_ => false
-			};
-		}
-		
-		if (flipUv && graphic.data != null)
-			rotation += graphic.data.flipExtraRotation;
-
-		var material = graphic.MatAt(thingRotation, thing);
-
-		Graphic.TryGetTextureAtlasReplacementInfo(material, thing.def.category.ToAtlasGroup(), flipUv, true,
-			out material, out var uvs, out var vertexColor);
-
-		var colors = SimplePool<ColorsArray>.Get();
-		Array.Fill(colors.Value, vertexColor);
-		
-		Printer_Plane.PrintPlane(layer, drawLoc, drawSize, material, rotation, flipUv, uvs, colors.Value);
-		
-		SimplePool<ColorsArray>.Return(colors);
-
-		if (drawShadow)
-			graphic.ShadowGraphic?.Print(layer, thing, 0f);
-	}
-
-	private readonly struct ColorsArray
-	{
-		public readonly Color32[] Value;
-		public ColorsArray() => Value = new Color32[4];
-	}
-
-	private static void AdjustDrawSize(ref Vector2 drawSize, float drawScale, in Vector2 maxDrawSize)
-	{
-		drawSize *= drawScale;
-
-		if (drawSize.x > maxDrawSize.x)
-			drawSize *= maxDrawSize.x / drawSize.x;
-
-		if (drawSize.y > maxDrawSize.y)
-			drawSize *= maxDrawSize.y / drawSize.y;
-	}
-
-	private Vector3 DrawPositionForThing(Thing thing, Rot4 thingRotation, ItemGraphic itemGraphic,
-		out float stackRotation)
+	private Vector3 DrawOffsetForThing(Thing thing, in Vector3 parentDrawLoc, Rot4 thingRotation,
+		ItemGraphic itemGraphic, out float stackRotation)
 	{
 		var position = ItemOffsetAt(thing.Position, thing.Map, thing.thingIDNumber, itemGraphic,
-			CurrentGraphicVariation!, out stackRotation);
-		
+			CurrentGraphicVariation, out stackRotation);
+
 		position += itemGraphic.DrawOffsetForRot(Parent.Rotation);
 
 		if (thing is Pawn pawn)
@@ -489,22 +657,22 @@ public class StorageRenderer
 		{
 			position += thing.Position.ToVector3Shifted()
 				+ thing.Graphic.DrawOffset(thingRotation);
-			
+
 			position.y += thing.def.Altitude;
 		}
 
-		return position;
+		return position - parentDrawLoc;
 	}
 
 	private static Vector3 ItemOffsetAt(in IntVec3 position, Map map, int thingID, ItemGraphic itemGraphic,
-		GraphicsDef graphicsDef, out float stackRotation)
+		GraphicsDef? graphicsDef, out float stackRotation)
 	{
 		var itemCount = 0;
 		var precedingItemCount = 0;
 		var stackBehaviour = itemGraphic.stackBehaviour;
-		if (stackBehaviour == StackBehaviour.Default)
+		if (stackBehaviour == StackBehaviour.Default && graphicsDef != null)
 			stackBehaviour = graphicsDef.stackBehaviour;
-		
+
 		var isWeaponButNotWood = false; // fish and beer is fine
 		var defMatchesForAllItems = true;
 		ThingDef? firstValidThingDefInCell = null;
@@ -559,6 +727,7 @@ public class StorageRenderer
 				precedingItemCountFloat,
 				precedingItemCount),
 			StackBehaviour.Stack => ComputeStackOffsetForStack(ref stackOffset, precedingItemCountFloat),
+			// ReSharper disable once PatternIsRedundant
 			StackBehaviour.Circle or _ => ComputeStackOffsetForCircle(position, itemCount, precedingItemCount)
 		};
 

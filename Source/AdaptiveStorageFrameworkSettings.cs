@@ -37,19 +37,26 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 	
 	private static string? _contentsTabTypeName = typeof(ContentsITab).FullName;
 
+	public static HashSet<InspectTabBase> KnownLoadedContentsTabs
+		=> _knownLoadedContentsTabs ??= PrepareKnownLoadedContentsTabTypes();
+
 	private static (Type type, ModContentPack? contentPack)[] LoadedContentsTabTypes
 		=> _loadedContentsTabTypes ??= PrepareLoadedContentsTabTypes();
 
-	private static (Type, ModContentPack?)[] PrepareLoadedContentsTabTypes()
+	private static HashSet<InspectTabBase> PrepareKnownLoadedContentsTabTypes()
 		=> InternalDefOf.Shelf.inspectorTabsResolved
 			.Where(static tab => tab.labelKey.Translate() == ContentsITab.LabelTranslated
 				&& tab.GetType() != typeof(ContentsITab))
-			.Select(static tab => tab.GetType())
-			.Append(typeof(ContentsITab))
-			.Select(static tab => (tab, LoadedModManager.RunningModsListForReading.Find(contentPack
-				=> contentPack.assemblies.loadedAssemblies.Contains(tab.Assembly))))
+			.Append(InspectTabManager.GetSharedInstance(typeof(ContentsITab)))
+			.ToHashSet();
+
+	private static (Type, ModContentPack?)[] PrepareLoadedContentsTabTypes()
+		=> KnownLoadedContentsTabs
+			.Select(static tab => (tab.GetType(), LoadedModManager.RunningModsListForReading.Find(contentPack
+				=> contentPack.assemblies.loadedAssemblies.Contains(tab.GetType().Assembly))))
 			.ToArray()!;
 
+	private static HashSet<InspectTabBase>? _knownLoadedContentsTabs;
 	private static (Type, ModContentPack?)[]? _loadedContentsTabTypes;
 	
 	public static void DoSettingsWindowContents(Rect inRect)

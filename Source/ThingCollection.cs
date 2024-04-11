@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 
 namespace AdaptiveStorage;
 
-public class ThingCollection : IList<Thing>, IList<ThingDef>
+public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDef>, IReadOnlyList<ThingDef>
 {
 	private ThingDef[] _defs = Array.Empty<ThingDef>();
 	private Thing[] _things = Array.Empty<Thing>();
@@ -43,6 +43,8 @@ public class ThingCollection : IList<Thing>, IList<ThingDef>
 		get => DefAt(index);
 		set => throw new NotSupportedException();
 	}
+
+	ThingDef IReadOnlyList<ThingDef>.this[int index] => DefAt(index);
 
 	public void Add(Thing thing)
 	{

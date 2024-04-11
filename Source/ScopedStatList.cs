@@ -5,24 +5,24 @@
 
 namespace AdaptiveStorage;
 
-public readonly struct ScopedStatList : IDisposable
+public readonly record struct ScopedStatList : IDisposable
 {
-	public readonly List<float> List;
+	private readonly List<float> _list;
 
 	public ScopedStatList(IList<Thing> things, StatDef stat)
 	{
-		List = SimplePool<List<float>>.Get();
-		List.Clear();
+		_list = SimplePool<List<float>>.Get();
+		_list.Clear();
 			
 		for (var i = 0; i < things.Count; i++)
 		{
-			List.Add(things[i] is { } storedThing
+			_list.Add(things[i] is { } storedThing
 				? storedThing.GetStatValue(stat) * storedThing.stackCount
 				: 0f);
 		}
 	}
 
-	public float this[int index] => List[index];
+	public float this[int index] => _list[index];
 
 	public float Sum
 	{
@@ -30,8 +30,8 @@ public readonly struct ScopedStatList : IDisposable
 		{
 			var sum = 0f;
 
-			for (var i = List.Count; i-- > 0;)
-				sum += List[i];
+			for (var i = _list.Count; i-- > 0;)
+				sum += _list[i];
 
 			return sum;
 		}
@@ -39,7 +39,7 @@ public readonly struct ScopedStatList : IDisposable
 	
 	public void Dispose()
 	{
-		List.Clear();
-		SimplePool<List<float>>.Return(List);
+		_list.Clear();
+		SimplePool<List<float>>.Return(_list);
 	}
 }

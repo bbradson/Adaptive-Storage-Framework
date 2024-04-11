@@ -28,4 +28,11 @@
 			<blueprintClass>Blueprint_Storage</blueprintClass>
 		</building>
 	</ThingDef>
+
+	<ThingDef Name="AdaptiveStorageMinifiableBase" ParentName="AdaptiveStorageBase" Abstract="True">
+		<minifiedDef>MinifiedThing</minifiedDef>
+		<thingCategories>
+			<li>BuildingsFurniture</li>
+		</thingCategories>
+	</ThingDef>
 </Defs>

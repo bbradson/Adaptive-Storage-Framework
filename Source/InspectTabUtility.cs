@@ -12,13 +12,25 @@ public static class InspectTabUtility
 {
 	public static IEnumerable<InspectTabBase> Modify(IEnumerable<InspectTabBase> tabs)
 	{
+		var hasUnknownTab = false;
+		
 		foreach (var tab in tabs)
 		{
-			if (tab != null && tab.labelKey.Translate() != ContentsITab.LabelTranslated)
-				yield return tab;
+			if (tab == null)
+				continue;
+
+			if (tab.labelKey.Translate() == ContentsITab.LabelTranslated)
+			{
+				if (AdaptiveStorageFrameworkSettings.KnownLoadedContentsTabs.Contains(tab))
+					continue;
+				else
+					hasUnknownTab = true;
+			}
+			
+			yield return tab;
 		}
 
-		if (AdaptiveStorageFrameworkSettings.ContentsTab is { } selectedContentsTab)
+		if (!hasUnknownTab && AdaptiveStorageFrameworkSettings.ContentsTab is { } selectedContentsTab)
 			yield return selectedContentsTab;
 	}
 

@@ -85,25 +85,53 @@
 	<useDominantContentColor>false</useDominantContentColor>
 
 	<!-- weight for randomly selecting this GraphicsDef, including all its contents, when building a structure -->
-	<!-- only accepts whole positive numbers and 0, with 0 acting as fallback if all other graphicsDefs turn out invalid -->
+	<!-- works in 6 passes, first trying to pick a random valid def for positive weights, then negative weights with reversed sign -->
+	<!-- if the previous pass fails, then 0, and if that still doesn't find a valid graphicsDef it does this again in reverse -->
+	<!-- for all the other, invalid, graphics, starting at 0 -->
 	<randomSelectionWeight>1</randomSelectionWeight>
 
-	<!-- defs of stored items that trigger switching to this graphicsDef. Can be combined with other fields -->
+	<!-- the minimum amount of stacks a storage has to contain for this GraphicsDef -->
+	<minimumThingCount>0</minimumThingCount>
+
+	<!-- the minimum amount of stacks passing the allowedFilter a storage has to contain for this GraphicsDef -->
+	<minimumAllowedThingCount>0</minimumAllowedThingCount>
+
+	<!-- the maximum amount of stacks a storage is allowed to contain for this GraphicsDef -->
+	<maximumThingCount>2147483647</maximumThingCount>
+
+	<!-- a filter, just like those on storage settings and recipes, deciding when a GraphicsDef becomes viable for choosing -->
+	<allowedFilter>
+		<thingDefs>etc</thingDefs>
+		<categories>etc</categories>
+		<disallowedCategories>etc</disallowedCategories>
+		etc
+	</allowedFilter>
+
+	<!-- defs to directly add to the allowedFilter. Mostly there for backwards compatibility -->
 	<requiredThingDefs>
 		<li>DEFNAME</li>
 		etc
 	</requiredThingDefs>
 
-	<!-- optional toggle to switch whether requiredThingDefs should act as a filter all stored things have to match, or only as requirement for at least one stored item -->
-	<onlyAllowRequiredThingDefs>true</onlyAllowRequiredThingDefs>
+	<!-- Accepts Any, All, Majority and Minority, deciding how many of the stored things have to pass the allowedFilter -->
+	<!-- for this GraphicsDef to be considered viable -->
+	<allowedRequirement>Any</allowedRequirement>
 
-	<!-- defs of stored items that trigger disabling this graphicsDef. Can be combined with other fields -->
+	<!-- allowedFilter in reverse. Any stored thing accepted by this filter causes the GraphicsDef to not be chosen -->
+	<forbiddenFilter>
+		<thingDefs>etc</thingDefs>
+		<categories>etc</categories>
+		<disallowedCategories>etc</disallowedCategories>
+		etc
+	</forbiddenFilter>
+
+	<!-- defs to directly add to the forbiddenFilter. Mostly there for backwards compatibility -->
 	<disallowedThingDefs>
 		<li>DEFNAME</li>
 		etc
 	</disallowedThingDefs>
 
-	<!-- the thing categories all stored things have to match to enable the graphicsdef, if specified -->
+	<!-- thing categories to add to the allowedFilter. Mostly there for backwards compatibility -->
 	<allowedThingCategories>
 		<li>etc</li>
 	</allowedThingCategories>
@@ -118,6 +146,44 @@
 				<li>GraphicsDefName</li> <!-- alternative way of specifying targetDefs for graphics -->
 			</graphics>
 			<labelFormat>Default</labelFormat> <!-- alternative formats for label display in the bottom left corner. Supported are StuffAsNoun to display eg Wood pile instead of Wooden pile and NoStuff to hide stuff and simply show pile instead. Currently doesn't affect the architect tab and blueprints -->
+			
+			<!-- overrides the normal maxItemsInCell -->
+			<maxItemsPerCellByQuality>
+				<awful>1</awful>
+				<poor>2</poor>
+				<normal>3</normal>
+				<good>4</good>
+				<excellent>5</excellent>
+				<masterwork>6</masterwork>
+				<legendary>7</legendary>
+			</maxItemsPerCellByQuality>
+
+			<!-- statFactors and offsets all require AdaptiveStorage.StatPart to be set on the relevant StatDef -->
+			<!-- then apply the relevant effect on stored items -->
+			<itemStatFactors>
+				<DefName>1</DefName>
+			</itemStatFactors>
+
+			<itemStatOffsets>
+				<DefName>0</DefName>
+			</itemStatOffsets>
+
+			<itemStatFactorsByQuality>
+				<li>
+					<stat>DefName</stat>
+					<awful>1</awful>
+					<poor>2</poor>
+					<normal>3</normal>
+					<good>4</good>
+					<excellent>5</excellent>
+					<masterwork>6</masterwork>
+					<legendary>7</legendary>
+				</li>
+			</itemStatFactorsByQuality>
+
+			<itemStatOffsetsByQuality>
+				<!-- same format as itemStatFactorsByQuality -->
+			</itemStatOffsetsByQuality>
 		</li>
 	</modExtensions>
 </ThingDef>

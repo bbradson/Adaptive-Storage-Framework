@@ -36,7 +36,17 @@ public static class OnStartup
 
 		var graphicsDefs = DefDatabase<GraphicsDef>.AllDefsListForReading;
 		foreach (var graphicsDef in graphicsDefs)
-			graphicsDef.Initialize();
+		{
+			try
+			{
+				graphicsDef.Initialize();
+			}
+			catch (Exception e)
+			{
+				Log.Error($"Error while initializing '{graphicsDef}' from mod '{
+					graphicsDef.modContentPack?.Name ?? "null"}':\n{e}");
+			}
+		}
 	}
 
 	private static void LogDefDatabaseCorruption(List<ThingDef> thingDefs, int i)

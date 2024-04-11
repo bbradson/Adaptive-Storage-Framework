@@ -10,7 +10,7 @@ public class StorageGraphic
 {
 	public GraphicData? graphicData;
 
-	public List<GraphicData> graphicDatas = new();
+	public List<GraphicData> graphicDatas = [];
 
 	public bool?
 		showContainedItems,

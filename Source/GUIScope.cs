@@ -7,14 +7,14 @@ namespace AdaptiveStorage;
 
 public static class GUIScope
 {
-	public readonly struct WidgetGroup : IDisposable
+	public readonly record struct WidgetGroup : IDisposable
 	{
 		public WidgetGroup(in Rect rect) => Widgets.BeginGroup(rect);
 
 		public void Dispose() => Widgets.EndGroup();
 	}
 	
-	public readonly struct ScrollView : IDisposable
+	public readonly record struct ScrollView : IDisposable
 	{
 		private readonly ScrollViewStatus _scrollViewStatus;
 
@@ -49,7 +49,7 @@ public static class GUIScope
 		public float Height;
 	}
 	
-	public readonly struct TextAnchor : IDisposable
+	public readonly record struct TextAnchor : IDisposable
 	{
 		private readonly UnityEngine.TextAnchor _default;
 	
@@ -62,7 +62,7 @@ public static class GUIScope
 		public void Dispose() => Text.Anchor = _default;
 	}
 
-	public readonly struct WordWrap : IDisposable
+	public readonly record struct WordWrap : IDisposable
 	{
 		private readonly bool _default;
 	
@@ -75,7 +75,7 @@ public static class GUIScope
 		public void Dispose() => Text.WordWrap = _default;
 	}
 
-	public readonly struct Color : IDisposable
+	public readonly record struct Color : IDisposable
 	{
 		private readonly UnityEngine.Color _default;
 	
@@ -88,7 +88,7 @@ public static class GUIScope
 		public void Dispose() => GUI.color = _default;
 	}
 	
-	public readonly struct Font : IDisposable
+	public readonly record struct Font : IDisposable
 	{
 		private readonly GameFont _default;
 	
@@ -101,7 +101,7 @@ public static class GUIScope
 		public void Dispose() => Text.Font = _default;
 	}
 	
-	public readonly struct FontSize : IDisposable
+	public readonly record struct FontSize : IDisposable
 	{
 		private readonly int _default;
 	

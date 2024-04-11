@@ -9,6 +9,9 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+#if !V1_4
+using LudeonTK;
+#endif
 
 namespace AdaptiveStorage;
 
@@ -44,7 +47,14 @@ public class DefEditorWindow : EditWindow
 		}
 
 		Rect rect = new(0f, 0f, inRect.width, 16f);
-		LabelColumnWidth = Widgets.HorizontalSlider_NewTemp(rect, LabelColumnWidth, 0f, inRect.width);
+		LabelColumnWidth
+#if V1_4
+			= Widgets.HorizontalSlider_NewTemp(
+#else
+			= Widgets.HorizontalSlider(
+#endif
+				rect, LabelColumnWidth, 0f, inRect.width);
+		
 		var outRect = inRect.AtZero();
 		outRect.yMin += 16f;
 		Rect rect2 = new(0f, 0f, outRect.width - 16f, ViewHeight);
@@ -83,13 +93,11 @@ public static class EditTreeNodeDatabase
 		return treeNode_Editor;
 	}
 
-	public static List<TreeNode_Editor> Roots { get; } = new();
+	public static List<TreeNode_Editor> Roots { get; } = [];
 }
 
-public class Listing_TreeDefs : Listing_Tree
+public class Listing_TreeDefs(float labelColumnWidth) : Listing_Tree
 {
-	public Listing_TreeDefs(float labelColumnWidth) => LabelWidthInt = labelColumnWidth;
-
 	public void ContentLines(TreeNode_Editor node, int indentLevel, float scrollPosition, float viewHeight)
 	{
 		node.DoSpecialPreElements(this);
@@ -176,8 +184,16 @@ public class Listing_TreeDefs : Listing_Tree
 			MakeCreateNewObjectMenu(node, baseType, AddAction2);
 		}
 
-		if (node.HasDeleteButton && widgetRow.ButtonIcon(TexButton.DeleteX, null, GenUI.SubtleMouseoverColor))
+		if (node.HasDeleteButton && widgetRow.ButtonIcon(
+#if V1_4
+			TexButton.DeleteX,
+#else
+			TexButton.Delete,
+#endif
+			null, GenUI.SubtleMouseoverColor))
+		{
 			node.Delete();
+		}
 	}
 
 	public static void ExtraInfoText(TreeNode_Editor node, WidgetRow widgetRow)
@@ -205,7 +221,7 @@ public class Listing_TreeDefs : Listing_Tree
 	public static void MakeCreateNewObjectMenu(TreeNode_Editor owningNode, Type? baseType, Action<object> addAction)
 	{
 		var list = baseType.InstantiableDescendantsAndSelf().ToList();
-		List<FloatMenuOption> list2 = new();
+		List<FloatMenuOption> list2 = [];
 		foreach (var item in list)
 		{
 			var creatingType = item;
@@ -269,7 +285,7 @@ public class Listing_TreeDefs : Listing_Tree
 			var flag = obj as bool?;
 			if (Widgets.ButtonText(rect, flag is { } value ? value.ToString() : "null"))
 			{
-				List<FloatMenuOption> list = new();
+				List<FloatMenuOption> list = [];
 				
 				for (var i = 0; i < 3; i++)
 				{
@@ -306,9 +322,14 @@ public class Listing_TreeDefs : Listing_Tree
 
 			if (array.Length != 0)
 			{
-				value = Widgets.HorizontalSlider_NewTemp(
-					new(LabelWidth + 60f + 4f, curY, EditAreaWidth - 60f - 8f, lineHeight),
-					value, array[0].min, array[0].max);
+				value
+#if V1_4
+					= Widgets.HorizontalSlider_NewTemp(
+#else
+					= Widgets.HorizontalSlider(
+#endif
+						new(LabelWidth + 60f + 4f, curY, EditAreaWidth - 60f - 8f, lineHeight),
+						value, array[0].min, array[0].max);
 
 				obj = value;
 				rect.width = 60f;
@@ -321,7 +342,7 @@ public class Listing_TreeDefs : Listing_Tree
 		{
 			if (Widgets.ButtonText(rect, obj!.ToString()))
 			{
-				List<FloatMenuOption> list = new();
+				List<FloatMenuOption> list = [];
 				
 				foreach (var value2 in Enum.GetValues(objectType))
 					list.Add(new(value2.ToString(), () => node.Value = value2));
@@ -334,7 +355,7 @@ public class Listing_TreeDefs : Listing_Tree
 		{
 			if (Widgets.ButtonText(rect, obj is null ? "null" : obj.ToString()))
 			{
-				List<FloatMenuOption> list = new();
+				List<FloatMenuOption> list = [];
 				
 				foreach (var value2 in Enum.GetValues(innerType))
 					list.Add(new(value2.ToString(), () => node.Value = value2));
@@ -450,7 +471,7 @@ public class Listing_TreeDefs : Listing_Tree
 			var rot4 = obj as Rot4?;
 			if (Widgets.ButtonText(rect, rot4 is { } value ? value.ToStringWord() : "null"))
 			{
-				List<FloatMenuOption> list = new();
+				List<FloatMenuOption> list = [];
 				foreach (var value2 in Enum.GetValues(typeof(Rot4Enum)))
 				{
 					var localVal = value2;
@@ -502,7 +523,9 @@ public class Listing_TreeDefs : Listing_Tree
 		West
 	}
 
-	public override float LabelWidth => LabelWidthInt;
+	protected override float LabelWidth => LabelWidthInt;
+
+	public float GetLabelWidth() => LabelWidth;
 
 	public static GUIStyle NullInfoLabelStyle { get; }
 		= new(UIHelpers.LabelStyle) { normal = { textColor = new(1f, 0.6f, 0.6f, 0.5f) } };
@@ -513,7 +536,7 @@ public class Listing_TreeDefs : Listing_Tree
 	public static GUIStyle GrayLabelStyle { get; }
 		= new(UIHelpers.LabelStyle) { normal = { textColor = new(1f, 1f, 1f, 0.4f) } };
 
-	private float LabelWidthInt { get; }
+	private float LabelWidthInt { get; } = labelColumnWidth;
 }
 
 public class TreeNode_Editor : TreeNode
@@ -588,7 +611,7 @@ public class TreeNode_Editor : TreeNode
 		if (nestDepth > 10 || original.children is null)
 			return null;
 
-		List<TreeNode> newList = new();
+		List<TreeNode> newList = [];
 		for (var i = 0; i < original.children.Count; i++)
 			newList.Add(new TreeNode_Editor((TreeNode_Editor)original.children[i], this, nestDepth + 1));
 		return newList;
@@ -616,7 +639,7 @@ public class TreeNode_Editor : TreeNode
 		else if (Obj == (parentNode?.parentNode as TreeNode_Editor)?.Obj)
 			children = CopyChildren(parentNode!.parentNode);
 
-		children = new();
+		children = [];
 		if (Obj is IList o)
 		{
 			var num = o.Count;
@@ -686,18 +709,22 @@ public class TreeNode_Editor : TreeNode
 			var widgetRow = listing.StartWidgetsRow(nestDepth);
 			try
 			{
-				EditWidgetsMethod.Invoke(Obj, new object[] { widgetRow });
+				EditWidgetsMethod.Invoke(Obj, [widgetRow]);
 			}
-			catch
+			catch (Exception ex)
 			{
-				var message = $"Means of Production encountered an error when trying to handle {Obj}.";
+				var message = new StringBuilder("Encountered an exception when trying to handle ");
+				message.Append(Obj);
+				message.Append('.');
 				if (Find.CurrentMap is null)
 				{
-					message += " A few methods don't work from the main menu and require a map to be loaded. This "
-						+ "might be one of them.";
+					message.Append($" A few methods don't work from the main menu and require a map to be loaded. This "
+						+ $"might be one of them.");
 				}
+				message.AppendLine();
+				message.Append(ex);
 
-				Log.Error(message);
+				Log.Error(message.ToString());
 			}
 		}
 

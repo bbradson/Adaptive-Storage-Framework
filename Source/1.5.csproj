@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<AssemblyName>AdaptiveStorageFramework</AssemblyName>
+		<RootNamespace>AdaptiveStorage</RootNamespace>
+		<OutDir>..\1.5\Assemblies\</OutDir>
+		<Authors>Bradson</Authors>
+		<Copyright>Copyright (c) 2023 Bradson</Copyright>
+		<Version>1.1.0</Version>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<Nullable>enable</Nullable>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Optimize>true</Optimize>
+		<EnableNETAnalyzers>True</EnableNETAnalyzers>
+		<AnalysisLevel>preview-recommended</AnalysisLevel>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>5</WarningLevel>
+		<NoWarn>CA1000;CA1051;CA1305;CA1707;CA1708;CA1711;CA1725;CA1852;CA2201</NoWarn>
+		<DefaultItemExcludes>$(DefaultItemExcludes);obj/**/*.*</DefaultItemExcludes>
+		<PublicizerClearCacheOnClean>true</PublicizerClearCacheOnClean>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<DefineConstants>DEBUG;V1_5</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DefineConstants>V1_5</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.5.*-*" />
+		<PackageReference Include="Lib.Harmony" Version="2.3.*" ExcludeAssets="runtime" />
+		<PackageReference Include="PolySharp" Version="1.*" />
+		<PackageReference Include="Krafs.Publicizer" Version="2.*" />
+		<Publicize Include="Assembly-CSharp:RimWorld.InspectPaneUtility.IsOpen" />
+		<Publicize Include="Assembly-CSharp:RimWorld.ITab_ContentsBase.thingsToSelect" />
+		<Publicize Include="Assembly-CSharp:RimWorld.MinifiedThing.get_CrateFrontGraphic" />
+		<Publicize Include="Assembly-CSharp:RimWorld.OverlayDrawer.RenderForbiddenOverlay" />
+		<Publicize Include="Assembly-CSharp:RimWorld.Selector.SelectableObjectsUnderMouse" />
+		<Publicize Include="Assembly-CSharp:RimWorld.Planet.CaravanThingsTabUtility.DrawMass" />
+		<Publicize Include="Assembly-CSharp:Verse.DefDatabase`1.SetIndices" />
+		<Publicize Include="Assembly-CSharp:Verse.Graphic.AngleFromRot" />
+		<Publicize Include="Assembly-CSharp:Verse.Graphic_Shadow.GlobalShadowPosOffsetX" />
+		<Publicize Include="Assembly-CSharp:Verse.Graphic_Shadow.GlobalShadowPosOffsetZ" />
+		<Publicize Include="Assembly-CSharp:Verse.Graphic_Shadow.shadowInfo" />
+		<Publicize Include="Assembly-CSharp:Verse.GraphicData.Init" />
+		<Publicize Include="Assembly-CSharp:Verse.Listing.curY" />
+		<Publicize Include="Assembly-CSharp:Verse.SectionLayer_ThingsGeneral.TakePrintFrom" />
+		<Publicize Include="Assembly-CSharp:Verse.Text.tmpTextGUIContent" />
+		<Publicize Include="Assembly-CSharp:Verse.ThingFilter.categories" />
+		<Publicize Include="Assembly-CSharp:Verse.ThingWithComps.Comps_PostDraw" />
+		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.curY" />
+		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.IncrementYIfWillExceedMaxWidth" />
+		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.IncrementPosition" />
+		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.LeftX" />
+		<Publicize Include="UnityEngine.CoreModule:UnityEngine.Graphics.Internal_DrawMesh_Injected" />
+	</ItemGroup>
+</Project>

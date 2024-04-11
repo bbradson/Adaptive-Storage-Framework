@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33209.295
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdaptiveStorage", "AdaptiveStorage.csproj", "{C0F52CB9-6857-4033-BAD6-62B410ADF253}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "1.5", "1.5.csproj", "{C0F52CB9-6857-4033-BAD6-62B410ADF253}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "1.4", "1.4.csproj", "{A038654F-7155-4AE5-84B2-2A226C519B59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{C0F52CB9-6857-4033-BAD6-62B410ADF253}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0F52CB9-6857-4033-BAD6-62B410ADF253}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0F52CB9-6857-4033-BAD6-62B410ADF253}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A038654F-7155-4AE5-84B2-2A226C519B59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A038654F-7155-4AE5-84B2-2A226C519B59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A038654F-7155-4AE5-84B2-2A226C519B59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A038654F-7155-4AE5-84B2-2A226C519B59}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

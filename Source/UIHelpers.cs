@@ -3,6 +3,10 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+#if !V1_4
+using LudeonTK;
+#endif
+
 namespace AdaptiveStorage;
 
 public static class UIHelpers
@@ -31,10 +35,17 @@ public static class UIHelpers
 		var num = Prefs.UIScale / 2f;
 		if (Prefs.UIScale > 1f && num - Mathf.Floor(num) > float.Epsilon)
 		{
+#if V1_4
 			rect.xMin = Widgets.AdjustCoordToUIScalingFloor(rect.xMin);
 			rect.yMin = Widgets.AdjustCoordToUIScalingFloor(rect.yMin);
 			rect.xMax = Widgets.AdjustCoordToUIScalingCeil(rect.xMax + 1E-05f);
 			rect.yMax = Widgets.AdjustCoordToUIScalingCeil(rect.yMax + 1E-05f);
+#else
+			rect.xMin = UIScaling.AdjustCoordToUIScalingFloor(rect.xMin);
+			rect.yMin = UIScaling.AdjustCoordToUIScalingFloor(rect.yMin);
+			rect.xMax = UIScaling.AdjustCoordToUIScalingCeil(rect.xMax + 1E-05f);
+			rect.yMax = UIScaling.AdjustCoordToUIScalingCeil(rect.yMax + 1E-05f);
+#endif
 		}
 
 		GUI.Label(rect, label, style);
@@ -112,7 +123,7 @@ public static class UIHelpers
 	/// </summary>
 	public static void StyledInfoText(this Listing_TreeDefs listing, string text, GUIStyle? style = null)
 	{
-		Rect rect = new(0f, listing.curY, listing.ColumnWidth, 50f) { xMin = listing.LabelWidth };
+		Rect rect = new(0f, listing.CurHeight, listing.ColumnWidth, 50f) { xMin = listing.GetLabelWidth() };
 		style ??= LabelStyle;
 		rect.height = text.CalcHeight(rect.width, style);
 		rect.Label(text, style);

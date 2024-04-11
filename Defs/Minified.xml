@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+	<!-- unfinished, do not use -->
+	<!-- ThingDef Name="AdaptiveStorageMinifiedBase" ParentName="MinifiedThing">
+		<defName>AdaptiveStorageMinified</defName>
+		<thingClass>AdaptiveStorage.Minified</thingClass>
+		<drawerType>MapMeshAndRealTime</drawerType>
+		<passability>PassThroughOnly</passability>
+		<fillPercent>0.4</fillPercent>
+		<castEdgeShadows>false</castEdgeShadows>
+		<pathCost>50</pathCost>
+		<pathCostIgnoreRepeat>true</pathCostIgnoreRepeat>
+		<inspectorTabs>
+			<li>ITab_Storage</li>
+		</inspectorTabs>
+		<statBases>
+			<Mass>0.44</Mass>
+		</statBases>
+	</ThingDef -->
+</Defs>

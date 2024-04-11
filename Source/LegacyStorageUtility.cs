@@ -58,8 +58,11 @@ public static class LegacyStorageUtility
 	{
 		var directlyHeldThings = thingHolder.GetDirectlyHeldThings();
 		for (var i = 0; i < directlyHeldThings.Count; i++)
-			list.Add(directlyHeldThings.GetAt(i));
+			list.Add(directlyHeldThings[i]);
 	}
+
+	public static int CurrentSlotLimit(this object? obj)
+		=> obj is ThingClass adaptive ? adaptive.CurrentSlotLimit : obj.TotalSlots();
 
 	public static int TotalSlots(this object? obj)
 	{
@@ -80,7 +83,8 @@ public static class LegacyStorageUtility
 			* (thing != null
 				? LWM.Active && LWM.GetCompProperties(thing.def) is { } lwmProps
 					? LWM.GetMaxStacksPerCell(lwmProps)
-					: thing.def.building?.maxItemsInCell ?? 1
+					: Math.Max(thing is Building building ? building.MaxItemsInCell : 1,
+						thing.def.building?.maxItemsInCell ?? 1)
 				: 1);
 	}
 }

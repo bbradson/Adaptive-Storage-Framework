@@ -15,7 +15,7 @@ public static class ToggleableOverlays
 	private static readonly MethodInfo? _checkMouseOverMethod
 		= Active
 			? AccessTools.DeclaredMethod("ToggleableOverlays.ToggleableOverlaysUtility:CheckMouseOver",
-				new[] { typeof(Thing), typeof(bool), typeof(bool) })
+				[typeof(Thing), typeof(bool), typeof(bool)])
 			: null;
 
 	private static readonly FieldInfo? _hideStorageBuildingField

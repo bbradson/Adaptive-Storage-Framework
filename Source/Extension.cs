@@ -14,12 +14,18 @@ public class Extension : DefModExtension
 
 	public LabelFormat labelFormat;
 
+	public List<StatModifier>? itemStatFactors, itemStatOffsets;
+	
+	public List<StatModifierQuality>? itemStatFactorsByQuality, itemStatOffsetsByQuality;
+
+	public ValuesByQuality? maxItemsPerCellByQuality;
+
 	public void Initialize(ThingDef parent)
 	{
 		if (graphics is null)
 			return;
 
 		for (var i = graphics.Count; i-- > 0;)
-			(graphics[i].targetDefs ??= new()).AddDistinct(parent);
+			graphics[i].targetDefs.AddDistinct(parent);
 	}
 }

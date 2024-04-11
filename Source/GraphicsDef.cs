@@ -5,24 +5,22 @@
 
 using System.Linq;
 using System.Xml;
+// ReSharper disable NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 
 namespace AdaptiveStorage;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class GraphicsDef : Def
 {
-	public static Dictionary<ThingDef, List<GraphicsDef>> Database { get; } = new();
-
-	private static Type? _deepStorageITabType
-		= Type.GetType("LWM.DeepStorage.ITab_DeepStorage_Inventory, LWM.DeepStorage");
-	
-	public ThingDef? targetDef;
-
-	public List<ThingDef>? targetDefs;
-	
-	public List<StorageGraphic> graphics = new();
+	public List<StorageGraphic> graphics = [];
 
 	public Columns<ItemGraphic>? itemGraphics;
+	
+	public ThingFilter
+		allowedFilter = new(),
+		forbiddenFilter = new();
+
+	public AllowedRequirement allowedRequirement = AllowedRequirement.Any;
 
 	public bool
 		showContainedItems = true,
@@ -31,23 +29,98 @@ public class GraphicsDef : Def
 
 	public StackBehaviour stackBehaviour;
 
-	public int randomSelectionWeight = 1;
+	public int randomSelectionWeight = 1,
+		minimumThingCount = int.MinValue,
+		minimumAllowedThingCount = int.MinValue,
+		maximumThingCount = int.MaxValue;
 
 	public List<ThingDef>?
 		requiredThingDefs,
 		disallowedThingDefs;
 
 	public List<ThingCategoryDef>? allowedThingCategories;
+	
+	public ThingDef? targetDef;
 
-	public void Initialize()
+	public List<ThingDef> targetDefs = [];
+
+	[Unsaved]
+	private bool
+		_hasEmptyStackGraphic,
+		_forbidsNothing;
+
+	public bool HasEmptyStackGraphic => _hasEmptyStackGraphic;
+
+	public bool ForbidsNothing => _forbidsNothing;
+	
+	public static Dictionary<ThingDef, List<GraphicsDef>> Database { get; } = new();
+
+	public static Func<GraphicsDef, uint> PositiveWeightSelector { get; }
+		= static graphic => graphic.randomSelectionWeight is var weight and > 0 ? (uint)weight : 0u;
+
+	public static Func<GraphicsDef, uint> NegativeWeightSelector { get; }
+		= static graphic => graphic.randomSelectionWeight is var weight and < 0 ? (uint)-weight : 0u;
+
+	public static Func<GraphicsDef, uint> NullWeightSelector { get; }
+		= static graphic => graphic.randomSelectionWeight == 0 ? 1u : 0u;
+
+	private static Type? _deepStorageITabType
+		= Type.GetType("LWM.DeepStorage.ITab_DeepStorage_Inventory, LWM.DeepStorage");
+
+	public override void ResolveReferences()
 	{
-		targetDefs ??= new();
+		if (onlyAllowRequiredThingDefs)
+			allowedRequirement = AllowedRequirement.All;
+		
+		if (randomSelectionWeight < 0)
+			randomSelectionWeight = 0;
+		
+		targetDefs ??= [];
 		
 		if (targetDef != null)
 			targetDefs.AddDistinct(targetDef);
 
+		graphics ??= [];
+		ResolveForbiddenFilter();
+		ResolveAllowedFilter();
+	}
+
+	private void ResolveForbiddenFilter()
+	{
+		forbiddenFilter ??= new();
+		forbiddenFilter.ResolveReferences();
+		
+		if (disallowedThingDefs is [_,..])
+			forbiddenFilter.SetAllowAll(disallowedThingDefs, true);
+
+		_forbidsNothing = forbiddenFilter.AllowedDefCount == 0;
+	}
+
+	private void ResolveAllowedFilter()
+	{
+		allowedFilter ??= new();
+
+		if (allowedThingCategories is [_,..])
+			(allowedFilter.categories ??= []).AddRangeDistinct(allowedThingCategories.Select(static cat => cat.defName));
+
+		allowedFilter.ResolveReferences();
+
+		if (requiredThingDefs is [_,..])
+			allowedFilter.SetAllowAll(requiredThingDefs, true);
+		
+		if (allowedFilter.AllowedDefCount == 0)
+			allowedFilter.SetAllowAll(StorageSettings.EverStorableFixedSettings().filter);
+
+		allowedFilter.SetAllowAll(forbiddenFilter.AllowedThingDefs, false);
+	}
+
+	public void Initialize()
+	{
 		foreach (var def in targetDefs)
 			InitializeOnDef(def);
+
+		if (graphics.Count == 0)
+			graphics.Add(new() { graphicData = targetDefs.FirstOrDefault()?.graphicData });
 		
 		foreach (var graphic in graphics)
 			graphic.Initialize();
@@ -55,47 +128,78 @@ public class GraphicsDef : Def
 		graphics.Sort(static (x, y)
 			=> x.minimumStackCount.CompareTo(y.minimumStackCount));
 
-		itemGraphics?.Initialize(targetDefs);
+		if (targetDefs.Count > 0)
+			itemGraphics?.Initialize(targetDefs);
+
+		var minimumStackCountOnGraphics = graphics.Min(static g => g.minimumStackCount);
+		_hasEmptyStackGraphic = minimumStackCountOnGraphics < 1;
+		
+		if (minimumAllowedThingCount < 0 && !HasEmptyStackGraphic)
+			minimumAllowedThingCount = 1;
+
+		if (minimumThingCount < minimumAllowedThingCount)
+			minimumThingCount = minimumAllowedThingCount;
+
+		if (minimumThingCount < minimumStackCountOnGraphics)
+			minimumThingCount = minimumStackCountOnGraphics;
 	}
 
-	public bool Allows(ThingDef thingDef)
-		=> (allowedThingCategories is not [_, ..] || allowedThingCategories.Overlaps(thingDef.thingCategories))
-			&& (disallowedThingDefs is not [_, ..] || !disallowedThingDefs.Contains(thingDef))
-			&& (requiredThingDefs is not [_, ..]
-				|| !onlyAllowRequiredThingDefs
-				|| requiredThingDefs.Contains(thingDef));
+	public bool Allows(int thingCount) => thingCount >= minimumThingCount && thingCount <= maximumThingCount;
 
-	public bool Allows(List<Thing> things)
+	public bool Allows(ThingDef thingDef) => allowedFilter.Allows(thingDef);
+
+	public bool Allows(Thing thing) => allowedFilter.Allows(thing);
+
+	public bool Allows<T>(T things) where T : IList<Thing>
 	{
-		if (things.Count == 0)
-			return requiredThingDefs is not [_, ..] && graphics.Exists(static g => g.minimumStackCount < 1);
+		if (!Allows(things.Count))
+			return false;
 
+		var allowedThingCount = 0;
+		var remainingThingCount = 0;
 		for (var i = things.Count; i-- > 0;)
 		{
-			if (!Allows(things[i].def))
+			var thing = things[i];
+			if (Allows(thing))
+				allowedThingCount++;
+			else if (OnlyAllowRequiredThingDefs || Forbids(thing))
 				return false;
+			else
+				remainingThingCount++;
 		}
 
-		return onlyAllowRequiredThingDefs
-			|| requiredThingDefs is not [_,..]
-			|| things.Overlaps(requiredThingDefs);
+		return allowedThingCount >= minimumAllowedThingCount
+			&& allowedRequirement switch
+			{
+				AllowedRequirement.Majority => allowedThingCount > remainingThingCount,
+				AllowedRequirement.Minority => allowedThingCount < remainingThingCount,
+				_ => true
+			};
 	}
 
-	public bool Allows<T>(T thingDefs) where T : IList<ThingDef>
+	public bool Allows(IList<ThingDef> thingDefs)
 	{
 		if (thingDefs.Count == 0)
-			return requiredThingDefs is not [_, ..] && graphics.Exists(static g => g.minimumStackCount < 1);
-		
+			return HasEmptyStackGraphic;
+
+		var hasAnyAllowedThing = false;
 		for (var i = thingDefs.Count; i-- > 0;)
 		{
-			if (!Allows(thingDefs[i]))
+			var thingDef = thingDefs[i];
+			if (Allows(thingDef))
+				hasAnyAllowedThing = true;
+			else if (OnlyAllowRequiredThingDefs || Forbids(thingDef))
 				return false;
 		}
 
-		return onlyAllowRequiredThingDefs
-			|| requiredThingDefs is not [_,..]
-			|| thingDefs.Overlaps(requiredThingDefs);
+		return hasAnyAllowedThing;
 	}
+
+	private bool OnlyAllowRequiredThingDefs => allowedRequirement == AllowedRequirement.All;
+
+	public bool Forbids(ThingDef thingDef) => !ForbidsNothing && forbiddenFilter.Allows(thingDef);
+
+	public bool Forbids(Thing thing) => !ForbidsNothing && forbiddenFilter.Allows(thing);
 
 	private void InitializeOnDef(ThingDef def)
 	{
@@ -106,11 +210,11 @@ public class GraphicsDef : Def
 		if (!def.inspectorTabs.Contains(contentsITabType) && !def.inspectorTabs.Contains(_deepStorageITabType))
 		{
 			def.inspectorTabs.Add(contentsITabType);
-			(def.inspectorTabsResolved ??= new()).Add(InspectTabManager.GetSharedInstance(contentsITabType));
+			(def.inspectorTabsResolved ??= []).Add(InspectTabManager.GetSharedInstance(contentsITabType));
 		}
 
 		if (!Database.TryGetValue(def, out var list))
-			Database[def] = list = new();
+			Database[def] = list = [];
 
 		if (!list.Contains(this))
 			list.Add(this);
@@ -118,6 +222,9 @@ public class GraphicsDef : Def
 
 	public override IEnumerable<string> ConfigErrors()
 	{
+		if (randomSelectionWeight < 0)
+			yield return ErrorForDef("has negative random selection weight");
+		
 		foreach (var configError in base.ConfigErrors())
 			yield return configError;
 		
@@ -189,7 +296,7 @@ public class GraphicsDef : Def
 	[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 	public class Columns<T> where T : IHasPosition, new()
 	{
-		public List<Rows<T>> columns = new();
+		public List<Rows<T>> columns = [];
 
 		public T? defaults;
 
@@ -246,7 +353,7 @@ public class GraphicsDef : Def
 	public class Rows<T> : IHasPosition where T : IHasPosition
 	{
 		public int? position;
-		public List<T> rows = new();
+		public List<T> rows = [];
 	
 		int? IHasPosition.Position
 		{
@@ -267,5 +374,13 @@ public class GraphicsDef : Def
 				rows = DirectXmlToObject.ObjectFromXml<List<T>>(childNode, false);
 			}
 		}
+	}
+
+	public enum AllowedRequirement
+	{
+		Any,
+		All,
+		Majority,
+		Minority
 	}
 }
