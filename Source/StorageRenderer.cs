@@ -354,14 +354,14 @@ public class StorageRenderer
 		{
 			var resultIndex = allowedGraphics.TryGetSeededIndex(seed, _weightSelectorsInOrder[i]);
 			if (resultIndex >= 0)
-				return resultIndex;
+				return allGraphics.IndexOf(allowedGraphics[resultIndex]);
 		}
 
 		for (var i = _weightSelectorsInOrder.Length; i-- > 0;)
 		{
 			var resultIndex = forbiddenGraphics.TryGetSeededIndex(seed, _weightSelectorsInOrder[i]);
 			if (resultIndex >= 0)
-				return resultIndex;
+				return allGraphics.IndexOf(forbiddenGraphics[resultIndex]);
 		}
 
 		return 0;
