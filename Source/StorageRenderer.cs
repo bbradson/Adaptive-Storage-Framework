@@ -372,12 +372,28 @@ public class StorageRenderer
 		GraphicsDef.PositiveWeightSelector, GraphicsDef.NegativeWeightSelector, GraphicsDef.NullWeightSelector
 	];
 
+	private void AssignToDrawablesNowOrLater(Thing newItem, SectionLayer? layer)
+	{
+		if (UnityData.IsInMainThread)
+			AssignToDrawables(newItem, layer);
+		else
+			LongEventHandler.ExecuteWhenFinished(() => AssignToDrawables(newItem, layer));
+	}
+
 	private void AssignToDrawables(Thing newItem, SectionLayer? layer)
 	{
 		if (MakePrintData(newItem, layer) is { } printData)
 			Drawables.Add(printData);
 
 		Parent.Map.dynamicDrawManager.DeRegisterDrawable(newItem);
+	}
+
+	private void AssignToPrintablesNowOrLater(Thing newItem, SectionLayer? layer)
+	{
+		if (UnityData.IsInMainThread)
+			AssignToPrintables(newItem, layer);
+		else
+			LongEventHandler.ExecuteWhenFinished(() => AssignToPrintables(newItem, layer));
 	}
 
 	private void AssignToPrintables(Thing newItem, SectionLayer? layer)
@@ -395,13 +411,13 @@ public class StorageRenderer
 		var drawerType = newItemDef.drawerType;
 
 		if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
-			AssignToDrawables(newItem, layer);
+			AssignToDrawablesNowOrLater(newItem, layer);
 
 		if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
-			AssignToPrintables(newItem, layer);
+			AssignToPrintablesNowOrLater(newItem, layer);
 
 		if (updateOthers)
-			UpdateAllPrintDatas(layer, newItem);
+			UpdateAllPrintDatasNowOrLater(layer, newItem);
 
 		if (!ThingRequestGroup.HasGUIOverlay.Includes(newItem.def))
 			return;
@@ -410,6 +426,14 @@ public class StorageRenderer
 
 		if (!PerformanceFish.RemoveFromGroupList(lister, newItem, ThingRequestGroup.HasGUIOverlay))
 			lister.ThingsInGroup(ThingRequestGroup.HasGUIOverlay).Remove(newItem);
+	}
+
+	private void UpdateAllPrintDatasNowOrLater(SectionLayer? layer, Thing? except = null)
+	{
+		if (UnityData.IsInMainThread)
+			UpdateAllPrintDatas(layer, except);
+		else
+			LongEventHandler.ExecuteWhenFinished(() => UpdateAllPrintDatas(layer, except));
 	}
 
 	private void UpdateAllPrintDatas(SectionLayer? layer, Thing? except = null)
@@ -532,7 +556,7 @@ public class StorageRenderer
 		}
 
 		if (updateOthers)
-			UpdateAllPrintDatas(layer, newItem);
+			UpdateAllPrintDatasNowOrLater(layer, newItem);
 	}
 
 	public void TryDirtyParentMapMesh()

@@ -235,13 +235,7 @@ public class PrintData
 			return;
 
 		if (updateMaterial)
-		{
-			var newMaterial = Graphic.MatAt(thingRotation, Thing);
-			if (_material == newMaterial)
-				updateMaterial = false;
-			else
-				_material = newMaterial;
-		}
+			updateMaterial = TryUpdateMaterial(thingRotation);
 
 		if (!Graphic.ShouldDrawRotated && _thingRotation.IsHorizontal != thingRotation.IsHorizontal)
 			_drawSize = DrawSize.Rotated();
@@ -279,10 +273,20 @@ public class PrintData
 			InitializeFromAtlas(atlasGroup ?? Thing.GetAtlasGroup());
 	}
 
+	private bool TryUpdateMaterial(Rot4 thingRotation)
+	{
+		var newMaterial = Graphic.MatAt(thingRotation, Thing);
+		if (_material == newMaterial)
+			return false;
+
+		_material = newMaterial;
+		return true;
+	}
+
 	public void SetGraphic(Graphic graphic, TextureAtlasGroup? atlasGroup = null, bool updateMaterial = true)
 	{
 		_graphic = graphic;
-		
+
 		if (updateMaterial)
 			_material = graphic.MatAt(ThingRotation, Thing);
 		
@@ -356,6 +360,7 @@ public class PrintData
 		_drawLoc = drawLoc;
 		_thingRotation = thingRotation;
 		_drawSize = drawSize;
+		_drawOffset = drawOffset;
 		_extraRotation = extraRotation;
 		_rotation = rotation;
 		_flipUv = flipUv;

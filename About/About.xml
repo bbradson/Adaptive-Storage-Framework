@@ -8,7 +8,9 @@
 		<li>Bradson</li>
 	</authors>
 
-	<packageId>adaptive.storage.framework</packageId>
+	<packageId>adaptive.storage.framework.dev</packageId>
+
+	<modIconPath IgnoreIfNoMatchingField="True">AdaptiveStorageFramework/ModIcon</modIconPath>
 
 	<description>Adaptive Storage Framework contains several fancy features to allow modders to better shape the way they want to make and change their own storage mods. It has added functionalities to change textures based on what items are stored, how much, item rendering offsets and so on.</description>
 
