@@ -72,8 +72,8 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 	public override int MaxItemsInCell => _maxItemsInCell;
 
 	public virtual SectionLayer? CurrentSectionLayer
-		=> SpawnedOrAnyParentSpawned
-			? MapHeld.mapDrawer.SectionAt(PositionHeld).GetLayer(typeof(SectionLayer_ThingsGeneral))
+		=> SpawnedOrAnyParentSpawned && MapHeld.mapDrawer is { sections: not null} drawer
+			? drawer.SectionAt(PositionHeld).GetLayer(typeof(SectionLayer_ThingsGeneral))
 			: null;
 
 	public IntVec3 BottomLeftCell { get; private set; }

@@ -8,7 +8,7 @@
 		<li>Bradson</li>
 	</authors>
 
-	<packageId>adaptive.storage.framework.dev</packageId>
+	<packageId>adaptive.storage.framework</packageId>
 
 	<modIconPath IgnoreIfNoMatchingField="True">AdaptiveStorageFramework/ModIcon</modIconPath>
 
