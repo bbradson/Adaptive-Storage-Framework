@@ -478,6 +478,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 				
 				renderer.InitializeStoredThingGraphics(Parent.CurrentSectionLayer);
 				renderer.NotifyCurrentGraphicChanged();
+				LongEventHandler.ExecuteWhenFinished(() => Parent.DirtyMapMesh(Parent.Map));
 			}
 		};
 
