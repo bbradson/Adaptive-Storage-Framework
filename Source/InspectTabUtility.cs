@@ -3,9 +3,6 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
-using System.Linq;
-// ReSharper disable PossibleMultipleEnumeration
-
 namespace AdaptiveStorage;
 
 public static class InspectTabUtility
@@ -40,9 +37,10 @@ public static class InspectTabUtility
 		if (Find.Selector.NumSelected > 1)
 			return;
 
-		var tabs = selectable.GetInspectTabs();
+		using var pooledTabs = selectable.GetInspectTabs().ToPooledList();
+		var tabs = pooledTabs.List;
 
-		if (tabs.Any(static tab
+		if (tabs.Exists(static tab
 			=> InspectPaneUtility.IsOpen(tab, (MainTabWindow_Inspect)MainButtonDefOf.Inspect.TabWindow)))
 		{
 			return;
@@ -50,9 +48,11 @@ public static class InspectTabUtility
 
 		var selectedContentsTab = AdaptiveStorageFrameworkSettings.ContentsTab;
 
-		var tab = selectedContentsTab is null || selectable.StoredThings().Count < 1
-			? tabs.FirstOrDefault(static tab => tab is ITab_Storage)
-			: selectedContentsTab;
+		var tab = selectedContentsTab is null
+			|| !tabs.Contains(selectedContentsTab)
+			|| !selectedContentsTab.IsVisible
+				? tabs.Find(static tab => tab is ITab_Storage)
+				: selectedContentsTab;
 
 		if (tab is null)
 			return;

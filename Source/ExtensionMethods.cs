@@ -3,6 +3,7 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using AdaptiveStorage.Pools;
 #if V1_4
 using System.Runtime.CompilerServices;
 #endif
@@ -125,6 +126,23 @@ public static class ExtensionMethods
 			if (!list.Contains(item))
 				list.Add(item);
 		}
+	}
+
+	public static PooledIList<List<TSource>> ToPooledList<TSource>(this IEnumerable<TSource> source)
+	{
+		var result = new PooledIList<List<TSource>>();
+		
+		try
+		{
+			result.List.AddRange(source);
+		}
+		catch
+		{
+			result.Dispose();
+			throw;
+		}
+		
+		return result;
 	}
 
 	public static void SetAllowAll(this ThingFilter filter, IEnumerable<ThingDef> defs, bool allow)

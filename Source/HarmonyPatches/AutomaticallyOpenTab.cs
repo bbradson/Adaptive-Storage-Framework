@@ -14,7 +14,7 @@ public static class AutomaticallyOpenTab
 	[HarmonyPostfix]
 	public static void Postfix(object t)
 	{
-		if (t is ISlotGroupParent and (not ThingClass) and ISelectable selectable)
+		if (t is IStoreSettingsParent and (not ThingClass) and ISelectable selectable)
 			InspectTabUtility.TryOpen(selectable);
 	}
 }
