@@ -3,7 +3,9 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using AdaptiveStorage.ModCompatibility;
 using AdaptiveStorage.Pools;
 
@@ -192,6 +194,12 @@ public class StorageRenderer
 		return result;
 	}
 
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private void LogFailedPrintAttempt(in Vector3 drawLoc)
+		=> Log.Error($"Print for '{Parent}' at drawLoc '{drawLoc}' had null section layer passed in. Sections "
+			+ $"should never be null and could be an indicator for parts of the map having failed to load.\n{
+				new StackTrace(true)}");
+
 	public void PrintAt(SectionLayer layer, in Vector3 drawLoc, in Vector2 drawSize)
 	{
 		_drawScale = TryGetCurrentDrawSize(out var size) ? drawSize / size : Vector2.one;
@@ -200,6 +208,12 @@ public class StorageRenderer
 
 	public void PrintAt(SectionLayer layer, in Vector3 drawLoc)
 	{
+		if (layer == null!)
+		{
+			LogFailedPrintAttempt(drawLoc);
+			return;
+		}
+		
 		if (CurrentGraphic is null)
 		{
 			Parent.BasePrint(layer);
@@ -210,7 +224,7 @@ public class StorageRenderer
 
 		UpdateAllPrintDatas(layer);
 		for (var i = Printables.Count; i-- > 0;)
-			Printables[i].PrintAt(drawLoc);
+			Printables[i].PrintAt(layer, drawLoc);
 
 		PostPrintComps(layer);
 	}
@@ -668,10 +682,11 @@ public class StorageRenderer
 	private Vector3 DrawOffsetForThing(Thing thing, in Vector3 parentDrawLoc, Rot4 thingRotation,
 		ItemGraphic itemGraphic, out float stackRotation)
 	{
-		var position = ItemOffsetAt(thing.Position, thing.Map, thing.thingIDNumber, itemGraphic,
+		var parentRotation = Parent.Rotation;
+		var position = ItemOffsetAt(thing.Position, thing.Map, parentRotation, thing.thingIDNumber, itemGraphic,
 			CurrentGraphicVariation, out stackRotation);
 
-		position += itemGraphic.DrawOffsetForRot(Parent.Rotation);
+		position += itemGraphic.DrawOffsetForRot(parentRotation);
 
 		if (thing is Pawn pawn)
 		{
@@ -688,8 +703,8 @@ public class StorageRenderer
 		return position - parentDrawLoc;
 	}
 
-	private static Vector3 ItemOffsetAt(in IntVec3 position, Map map, int thingID, ItemGraphic itemGraphic,
-		GraphicsDef? graphicsDef, out float stackRotation)
+	private static Vector3 ItemOffsetAt(in IntVec3 position, Map map, Rot4 parentRotation, int thingID,
+		ItemGraphic itemGraphic, GraphicsDef? graphicsDef, out float stackRotation)
 	{
 		var itemCount = 0;
 		var precedingItemCount = 0;
@@ -726,7 +741,7 @@ public class StorageRenderer
 
 		var precedingItemCountFloat = (float)precedingItemCount;
 
-		var stackOffset = itemGraphic.stackOffset;
+		var stackOffset = itemGraphic.StackOffsetForRot(parentRotation);
 
 		stackOffset.y = precedingItemCountFloat
 			* (stackOffset.y == 0f ? ItemGraphic.DEFAULT_STACK_OFFSET_Y : stackOffset.y);

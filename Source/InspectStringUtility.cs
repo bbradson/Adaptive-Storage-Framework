@@ -20,15 +20,15 @@ public static class InspectStringUtility
 		var stringBuilder = SimplePool<StringBuilder>.Get();
 		stringBuilder.Clear();
 
-		if (building.storageGroup != null)
-			AppendLinkedStorageSettings(building, text, stringBuilder);
+		if (building is IStorageGroupMember { Group: { } group })
+			AppendLinkedStorageSettings(group, text, stringBuilder);
 
 		if (!text.NullOrEmpty() || stringBuilder.Length > 0)
 			stringBuilder.Append('\n');
 
 		var storedThings = building.StoredThings();
 
-		text += AppendCount(storedThings.Count > 0
+		text += AppendCount(storedThings.Length > 0
 				? AppendStoredThings(stringBuilder, storedThings)
 				: stringBuilder.Append(Strings.TranslatedWithBackup.Empty.CapitalizeFirst()), building, storedThings)
 			.ToString();
@@ -77,14 +77,14 @@ public static class InspectStringUtility
 		return stringBuilder;
 	}
 
-	private static void AppendLinkedStorageSettings(Building_Storage building, string text, StringBuilder stringBuilder)
+	private static void AppendLinkedStorageSettings(StorageGroup group, string text, StringBuilder stringBuilder)
 	{
 		if (!text.NullOrEmpty())
 			stringBuilder.Append('\n');
 
 		stringBuilder.Append(Strings.Translated.LinkedStorageSettings)
 			.Append(": ")
-			.Append(Strings.Translated.NumBuildings.Formatted(building.storageGroup.MemberCount).CapitalizeFirst());
+			.Append(Strings.Translated.NumBuildings.Formatted(group.MemberCount).CapitalizeFirst());
 	}
 
 	private static Func<ThingWithComps, string> _thingWithCompsGetInspectString

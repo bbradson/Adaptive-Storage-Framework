@@ -63,6 +63,19 @@ public class ContentsITab : ITab_ContentsBase
 	protected override void DoItemsLists(Rect outRect, ref float curY)
 	{
 		var storedThings = container;
+		
+		if (storedThings is Thing[] thingArray)
+		{
+			Array.Sort(thingArray, (Comparison<Thing>)(static (a, b) =>
+			{
+				var result = string.Compare(a.GetInnerIfMinified().LabelNoCount, b.GetInnerIfMinified().LabelNoCount,
+					StringComparison.OrdinalIgnoreCase);
+				if (result == 0)
+					result = a.stackCount.CompareTo(b.stackCount);
+				
+				return result;
+			}));
+		}
 
 		using var massList = new ScopedStatList(storedThings, StatDefOf.Mass);
 		using var groupScope = new GUIScope.WidgetGroup(outRect);

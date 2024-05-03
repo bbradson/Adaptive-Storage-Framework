@@ -95,6 +95,13 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		_count = 0;
 	}
 
+	public Thing[] ToArray()
+	{
+		var destinationArray = new Thing[_count];
+		Array.Copy(_things, 0, destinationArray, 0, _count);
+		return destinationArray;
+	}
+
 	public bool Contains(ThingDef item) => IndexOf(item) >= 0;
 	public bool Contains(Thing item) => IndexOf(item) >= 0;
 

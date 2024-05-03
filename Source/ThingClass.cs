@@ -144,11 +144,15 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 	
 	protected virtual void PostInitialize() // why does this not exist on Thing ???
 	{
-		if (_maxItemsByCell.Length == 0)
-			_maxItemsByCell = new int[def.Size.Area];
-		
 		Extension = def.GetModExtension<Extension>();
 		CompQuality = GetComp<CompQuality>();
+		
+		if (_maxItemsByCell.Length == 0)
+		{
+			_maxItemsByCell = new int[def.Size.Area];
+			Array.Fill(_maxItemsByCell, _maxItemsInCell = Math.Min(DefaultMaxItemsInCell(), _currentSlotLimitPerCell));
+		}
+		
 		Renderer = new(this);
 		_godModeGizmos = new(this);
 		_statDrawEntries = new(this);
@@ -232,9 +236,15 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 
 	public override void SpawnSetup(Map map, bool respawningAfterLoad)
 	{
+		BottomLeftCell = this.OccupiedRect()
+#if V1_4
+			.BottomLeft;
+#else
+			.Min; // wtf? why was this renamed?
+#endif
+
 		base.SpawnSetup(map, respawningAfterLoad);
 
-		BottomLeftCell = AllSlotCellsList().MinBy(static cell => cell.x * cell.z);
 		TotalSlots = CellCount * DefaultMaxItemsInCell();
 		CurrentSlotLimit = _currentSlotLimit;
 		InitializeStoredThings();

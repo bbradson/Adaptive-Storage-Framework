@@ -9,10 +9,10 @@ namespace AdaptiveStorage;
 
 public static class LegacyStorageUtility
 {
-	public static IList<Thing> StoredThings(this object? obj)
+	public static Thing[] StoredThings(this object? obj)
 	{
 		if (obj is ThingClass adaptive)
-			return adaptive.StoredThings;
+			return adaptive.StoredThings.ToArray();
 		
 		var list = SimplePool<List<Thing>>.Get();
 		list.Clear();

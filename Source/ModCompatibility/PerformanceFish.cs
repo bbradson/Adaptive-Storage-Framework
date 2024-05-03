@@ -16,21 +16,23 @@ public static class PerformanceFish
 		_addToGroupListMethod
 			= Active
 				? AccessTools.DeclaredMethod("PerformanceFish.Listers.ThingsPrepatches:AddToGroupList")
+				?? throw new MissingMethodException("PerformanceFish.Listers.ThingsPrepatches:AddToGroupList")
 				: null,
 		_removeFromGroupListMethod
 			= Active
 				? AccessTools.DeclaredMethod("PerformanceFish.Listers.ThingsPrepatches:RemoveFromGroupList")
+				?? throw new MissingMethodException("PerformanceFish.Listers.ThingsPrepatches:RemoveFromGroupList")
 				: null;
 
 	private static readonly Action<ListerThings, Thing, ThingRequestGroup>?
 		_addToGroupListFunc
-			= Active && _addToGroupListMethod != null
-				? (Action<ListerThings, Thing, ThingRequestGroup>)_addToGroupListMethod.CreateDelegate(
+			= Active
+				? (Action<ListerThings, Thing, ThingRequestGroup>)_addToGroupListMethod!.CreateDelegate(
 					typeof(Action<ListerThings, Thing, ThingRequestGroup>))
 				: null,
 		_removeFromGroupListFunc
-			= Active && _removeFromGroupListMethod != null
-				? (Action<ListerThings, Thing, ThingRequestGroup>)_removeFromGroupListMethod.CreateDelegate(
+			= Active
+				? (Action<ListerThings, Thing, ThingRequestGroup>)_removeFromGroupListMethod!.CreateDelegate(
 					typeof(Action<ListerThings, Thing, ThingRequestGroup>))
 				: null;
 

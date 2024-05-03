@@ -45,6 +45,10 @@ public class ItemGraphic : IHasPosition
 		drawOffset;
 
 	public Vector3?
+		stackOffsetNorth,
+		stackOffsetEast,
+		stackOffsetSouth,
+		stackOffsetWest,
 		drawOffsetNorth,
 		drawOffsetEast,
 		drawOffsetSouth,
@@ -72,13 +76,23 @@ public class ItemGraphic : IHasPosition
 		}
 	}
 
+	public Vector3 StackOffsetForRot(Rot4 rot)
+		=> rot.AsInt switch
+		{
+			Rot4.NorthInt => stackOffsetNorth,
+			Rot4.EastInt => stackOffsetEast,
+			Rot4.SouthInt => stackOffsetSouth,
+			Rot4.WestInt => stackOffsetWest,
+			_ => stackOffset
+		} ?? stackOffset;
+
 	public Vector3 DrawOffsetForRot(Rot4 rot)
 		=> rot.AsInt switch
 		{
-			0 => drawOffsetNorth ?? drawOffset,
-			1 => drawOffsetEast ?? drawOffset,
-			2 => drawOffsetSouth ?? drawOffset,
-			3 => drawOffsetWest ?? drawOffset,
+			Rot4.NorthInt => drawOffsetNorth,
+			Rot4.EastInt => drawOffsetEast,
+			Rot4.SouthInt => drawOffsetSouth,
+			Rot4.WestInt => drawOffsetWest,
 			_ => drawOffset
-		};
+		} ?? drawOffset;
 }

@@ -49,7 +49,15 @@
 							<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour> <!-- default stacks items of matching defs diagonally, items of varying defs in a circle and places weapons horizontally next to each other in alternating heights -->
 							<stackOffset>(0.0,0.0,0.0)</stackOffset><!-- offset inbetween each stacked item when using Stack as stackBehaviour. Defaults are (0.11,0.004054054,0.24). The middle value can be set to 0 to specify the default too -->
 
+							<!-- optionally with different values depending on rotation -->
+							<stackOffsetEast>(0.0,0.0,0.0)</stackOffsetEast>
+							<stackOffsetWest>(0.0,0.0,0.0)</stackOffsetWest>
+							<stackOffsetNorth>(0.0,0.0,0.0)</stackOffsetNorth>
+							<stackOffsetSouth>(0.0,0.0,0.0)</stackOffsetSouth>
+
 							<drawOffset>(0.0,0.0,0.0)</drawOffset><!-- used for any orientation not specified through one of the following fields -->
+
+							<!-- optionally with different values depending on rotation -->
 							<drawOffsetEast>(0.0,0.0,0.0)</drawOffsetEast>
 							<drawOffsetWest>(0.0,0.0,0.0)</drawOffsetWest>
 							<drawOffsetNorth>(0.0,0.0,0.0)</drawOffsetNorth>

@@ -16,20 +16,23 @@ public static class ToggleableOverlays
 		= Active
 			? AccessTools.DeclaredMethod("ToggleableOverlays.ToggleableOverlaysUtility:CheckMouseOver",
 				[typeof(Thing), typeof(bool), typeof(bool)])
+			?? throw new MissingMethodException(
+				"ToggleableOverlays.ToggleableOverlaysUtility:CheckMouseOver(Thing,bool,bool)")
 			: null;
 
 	private static readonly FieldInfo? _hideStorageBuildingField
 		= Active
 			? AccessTools.DeclaredField("ToggleableOverlays.ModSettings_ToggleableOverlays:hideStorageBuilding")
+			?? throw new MissingFieldException("ToggleableOverlays.ModSettings_ToggleableOverlays:hideStorageBuilding")
 			: null;
 
 	private static readonly Func<Thing, bool, bool, bool>? _checkMouseOverFunc
-		= Active && _checkMouseOverMethod != null
-			? (Func<Thing, bool, bool, bool>)_checkMouseOverMethod.CreateDelegate(typeof(Func<Thing, bool, bool, bool>))
+		= Active
+			? (Func<Thing, bool, bool, bool>)_checkMouseOverMethod!.CreateDelegate(typeof(Func<Thing, bool, bool, bool>))
 			: null;
 
 	private static readonly AccessTools.FieldRef<bool>? _hideStorageBuildingsFunc
-		= Active && _hideStorageBuildingField != null
+		= Active
 			? AccessTools.StaticFieldRefAccess<bool>(_hideStorageBuildingField)
 			: null;
 

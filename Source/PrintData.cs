@@ -4,6 +4,7 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using UnityEngine.Rendering;
 
 namespace AdaptiveStorage;
@@ -148,9 +149,11 @@ public class PrintData
 
 	public void Print() => PrintAt(_drawLoc);
 
-	public void PrintAt(Vector3 drawLoc)
+	public void PrintAt(in Vector3 drawLoc) => PrintAt(Layer!, drawLoc);
+
+	public void PrintAt(SectionLayer layer, Vector3 drawLoc)
 	{
-		if (Layer is null)
+		if (layer == null!)
 		{
 			LogFailedPrintAttempt();
 			return;
@@ -160,16 +163,17 @@ public class PrintData
 
 		if (Thing is MinifiedThing minifiedThing)
 		{
-			minifiedThing.PrintAt(Layer, drawLoc);
+			minifiedThing.PrintAt(layer, drawLoc);
 			return;
 		}
 
-		Printer_Plane.PrintPlane(Layer, drawLoc, DrawSize, Material, Rotation, FlipUv, Uvs, Colors);
+		Printer_Plane.PrintPlane(layer, drawLoc, DrawSize, Material, Rotation, FlipUv, Uvs, Colors);
 
 		if (ShadowData is { } shadowData && shadowData != _defaultShadowData)
-			PrintUtility.PrintShadowAt(shadowData, drawLoc, ThingRotation, Layer);
+			PrintUtility.PrintShadowAt(shadowData, drawLoc, ThingRotation, layer);
 	}
 
+	[MethodImpl(MethodImplOptions.NoInlining)]
 	private void LogFailedPrintAttempt()
 		=> Log.Error($"Tried printing '{Thing}' at drawLoc '{_drawLoc}' with null section layer.\n{
 			new StackTrace(true)}");

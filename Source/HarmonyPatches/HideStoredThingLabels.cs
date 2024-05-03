@@ -2,7 +2,7 @@
 // This Source Code Form is subject to the terms of the MIT license.
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
-
+/*
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 
@@ -19,4 +19,4 @@ public static class HideStoredThingLabels
 		=> !__instance.IsItem()
 			|| __instance.StoringThing() is not ThingClass storingThing
 			|| __instance == storingThing;
-}
+}*/
