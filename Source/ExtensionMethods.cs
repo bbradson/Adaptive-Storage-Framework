@@ -3,10 +3,8 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
-using AdaptiveStorage.Pools;
-#if V1_4
 using System.Runtime.CompilerServices;
-#endif
+using AdaptiveStorage.Pools;
 
 namespace AdaptiveStorage;
 
@@ -166,6 +164,15 @@ public static class ExtensionMethods
 
 	public static Vector3 GetPosition(this in Matrix4x4 matrix)
 		=> default(Vector3) with { x = matrix.m03, y = matrix.m13, z = matrix.m23 };
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static Map? TryGetMap(this Thing thing)
+	{
+		var maps = Current.Game.Maps;
+		var mapIndex = (uint)thing.mapIndexOrState;
+		
+		return mapIndex < (uint)maps.Count ? maps[(int)mapIndex] : null;
+	}
 
 	public static TextureAtlasGroup GetAtlasGroup(this Thing thing) => thing.def.category.ToAtlasGroup();
 

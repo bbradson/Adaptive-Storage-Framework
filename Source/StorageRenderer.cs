@@ -575,10 +575,14 @@ public class StorageRenderer
 
 	public void TryDirtyParentMapMesh()
 	{
-		if (!Parent.Spawned || Time.frameCount == _lastMapMeshDirtyFrame)
+		if (Parent.TryGetMap() is not { } map
+			|| Time.frameCount == _lastMapMeshDirtyFrame
+			|| map.mapDrawer is not { sections: not null})
+		{
 			return;
+		}
 
-		Parent.DirtyMapMesh(Parent.Map);
+		Parent.DirtyMapMesh(map);
 		_lastMapMeshDirtyFrame = Time.frameCount;
 	}
 

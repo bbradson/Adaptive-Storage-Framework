@@ -5,7 +5,7 @@
 		<RootNamespace>AdaptiveStorage</RootNamespace>
 		<Authors>Bradson</Authors>
 		<Copyright>Copyright (c) 2023 Bradson</Copyright>
-		<Version>1.1.1</Version>
+		<Version>1.1.2</Version>
 		<TargetFramework>net48</TargetFramework>
 		<LangVersion>preview</LangVersion>
 		<Nullable>enable</Nullable>
@@ -43,6 +43,7 @@
 		<Publicize Include="Assembly-CSharp:Verse.MapDrawer.sections" />
 		<Publicize Include="Assembly-CSharp:Verse.SectionLayer_ThingsGeneral.TakePrintFrom" />
 		<Publicize Include="Assembly-CSharp:Verse.Text.tmpTextGUIContent" />
+		<Publicize Include="Assembly-CSharp:Verse.Thing.mapIndexOrState" />
 		<Publicize Include="Assembly-CSharp:Verse.ThingFilter.categories" />
 		<Publicize Include="Assembly-CSharp:Verse.ThingWithComps.Comps_PostDraw" />
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.curY" />
