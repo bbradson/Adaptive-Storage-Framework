@@ -3,10 +3,12 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using AdaptiveStorage.Fishery.Pools;
 using RimWorld.Planet;
 
 namespace AdaptiveStorage;
 
+[PublicAPI]
 public class ContentsITab : ITab_ContentsBase
 {
 	public static readonly string
@@ -17,23 +19,67 @@ public class ContentsITab : ITab_ContentsBase
 
 	protected new object SelObject
 		=> base.SelObject is var obj && obj is Thing thing ? thing.GetInnerIfMinified() : obj;
-	
-	public override IList<Thing> container => SelObject.StoredThings();
+
+	public List<object> SelectedStorages
+	{
+		get
+		{
+			var currentSelObjects = AllSelObjects;
+			if (currentSelObjects._version != _selObjectsVersion)
+			{
+				UpdateSelectedStorages(_selectedStorages);
+				_selObjectsVersion = currentSelObjects._version;
+			}
+
+			return _selectedStorages;
+		}
+	}
+
+	public override IList<Thing> container
+	{
+		get
+		{
+			var storages = SelectedStorages;
+			if (storages.Count == 1)
+				return storages[0].StoredThings();
+			
+			using var pooledList = new PooledList<Thing>();
+			var list = pooledList.List;
+
+			for (var i = 0; i < storages.Count; i++)
+				list.AddRange(storages[i].StoredThings());
+			
+			return list.ToArray();
+		}
+	}
+
+	protected virtual int SlotLimit => SelectedStorages.Sum(static storage => storage.CurrentSlotLimit());
+
+	protected virtual bool CanRemoveThings
+		=> SelectedStorages.TrueForAll(static storage
+			=> storage is Thing { Faction: { } faction } && faction == Faction.OfPlayer);
 
 	// this is a confirmation box, not just a message
 	public override bool UseDiscardMessage => false;
 
-	public override bool IsVisible
-		=> SelObject is ISlotGroupParent or (IThingHolder and IHaulDestination);
+	public override bool IsVisible => SelectedStorages.Count > 0;
+
+	protected virtual bool DisplaySlider => SelectedStorages is [ThingClass];
 
 	public new virtual float ThingRowHeight => 30f;
 
 	public const float
 		SEARCH_WIDGET_MARGIN = 3f,
 		BORDER_MARGIN = SpaceBetweenItemsLists,
-		TOP_PADDING = 8f;
+		TOP_PADDING = 8f,
+		LABEL_MIN_GAP = 4f;
 
-	protected GUIScope.ScrollViewStatus _scrollViewStatus = new();
+	protected readonly GUIScope.ScrollViewStatus _scrollViewStatus = new();
+	// protected readonly Dictionary<string, TaggedString> _truncatedLabelCache = [];
+	// protected float _truncatedLabelCacheWidth;
+
+	private int _selObjectsVersion = -3;
+	private readonly List<object> _selectedStorages = [];
 
 	public ContentsITab()
 	{
@@ -41,12 +87,50 @@ public class ContentsITab : ITab_ContentsBase
 		containedItemsKey = Strings.Keys.ContainedItems;
 	}
 
+	// protected Dictionary<string, TaggedString> GetTruncatedLabelCacheForWidth(float width)
+	// {
+	// 	if (Math.Abs(width - _truncatedLabelCacheWidth) > 0.01f)
+	// 	{
+	// 		_truncatedLabelCache.Clear();
+	// 		_truncatedLabelCacheWidth = width;
+	// 	}
+	//
+	// 	return _truncatedLabelCache;
+	// }
+
+	// protected override void CloseTab()
+	// {
+	// 	base.CloseTab();
+	// 	_truncatedLabelCache.Clear();
+	// }
+	//
+	// public override void OnOpen()
+	// {
+	// 	base.OnOpen();
+	// 	_truncatedLabelCache.Clear();
+	// }
+
+	protected virtual void UpdateSelectedStorages(List<object> selectedStorages)
+	{
+		selectedStorages.Clear();
+		
+		var currentSelObjects = AllSelObjects;
+		for (var i = currentSelObjects.Count; --i >= 0;)
+		{
+			var selObject = currentSelObjects[i];
+			if (IsVisibleFor(selObject is Thing thing ? selObject = thing.GetInnerIfMinified() : selObject))
+				selectedStorages.Add(selObject);
+		}
+	}
+
+	public virtual bool IsVisibleFor(object obj) => obj is (ISlotGroupParent or (IThingHolder and IHaulDestination));
+
 	protected override void FillTab()
 	{
 		if (Event.current.type == EventType.Layout) // this gets sent every frame but can only draw behind every window
 			return;
 
-		canRemoveThings = SelObject is Thing { Faction: { } faction } && faction == Faction.OfPlayer;
+		canRemoveThings = CanRemoveThings;
 		
 		thingsToSelect.Clear();
 		var outRect = new Rect(new(), size).ContractedBy(BORDER_MARGIN);
@@ -60,22 +144,14 @@ public class ContentsITab : ITab_ContentsBase
 		TrySelectAndJump();
 	}
 
+	protected virtual bool CanRemoveThing(Thing thing) => canRemoveThings;
+
 	protected override void DoItemsLists(Rect outRect, ref float curY)
 	{
 		var storedThings = container;
 		
 		if (storedThings is Thing[] thingArray)
-		{
-			Array.Sort(thingArray, (Comparison<Thing>)(static (a, b) =>
-			{
-				var result = string.Compare(a.GetInnerIfMinified().LabelNoCount, b.GetInnerIfMinified().LabelNoCount,
-					StringComparison.OrdinalIgnoreCase);
-				if (result == 0)
-					result = a.stackCount.CompareTo(b.stackCount);
-				
-				return result;
-			}));
-		}
+			SortThings(thingArray);
 
 		using var massList = new ScopedStatList(storedThings, StatDefOf.Mass);
 		using var groupScope = new GUIScope.WidgetGroup(outRect);
@@ -103,7 +179,7 @@ public class ContentsITab : ITab_ContentsBase
 
 			hasAnyStoredThing = true;
 
-			if (!filter.Matches(thing.GetInnerIfMinified().def))
+			if (!filter.Matches((thing.GetInnerIfMinified() ?? thing).def))
 				continue;
 
 			if (scrollView.CanCull(thingRowHeight, curY))
@@ -123,11 +199,31 @@ public class ContentsITab : ITab_ContentsBase
 		QuickSearchWidget.NoResultsMatched = !filterHasAnyMatches;
 	}
 
+	private static void SortThings(Thing[] thingArray) => Array.Sort(thingArray, CompareLabelsThenStackCount);
+
+	private static int CompareLabelsThenStackCount(Thing? a, Thing? b)
+	{
+		if (a is null)
+			return b is null ? 0 : 1;
+
+		if (b is null)
+			return -1;
+
+		var result = string.Compare(a.GetInnerIfMinified()?.LabelNoCount, b.GetInnerIfMinified()?.LabelNoCount,
+			StringComparison.OrdinalIgnoreCase);
+
+		if (result == 0)
+			result = a.stackCount.CompareTo(b.stackCount);
+
+		return result;
+	}
+
 	private void TryDrawSlider(ref Rect outRect, ref float curY)
 	{
-		if (SelObject is not ThingClass adaptive)
+		if (!DisplaySlider)
 			return;
 
+		var adaptive = (ThingClass)SelectedStorages[0];
 		var sliderRect = outRect with { height = Text.LineHeight / 2f };
 		var totalSlots = adaptive.TotalSlots;
 		var currentSlotLimit = Math.Min(adaptive.CurrentSlotLimit, totalSlots);
@@ -151,7 +247,7 @@ public class ContentsITab : ITab_ContentsBase
 		using (new GUIScope.FontSize(15))
 		{
 			Widgets.ListSeparator(ref curY, outRect.width, $"{Strings.Translated.ContainedItems} ({
-				Strings.Stacks(storedThings.Count, SelObject.CurrentSlotLimit())}, {
+				Strings.Stacks(storedThings.Count, SlotLimit)}, {
 					massList.Sum.ToStringMass()})");
 			outRect.yMin += curY;
 		}
@@ -166,66 +262,63 @@ public class ContentsITab : ITab_ContentsBase
 		outRect.yMin += ThingRowHeight;
 	}
 
-	// https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/Deep_Storage_ITab.cs#L216-L235
 	protected override void OnDropThing(Thing t, int count)
 	{
-		if (SelObject is not Thing thing)
-			return;
-		
-		var dropCell = thing.Position + DropOffset;
-		var map = thing.Map;
-		t = t.SplitOff(count);
-
-		if (!GenDrop.TryDropSpawn(t, dropCell, map, ThingPlaceMode.Near, out var resultingThing, null,
-			cell => !map.ContainsStorageBuildingAt(cell)))
+		switch (t.StoringThing())
 		{
-			GenSpawn.Spawn(resultingThing = t, dropCell, map);
+			case ThingClass adaptive:
+				adaptive.Eject(t, count, dropOffset: DropOffset);
+				break;
+			case { } thing:
+				ThingMakerUtility.EjectFromStorage(thing, t, count, dropOffset: DropOffset);
+				break;
 		}
-
-		if (resultingThing.TryGetComp<CompForbiddable>() is { } compForbiddable)
-			compForbiddable.Forbidden = true;
-
-		if (resultingThing is null || !resultingThing.Spawned || resultingThing.Position == dropCell)
-			Messages.Message(Strings.Translated.ASF_MapFilled, new(dropCell, map), MessageTypeDefOf.NegativeEvent, false);
 	}
 
 	protected void DoThingRow(int index, Thing thing, float mass, float width, ref float curY,
 		Action<int> discardAction)
 	{
-		var count = thing.stackCount;
-		var thingDef = thing.def;
-		
-		var rect = new Rect(0f, curY, width, ThingRowHeight);
-		
-		if ((index & 1) == 0)
-			Widgets.DrawAltRect(rect);
-		
-		if (canRemoveThings)
+		try
 		{
-			DrawRemoveSpecificCountButton(thingDef, count, discardAction, ref rect);
-			DrawRemoveAllButton(count, thing, discardAction, ref rect);
-		}
-
-		DrawInfoCardButton(thing, ref rect);
-		DrawForbidToggle(thing, ref rect);
-
-		if (Mouse.IsOver(rect))
-			DrawHighlightTexture(rect);
-
-		if (thingDef.DrawMatSingle != null && thingDef.DrawMatSingle.mainTexture != null)
-			Widgets.ThingIcon(new(4f, curY, ThingIconSize, ThingIconSize), thing);
-
-		DrawMassLabel(mass, ref rect);
-		DrawRotLabel(thing, ref rect);
-		DrawLabel(thing, rect);
-
-		TooltipHandler.TipRegion(rect, string.Concat(thing.LabelCap, "\n", thing.DescriptionDetailed));
+			var count = thing.stackCount;
+			var thingDef = thing.def;
 		
-		if (Widgets.ButtonInvisible(rect))
-			SelectLater(thing);
+			var rect = new Rect(0f, curY, width, ThingRowHeight);
+		
+			if ((index & 1) == 0)
+				Widgets.DrawAltRect(rect);
+		
+			if (CanRemoveThing(thing))
+			{
+				DrawRemoveSpecificCountButton(thingDef, count, discardAction, ref rect);
+				DrawRemoveAllButton(count, thing, discardAction, ref rect);
+			}
 
-		if (Mouse.IsOver(rect))
-			TargetHighlighter.Highlight(thing); // arrow towards the thing
+			DrawInfoCardButton(thing, ref rect);
+			DrawForbidToggle(thing, ref rect);
+
+			if (Mouse.IsOver(rect))
+				DrawHighlightTexture(rect);
+
+			if (thingDef.DrawMatSingle != null && thingDef.DrawMatSingle.mainTexture != null)
+				Widgets.ThingIcon(new(4f, curY, ThingIconSize, ThingIconSize), thing);
+
+			DrawMassLabel(mass, ref rect);
+			DrawRotLabel(thing, ref rect);
+			DrawLabel(thing, rect);
+
+			TooltipHandler.TipRegion(rect, string.Concat(thing.LabelCap, "\n", thing.DescriptionDetailed));
+		
+			if (Widgets.ButtonInvisible(rect))
+				SelectLater(thing);
+
+			if (Mouse.IsOver(rect))
+				TargetHighlighter.Highlight(thing); // arrow towards the thing
+		}
+		catch (Exception ex)
+		{
+			Log.Error(ex.ToString());
+		}
 
 		curY += ThingRowHeight;
 	}
@@ -270,16 +363,31 @@ public class ContentsITab : ITab_ContentsBase
 
 	private static void DrawLabel(Thing thing, in Rect rect)
 	{
-		var labelRect = rect with { x = ThingLeftX, width = rect.width - ThingLeftX };
+		var labelRect = rect with { x = ThingLeftX, width = rect.width - ThingLeftX - LABEL_MIN_GAP };
 
 		using (new GUIScope.TextAnchor(TextAnchor.MiddleLeft))
-		using (new GUIScope.Color(ThingLabelColor))
+		using (new GUIScope.Color(GetThingLabelColor(thing)))
 		using (new GUIScope.WordWrap(false))
-			Widgets.Label(labelRect, thing.LabelCap.StripTags().Truncate(labelRect.width));
+		{
+			// looks better without truncating. Colors applied to partly affected text get lost with Truncate
+			// var thingLabel = thing.Label;
+			// var cache = GetTruncatedLabelCacheForWidth(labelRect.width);
+			// if (!cache.TryGetValue(thingLabel, out var truncatedLabel))
+			// 	truncatedLabel = ((TaggedString)thing.LabelCap).Truncate(labelRect.width - LABEL_MIN_GAP);
+			
+			Widgets.Label(labelRect, thing.LabelCap);
+		}
 	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	[PublicAPI]
+	private static Color GetThingLabelColor(Thing thing) => ThingLabelColor;
 
 	public void SelectLater(Thing thing)
 	{
+		if (thing.StoringAdaptiveStorage() is { AllowItemForbiddingAccess: false })
+			return;
+		
 		thingsToSelect.Clear();
 		thingsToSelect.Add(thing);
 	}
@@ -299,7 +407,9 @@ public class ContentsITab : ITab_ContentsBase
 		var x = rect.width - Widgets.CheckboxSize;
 		var y = rect.y + ((rect.height - Widgets.CheckboxSize) / 2f);
 		
-		if (thing is ThingWithComps thingWithComps && thingWithComps.GetComp<CompForbiddable>() is { } compForbiddable)
+		if (thing is ThingWithComps thingWithComps
+			&& thingWithComps.GetComp<CompForbiddable>() is { } compForbiddable
+			&& thing.StoringAdaptiveStorage() is not { AllowItemForbiddingAccess: false })
 		{
 			var checkOn = !compForbiddable.Forbidden;
 			var previousCheckOnState = checkOn;

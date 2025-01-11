@@ -20,6 +20,8 @@ public class Extension : DefModExtension
 
 	public ValuesByQuality? maxItemsPerCellByQuality;
 
+	public CellTable<ValuesByQuality>? maxItemsByCell;
+
 	public void Initialize(ThingDef parent)
 	{
 		if (graphics is null)
@@ -27,5 +29,7 @@ public class Extension : DefModExtension
 
 		for (var i = graphics.Count; i-- > 0;)
 			graphics[i].targetDefs.AddDistinct(parent);
+		
+		maxItemsByCell?.Initialize([parent]);
 	}
 }

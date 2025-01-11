@@ -8,7 +8,6 @@ using HarmonyLib;
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(Building_Storage), nameof(Building_Storage.GetGizmos))]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class HideStorageGizmos
 {
 	[HarmonyPostfix]

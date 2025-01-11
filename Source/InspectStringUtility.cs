@@ -3,7 +3,10 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Linq;
 using System.Text;
+using AdaptiveStorage.Fishery;
+using AdaptiveStorage.Fishery.Pools;
 using HarmonyLib;
 
 namespace AdaptiveStorage;
@@ -29,7 +32,7 @@ public static class InspectStringUtility
 		var storedThings = building.StoredThings();
 
 		text += AppendCount(storedThings.Length > 0
-				? AppendStoredThings(stringBuilder, storedThings)
+				? AppendStoresThingsSection(stringBuilder, storedThings)
 				: stringBuilder.Append(Strings.TranslatedWithBackup.Empty.CapitalizeFirst()), building, storedThings)
 			.ToString();
 
@@ -39,55 +42,125 @@ public static class InspectStringUtility
 	}
 
 	private static StringBuilder AppendCount(StringBuilder stringBuilder, Building_Storage building,
-		IList<Thing> storedThings)
+		ICollection<Thing> storedThings)
 		=> stringBuilder
 			.Append(". (")
 			.Append(Strings.Stacks(storedThings.Count, building.TotalSlots()))
 			.Append(')');
 
-	private static StringBuilder AppendStoredThings(StringBuilder stringBuilder, IList<Thing> storedThings)
+	private static StringBuilder AppendStoresThingsSection(StringBuilder stringBuilder, IList<Thing> storedThings)
 	{
 		stringBuilder.Append(Strings.Translated.StoresThings)
 			.Append(": ");
 
-		var storedThingCounts = SimplePool<Dictionary<ThingDef, int>>.Get();
-		storedThingCounts.Clear();
+		AppendStoredThings(stringBuilder, storedThings, ", ", sortBy: static (x, y)
+			=> string.CompareOrdinal(x.Key.label, y.Key.label) is var labelResult && labelResult != 0
+				? labelResult
+				: y.Value.CompareTo(x.Value));
+		
+		return stringBuilder;
+	}
 
-		for (var i = storedThings.Count; i-- > 0;)
+	private static void AppendStoredThings(StringBuilder stringBuilder, IList<Thing> storedThings, string separator,
+		bool includeCount = true, int max = int.MaxValue, Comparison<KeyValuePair<ThingDef, int>>? sortBy = null,
+		string? overflowText = null)
+	{
+		using var pooledStoredThingCountList = includeCount
+			? GetThingCountPairs(storedThings)
+			: new(storedThings.Select(static thing => new KeyValuePair<ThingDef, int>(thing.def, 1)));
+		
+		var storedThingCountList = pooledStoredThingCountList.List;
+		
+		if (sortBy != null)
+			storedThingCountList.Sort(sortBy);
+
+		if (overflowText != null && storedThingCountList.Count > max)
 		{
-			var storedThingDef = storedThings[i].def;
-			storedThingCounts[storedThingDef]
-				= storedThingCounts.TryGetValue(storedThingDef) + storedThings[i].stackCount;
+			storedThingCountList[max - 1] = new(null!,
+				storedThingCountList.AsReadOnlySpan()[(max - 1)..].Sum(static pair => pair.Value));
 		}
 
 		var firstItem = true;
-		foreach (var storedThingCountPair in storedThingCounts)
+		for (var i = 0; i < storedThingCountList.Count && i < max; i++)
 		{
+			var storedThingCountPair = storedThingCountList[i];
 			if (!firstItem)
-				stringBuilder.Append(", ");
+				stringBuilder.Append(separator);
 
-			stringBuilder.Append(GenLabel.ThingLabel(storedThingCountPair.Key, null, storedThingCountPair.Value)
-				.CapitalizeFirst());
+			stringBuilder.Append(storedThingCountPair.Key != null
+				? GenLabel.ThingLabel(storedThingCountPair.Key, null, includeCount ? storedThingCountPair.Value : 1)
+					.CapitalizeFirst()
+				: string.Concat(overflowText, " x",
+					(includeCount ? storedThingCountPair.Value : storedThingCountList.Count - max + 1)
+					.ToStringCached()));
 
 			firstItem = false;
 		}
-
-		storedThingCounts.Clear();
-		SimplePool<Dictionary<ThingDef, int>>.Return(storedThingCounts);
-		return stringBuilder;
 	}
+
+	private static PooledList<KeyValuePair<ThingDef, int>> GetThingCountPairs(IList<Thing> things)
+	{
+		var thingCountPairs = SimplePool<Dictionary<ThingDef, int>>.Get();
+		thingCountPairs.Clear();
+
+		for (var i = things.Count; --i >= 0;)
+		{
+			var storedThingDef = things[i].def;
+			thingCountPairs[storedThingDef]
+				= thingCountPairs.TryGetValue(storedThingDef) + Math.Max(things[i].stackCount, 1);
+		}
+
+		var result = thingCountPairs.ToPooledList();
+
+		thingCountPairs.Clear();
+		SimplePool<Dictionary<ThingDef, int>>.Return(thingCountPairs);
+		return result;
+	}
+
+	public static string ToStringThingLabels(this IList<Thing> things, string separator = ", ",
+		bool includeCount = true, Comparison<KeyValuePair<ThingDef, int>>? sortBy = null, int max = int.MaxValue,
+		string? overflowText = null)
+	{
+		using var stringBuilder = new PooledStringBuilder();
+		AppendStoredThings(stringBuilder.Builder, things, separator, includeCount, max, sortBy, overflowText);
+		return stringBuilder.ToString();
+	}
+
+	public static string[] ToStringsThingLabels(this IList<Thing> things, bool includeCount = true, bool sort = false,
+		int max = int.MaxValue)
+		=> things.ToStringsThingLabels(includeCount, sort
+			? static (x, y)
+				=> y.Value.CompareTo(x.Value) is var countResult && countResult != 0
+					? countResult
+					: string.CompareOrdinal(x.Key.label, y.Key.label)
+			: null, max, Strings.Translated.ASF_OtherItems);
+
+	public static string[] ToStringsThingLabels(this IList<Thing> things, bool includeCount = true,
+		Comparison<KeyValuePair<ThingDef, int>>? sortBy = null, int max = int.MaxValue, string? overflowText = null)
+		=> things.ToStringThingLabels("\n", includeCount, sortBy, max, overflowText).Split('\n');
 
 	private static void AppendLinkedStorageSettings(StorageGroup group, string text, StringBuilder stringBuilder)
 	{
 		if (!text.NullOrEmpty())
 			stringBuilder.Append('\n');
 
+#if !V1_5
 		stringBuilder.Append(Strings.Translated.LinkedStorageSettings)
 			.Append(": ")
-			.Append(Strings.Translated.NumBuildings.Formatted(group.MemberCount).CapitalizeFirst());
+			.Append(Strings.StorageBuildingCount(group.MemberCount));
+#else
+		stringBuilder.Append(Strings.Translated.StorageGroupLabel)
+			.Append(": ")
+			.Append(group.RenamableLabel.CapitalizeFirst())
+			.Append(" (")
+			.Append(group.MemberCount is > 1 and var memberCount
+				? Strings.StorageBuildingCount(memberCount)
+				: Strings.Translated.OneBuilding)
+			.Append(')');
+#endif
 	}
 
-	private static Func<ThingWithComps, string> _thingWithCompsGetInspectString
+	private static readonly Func<ThingWithComps, string> _thingWithCompsGetInspectString
 		= AccessTools.MethodDelegate<Func<ThingWithComps, string>>(
 			AccessTools.DeclaredMethod(typeof(ThingWithComps), nameof(ThingWithComps.GetInspectString)),
 			virtualCall: false);

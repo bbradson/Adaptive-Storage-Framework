@@ -8,7 +8,6 @@ using HarmonyLib;
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(SelectionDrawer), nameof(SelectionDrawer.Notify_Selected))]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class AutomaticallyOpenTab
 {
 	[HarmonyPostfix]

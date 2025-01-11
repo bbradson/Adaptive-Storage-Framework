@@ -4,14 +4,12 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using HarmonyLib;
 
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch]
 [HarmonyPriority(Priority.High)]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class HideStoredThingsFromSectionLayerAndOverlayDrawer
 {
 	public static IEnumerable<MethodBase> TargetMethods { [HarmonyTargetMethods] get; }
@@ -23,6 +21,5 @@ public static class HideStoredThingsFromSectionLayerAndOverlayDrawer
 
 	[HarmonyPrefix]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static bool Prefix(Thing t)
-		=> !t.IsItem() || t.StoringThing() is not ThingClass storingThing || t == storingThing;
+	public static bool Prefix(Thing t) => t.StoringAdaptiveStorage() is null;
 }

@@ -20,7 +20,7 @@ public class StatPart : RimWorld.StatPart
 	}
 
 	private static bool TryGetStoringStorage(Thing? thing, [NotNullWhen(true)] out ThingClass? storage)
-		=> (storage = thing is null || !thing.IsItem() ? null : thing.StoringThing() as ThingClass) != null;
+		=> (storage = thing?.StoringAdaptiveStorage()) != null;
 
 	public override string? ExplanationPart(StatRequest req)
 	{

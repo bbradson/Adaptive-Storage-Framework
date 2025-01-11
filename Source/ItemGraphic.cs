@@ -3,42 +3,47 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
-using System.Xml;
-
 namespace AdaptiveStorage;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class ItemGraphic : IHasPosition
+public class ItemGraphic : CellData
 {
 	public static Vector3 DefaultStackOffset
 		=> new(DEFAULT_STACK_OFFSET_X, DEFAULT_STACK_OFFSET_Y, DEFAULT_STACK_OFFSET_Z);
 	
 	public const float
 		DEFAULT_STACK_OFFSET_X = 0.11f,
-		DEFAULT_STACK_OFFSET_Y = 3f / 740f,
+		DEFAULT_STACK_OFFSET_Y = Altitudes.AltInc / 10f,
 		DEFAULT_STACK_OFFSET_Z = 0.24f;
 	
 	public static Vector2 DefaultMaxDrawSize => new(float.MaxValue, float.MaxValue);
 
-	public static ItemGraphic Default { get; } = new();
-	
-	public int? position;
+	public static ItemGraphic Default { get; } = InitializeDefaultGraphic();
+
+	public Type workerClass = typeof(ItemGraphicWorker);
+
+	[Unsaved]
+	private ItemGraphicWorker _worker = null!;
 
 	public bool
 		visible = true,
 		drawShadow = true;
 	
 	public float
-		drawScale = 1f,
 		rotation,
 		stackRotation,
-		stackOffsetFactor = 1f;
+		stackOffsetFactor = 1f,
+		multipleItemsDrawSizeFactor = 0.8f;
+
+	public Vector2 drawScale = Vector2.one;
 
 	public Rot4? textureOrientation;
 	
 	public Vector2 maxDrawSize = DefaultMaxDrawSize;
 
-	public StackBehaviour stackBehaviour;
+	public StackBehaviour stackBehaviour = StackBehaviour.Default;
+
+	public RotateInShelvesMode rotateInShelvesMode = RotateInShelvesMode.Reverse;
 
 	public Vector3
 		stackOffset = DefaultStackOffset,
@@ -53,28 +58,8 @@ public class ItemGraphic : IHasPosition
 		drawOffsetEast,
 		drawOffsetSouth,
 		drawOffsetWest;
-	
-	int? IHasPosition.Position
-	{
-		get => position;
-		set => position = value;
-	}
-	
-	public void LoadDataFromXmlCustom(XmlNode xmlRoot)
-	{
-		if (xmlRoot.Name.Length > 1 && int.TryParse(xmlRoot.Name[1..], out var value))
-			position = value;
 
-		foreach (XmlNode childNode in xmlRoot.ChildNodes)
-		{
-			if (childNode.NodeType == XmlNodeType.Comment)
-				continue;
-
-			var field = GetType().GetField(childNode.Name);
-			if (ParseHelper.FromString(childNode.InnerText, field.FieldType) is { } parsedValue)
-				field.SetValue(this, parsedValue);
-		}
-	}
+	public ItemGraphicWorker Worker => _worker;
 
 	public Vector3 StackOffsetForRot(Rot4 rot)
 		=> rot.AsInt switch
@@ -95,4 +80,15 @@ public class ItemGraphic : IHasPosition
 			Rot4.WestInt => drawOffsetWest,
 			_ => drawOffset
 		} ?? drawOffset;
+
+	public virtual void Initialize(GraphicsDef? parent)
+		=> _worker = WorkerClassMaker<ItemGraphicWorker>.MakeWorker(workerClass, parent!, this, parent!)
+			?? new ItemGraphicWorker(this, parent);
+
+	private static ItemGraphic InitializeDefaultGraphic()
+	{
+		var graphic = new ItemGraphic { rotateInShelvesMode = RotateInShelvesMode.Default };
+		graphic.Initialize(null);
+		return graphic;
+	}
 }

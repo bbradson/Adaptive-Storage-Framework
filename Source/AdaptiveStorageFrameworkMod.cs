@@ -3,8 +3,11 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using AdaptiveStorage.HarmonyPatches;
 using AdaptiveStorage.ModCompatibility;
 using HarmonyLib;
+
+[module: SkipLocalsInit]
 
 namespace AdaptiveStorage;
 
@@ -23,6 +26,9 @@ public class AdaptiveStorageFrameworkMod : Mod
 	{
 		Mod = this;
 		Settings = GetSettings<AdaptiveStorageFrameworkSettings>();
+		
+		Harmony.Patch(InitializeGraphicsDefs.TargetMethod,
+			new(((Delegate)InitializeGraphicsDefs.PlayDataLoadingFinished).Method));
 	}
 
 	public override string SettingsCategory() => NAME;

@@ -6,8 +6,42 @@
 namespace AdaptiveStorage;
 
 [PublicAPI]
-public class Minified : MinifiedThing
+public class Minified : MinifiedThing, ITransformable
 {
+	public Vector2 VisualSize { get; private set; }
+	
+	public MinifiedExtension? Extension { get; private set; }
+
+	public override Graphic Graphic => cachedGraphic ??= LoadInnerThingGraphic();
+
+	protected virtual Graphic LoadInnerThingGraphic()
+	{
+		var innerThing = InnerThing;
+		var innerThingDef = innerThing.def;
+		var innerThingSize = innerThingDef.size;
+		var graphic = innerThing.Graphic.ExtractInnerGraphicFor(innerThing);
+		var graphicDrawSize = graphic.drawSize;
+		
+		if (innerThingSize.Max() > 1)
+		{
+			var minifiedDrawSize = innerThingSize.ToVector2().Bounded(VisualSize); // VisualSize instead of hardcoded 1
+			
+			minifiedDrawSize.x /= innerThingSize.x;
+			minifiedDrawSize.x *= graphicDrawSize.x;
+			
+			minifiedDrawSize.y /= innerThingSize.z;
+			minifiedDrawSize.y *= graphicDrawSize.y;
+			
+			graphic = graphic.GetCopy(minifiedDrawSize, null);
+		}
+
+		var minifiedDrawScale = innerThingDef.minifiedDrawScale;
+		if (Math.Abs(minifiedDrawScale - 1f) > 1.0001f)
+			graphic = graphic.GetCopy(graphicDrawSize * minifiedDrawScale, null);
+
+		return graphic;
+	}
+
 	protected override Graphic LoadCrateFrontGraphic()
 		=> StyleDef is { Graphic: not null } styleDef
 			? styleDef.graphicData?.GraphicColoredFor(this) ?? styleDef.Graphic
@@ -18,89 +52,157 @@ public class Minified : MinifiedThing
 #else
 	protected
 #endif
-		override void DrawAt(Vector3 drawLoc, bool flip = false)
+		sealed override void DrawAt(Vector3 drawLoc, bool flip = false)
+		=> DrawAt(new(drawLoc, flip ? Vector2.one.Flip() : Vector2.one));
+
+	public virtual void DrawAt(in TransformData transformData)
 	{
-		CrateFrontGraphic.DrawFromDef(drawLoc + (Altitudes.AltIncVect * 0.1f), Rot4.North, null);
-
+		var onlyRealTimeDrawing = !Spawned || def.drawerType == DrawerType.RealtimeOnly;
 		var innerThing = InnerThing;
-		innerThing.Rotation = Rotation;
-		innerThing.Position = Position;
-		
-		innerThing.DrawNowAt(drawLoc
-#if !V1_4
-			+ innerThing.def.minifiedDrawOffset
-#endif
-			, flip);
+		var innerThingRealTimeDrawing = onlyRealTimeDrawing || innerThing.def.ShouldRealTimeDraw();
 
-// 		var innerThingDef = innerThing.def;
-// 		var rot = GetRot4ForInnerThing(innerThingDef);
-// 		
-// 		Graphic.Draw(drawLoc
-// #if !V1_4
-// 			+ innerThingDef.minifiedDrawOffset
-// #endif
-// 			+ Graphic.DrawOffset(rot), rot, this);
+		if (!innerThingRealTimeDrawing)
+			return;
+
+		if (onlyRealTimeDrawing)
+			DrawFrontGraphic(transformData);
+
+		DrawInnerThing(innerThing, transformData);
 	}
 
-	public override void Print(SectionLayer layer)
+	protected virtual void DrawFrontGraphic(in TransformData transformData)
 	{
-		var drawPos = DrawPos;
 		var frontGraphic = CrateFrontGraphic;
-		
-		PrintUtility.PrintThingAt(layer, TextureAtlasGroup.Item, drawPos + (Altitudes.AltIncVect * 0.1f),
-			frontGraphic.drawSize, frontGraphic.MatSingle, 0f, false);
-
-		var innerThing = InnerThing;
-		innerThing.Rotation = Rotation;
-		innerThing.Position = Position;
-		
-		if (innerThing is IPrintable adaptive)
+		using (frontGraphic.Scaled(transformData.Scale))
 		{
-			adaptive.PrintAt(layer, drawPos
-#if !V1_4
-				+ innerThing.def.minifiedDrawOffset
-#endif
-			);
+			frontGraphic.DrawFromDef(transformData.Position + (Altitudes.AltIncVect * 0.1f), Rotation, null,
+				transformData.CombinedRotation.AsFloat);
+		}
+	}
+
+	protected virtual void DrawInnerThing(Thing innerThing, in TransformData transformData)
+	{
+		var innerThingRotation = GetRotationForInnerThing(innerThing);
+		innerThing.Rotation = innerThingRotation;
+		innerThing.Position = Position;
+
+		if (innerThing is ITransformable scalable)
+		{
+			DrawScalableInnerThing(innerThing, transformData, scalable);
 		}
 		else
 		{
-			innerThing.Print(layer);
+			DrawRegularInnerThing(innerThing, transformData.Position, transformData.Scale,
+				transformData.CombinedRotation.AsFloat, innerThingRotation);
 		}
-
-		// 		var innerThingDef = innerThing.def;
-// 		PrintUtility.PrintThingAt(layer, innerThingDef.category.ToAtlasGroup(), drawPos
-// #if !V1_4
-// 			+ innerThingDef.minifiedDrawOffset
-// #endif
-// 			, Graphic.drawSize, Graphic.MatAt(GetRot4ForInnerThing(innerThingDef), this), 0f, false);
 	}
 
-// 	private Rot4 GetRot4ForInnerThing(ThingDef innerThingDef)
-// 		=>
-// #if !V1_4
-// 			innerThingDef.overrideMinifiedRot != Rot4.Invalid
-// 			? innerThingDef.overrideMinifiedRot
-// 			:
-// #endif
-// 			Graphic is Graphic_Single
-// 				? Rot4.North
-// 				: Rot4.South;
+	private void DrawScalableInnerThing(Thing innerThing, TransformData transformData,
+		ITransformable transformable)
+	{
+#if !V1_4
+		transformData.Position += innerThing.def.minifiedDrawOffset;
+#endif
+		transformData.Scale *= innerThing.GetVisualSize().Bounded(VisualSize);
+		
+		transformable.DrawAt(transformData);
+	}
 
-	// public override void Destroy(DestroyMode mode = DestroyMode.Vanish)
-	// {
-	// 	var spawned = Spawned;
-	// 	var map = Map;
-	// 	base.Destroy(mode);
-	// 	if (InnerThing == null)
-	// 		return;
-	//
-	// 	InstallBlueprintUtility.CancelBlueprintsFor(this);
-	// 	if (!spawned | ((mode != DestroyMode.Deconstruct) & (mode != DestroyMode.KillFinalize)))
-	// 		return;
-	//
-	// 	if (mode == DestroyMode.Deconstruct)
-	// 		SoundDefOf.Building_Deconstructed.PlayOneShot(new TargetInfo(Position, map));
-	// 		
-	// 	GenLeaving.DoLeavingsFor(InnerThing, map, mode, this.OccupiedRect());
-	// }
+	private void DrawRegularInnerThing(Thing innerThing, in Vector3 drawLoc, Vector2 drawScale, float extraRotation,
+		Rot4 innerThingRotation)
+	{
+		var thingGraphic = Graphic;
+		using (thingGraphic.Scaled(drawScale))
+		{
+			thingGraphic.Draw(drawLoc
+#if !V1_4
+				+ innerThing.def.minifiedDrawOffset
+#endif
+				+ thingGraphic.DrawOffset(innerThingRotation), innerThingRotation, innerThing);
+		}
+	}
+
+	public sealed override void Print(SectionLayer layer) => PrintAt(layer, new(DrawPos));
+
+	public virtual void PrintAt(SectionLayer layer, in TransformData transformData)
+	{
+		PrintFrontGraphic(layer, transformData);
+
+		var innerThing = InnerThing;
+		var innerThingDef = innerThing.def;
+		if (def.drawerType != DrawerType.MapMeshOnly
+			&& innerThingDef.drawerType is not (DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime))
+		{
+			return;
+		}
+
+		PrintInnerThing(layer, innerThing, transformData, innerThingDef);
+	}
+
+	protected void PrintFrontGraphic(SectionLayer layer, in TransformData transformData)
+	{
+		var frontGraphic = CrateFrontGraphic;
+		var rotation = Rotation.Rotated(transformData.RotationDirection);
+
+		PrintUtility.PrintThingAt(layer, TextureAtlasGroup.Item, transformData.Position + (Altitudes.AltIncVect * 0.1f),
+			frontGraphic.drawSize * transformData.Scale, frontGraphic.MatAt(rotation),
+			transformData.ExtraRotation.AsFloat + frontGraphic.AngleFromRot(rotation), false);
+	}
+
+	protected void PrintInnerThing(SectionLayer layer, Thing innerThing, TransformData transformData,
+		ThingDef innerThingDef)
+	{
+		var innerThingRotation = GetRotationForInnerThing(innerThing);
+		innerThing.Rotation = innerThingRotation;
+		innerThing.Position = Position;
+		
+#if !V1_4
+		transformData.Position += innerThingDef.minifiedDrawOffset;
+#endif
+
+		var innerThingSize = innerThing.GetVisualSize();
+		transformData.Scale *= innerThingSize.Bounded(VisualSize) / innerThingSize;
+
+		if (innerThing is ITransformable scalable)
+		{
+			scalable.PrintAt(layer, transformData);
+		}
+		else
+		{
+			var innerThingGraphic = Graphic;
+			PrintUtility.PrintThingAt(layer, innerThingDef.category.ToAtlasGroup(), transformData.Position
+				, innerThingGraphic.drawSize * transformData.Scale,
+				innerThingGraphic.MatAt(innerThingRotation, innerThing),
+				transformData.CombinedRotation.AsFloat, false);
+		}
+	}
+
+	protected Rot4 GetRotationForInnerThing(Thing innerThing)
+		=> 
+#if !V1_4
+			innerThing.def.overrideMinifiedRot is var overrideMinifiedRot && overrideMinifiedRot != Rot4.Invalid
+			? overrideMinifiedRot
+			:
+#endif
+			def.size is var size && size.x == size.z && Graphic is Graphic_Single
+				? Rot4.North
+				: Rotation;
+
+	protected virtual void PostInitialize()
+	{
+		Extension = def.GetModExtension<MinifiedExtension>();
+		VisualSize = this.GetVisualSize();
+	}
+
+	public override void PostMake()
+	{
+		base.PostMake();
+		PostInitialize();
+	}
+
+	public override void ExposeData()
+	{
+		base.ExposeData();
+		PostInitialize();
+	}
 }

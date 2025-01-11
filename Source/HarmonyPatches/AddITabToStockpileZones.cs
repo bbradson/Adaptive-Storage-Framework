@@ -8,7 +8,6 @@ using HarmonyLib;
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(Zone_Stockpile), nameof(Zone_Stockpile.GetInspectTabs))]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class AddITabToStockpileZones
 {
 	[HarmonyPostfix]

@@ -10,7 +10,6 @@ namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(ThingWithComps), nameof(ThingWithComps.DrawGUIOverlay))]
 [HarmonyPriority(Priority.High)]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class HideStoredThingLabels
 {
 	[HarmonyPrefix]

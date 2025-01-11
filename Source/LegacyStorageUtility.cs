@@ -3,6 +3,7 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using AdaptiveStorage.Fishery.Pools;
 using AdaptiveStorage.ModCompatibility;
 
 namespace AdaptiveStorage;
@@ -14,8 +15,8 @@ public static class LegacyStorageUtility
 		if (obj is ThingClass adaptive)
 			return adaptive.StoredThings.ToArray();
 		
-		var list = SimplePool<List<Thing>>.Get();
-		list.Clear();
+		using var pooledList = new PooledList<Thing>();
+		var list = pooledList.List;
 
 		switch (obj)
 		{
@@ -31,11 +32,7 @@ public static class LegacyStorageUtility
 			}
 		}
 
-		var array = list.Count > 0 ? list.ToArray() : Array.Empty<Thing>();
-		list.Clear();
-		SimplePool<List<Thing>>.Return(list);
-
-		return array;
+		return list.Count > 0 ? list.ToArray() : Array.Empty<Thing>();
 	}
 
 	private static void AddThingsFromSlotGroup(ISlotGroupParent slotGroupParent, List<Thing> list)

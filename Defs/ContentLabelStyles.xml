@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>Automatic</defName>
+		<label>Automatic</label>
+		<description>Automatically choose between item names getting displayed with their count when hidden and count only when having visible contents, either directly or through the building only accepting one kind</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+Automatic</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>TotalCount</defName>
+		<label>Total count</label>
+		<description>Display the total count of all items in storage in a format [ COUNT ]</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+TotalCount</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>NamesWithCount</defName>
+		<label>Item names with count</label>
+		<description>Display item names and their count in a format of Item xY, one entry per line</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+NamesWithCount</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>NamesWithCountOrTotalCount</defName>
+		<label>Item names with count or total count</label>
+		<description>Display up to 3 item names and their count in a format of Item xY, one entry per line, or the total count when having more items</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+NamesWithCountOrTotalCount</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>Names</defName>
+		<label>Item names</label>
+		<description>Display names of stored items, one entry per line</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+Names</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>NamesOrTotalCount</defName>
+		<label>Item names or total count</label>
+		<description>Display up to 3 names of stored items, one entry per line, or the total count when having more items</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+Names</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>None</defName>
+		<label>None</label>
+		<description>Do not display any labels</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+None</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>Vanilla</defName>
+		<label>Vanilla</label>
+		<description>Display item counts individually on each item</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+Vanilla</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+</Defs>

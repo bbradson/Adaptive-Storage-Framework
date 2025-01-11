@@ -847,7 +847,7 @@ public class TreeNode_Editor : TreeNode
 					return false;
 			}
 
-			if (IsListItem || (OwningField is { } field && field.FieldType.HasAttribute<EditorNullableAttribute>()))
+			if (IsListItem || (OwningField is { } f && f.FieldType.HasAttribute<EditorNullableAttribute>()))
 			{
 				_hasDeleteButton = 1;
 				return true;

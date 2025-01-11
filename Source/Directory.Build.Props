@@ -5,7 +5,7 @@
 		<RootNamespace>AdaptiveStorage</RootNamespace>
 		<Authors>Bradson</Authors>
 		<Copyright>Copyright (c) 2023 Bradson</Copyright>
-		<Version>1.1.2</Version>
+		<Version>1.2.0</Version>
 		<TargetFramework>net48</TargetFramework>
 		<LangVersion>preview</LangVersion>
 		<Nullable>enable</Nullable>
@@ -17,7 +17,9 @@
 		<DebugType>portable</DebugType>
 		<ErrorReport>prompt</ErrorReport>
 		<WarningLevel>5</WarningLevel>
-		<NoWarn>CA1000;CA1051;CA1305;CA1310;CA1707;CA1708;CA1711;CA1725;CA1852;CA2201</NoWarn>
+		<NoWarn>
+			CA1000;CA1051;CA1305;CA1310;CA1707;CA1708;CA1710;CA1711;CA1716;CA1725;CA1852;CA2201;CS0809;CS8500
+		</NoWarn>
 		<DefaultItemExcludes>$(DefaultItemExcludes);obj/**/*.*</DefaultItemExcludes>
 		<BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\$(Configuration)\</BaseIntermediateOutputPath>
 		<MSBuildProjectExtensionsPath>obj\$(MSBuildProjectName)\$(Configuration)\</MSBuildProjectExtensionsPath>
@@ -27,29 +29,55 @@
 		<PackageReference Include="PolySharp" Version="1.*" />
 		<PackageReference Include="Krafs.Publicizer" Version="2.*" />
 		<Publicize Include="Assembly-CSharp:RimWorld.Building_Storage.cachedOccupiedCells" />
+		<Publicize Include="Assembly-CSharp:RimWorld.FilthMonitor" />
 		<Publicize Include="Assembly-CSharp:RimWorld.InspectPaneUtility.IsOpen" />
 		<Publicize Include="Assembly-CSharp:RimWorld.ITab_ContentsBase.thingsToSelect" />
+		<Publicize Include="Assembly-CSharp:RimWorld.ListerHaulables.Check" />
+		<Publicize Include="Assembly-CSharp:RimWorld.ListerMergeables.Check" />
 		<Publicize Include="Assembly-CSharp:RimWorld.MinifiedThing.get_CrateFrontGraphic" />
 		<Publicize Include="Assembly-CSharp:RimWorld.OverlayDrawer.RenderForbiddenOverlay" />
 		<Publicize Include="Assembly-CSharp:RimWorld.Selector.SelectableObjectsUnderMouse" />
 		<Publicize Include="Assembly-CSharp:RimWorld.Planet.CaravanThingsTabUtility.DrawMass" />
+		<Publicize Include="Assembly-CSharp:Verse.CellIndices.mapSizeX" />
+		<Publicize Include="Assembly-CSharp:Verse.CellIndices.mapSizeZ" />
 		<Publicize Include="Assembly-CSharp:Verse.DefDatabase`1.SetIndices" />
 		<Publicize Include="Assembly-CSharp:Verse.Graphic.AngleFromRot" />
+		<Publicize Include="Assembly-CSharp:Verse.Graphic_Collection.MultiGraphicType" />
+		<Publicize Include="Assembly-CSharp:Verse.Graphic_Collection.SingleGraphicType" />
+		<Publicize Include="Assembly-CSharp:Verse.Graphic_Collection.subGraphics" />
 		<Publicize Include="Assembly-CSharp:Verse.Graphic_Shadow.GlobalShadowPosOffsetX" />
 		<Publicize Include="Assembly-CSharp:Verse.Graphic_Shadow.GlobalShadowPosOffsetZ" />
 		<Publicize Include="Assembly-CSharp:Verse.Graphic_Shadow.shadowInfo" />
 		<Publicize Include="Assembly-CSharp:Verse.GraphicData.Init" />
+		<Publicize Include="Assembly-CSharp:Verse.Listing.curX" />
 		<Publicize Include="Assembly-CSharp:Verse.Listing.curY" />
 		<Publicize Include="Assembly-CSharp:Verse.MapDrawer.sections" />
+		<Publicize Include="Assembly-CSharp:Verse.PlayDataLoader.ResetStaticDataPost" />
 		<Publicize Include="Assembly-CSharp:Verse.SectionLayer_ThingsGeneral.TakePrintFrom" />
 		<Publicize Include="Assembly-CSharp:Verse.Text.tmpTextGUIContent" />
 		<Publicize Include="Assembly-CSharp:Verse.Thing.mapIndexOrState" />
+		<Publicize Include="Assembly-CSharp:Verse.ThingFilter.allowedDefs" />
 		<Publicize Include="Assembly-CSharp:Verse.ThingFilter.categories" />
+		<Publicize Include="Assembly-CSharp:Verse.ThingFilter.disallowedSpecialFilters" />
+		<Publicize Include="Assembly-CSharp:Verse.ThingGrid.RegisterInCell" />
+		<Publicize Include="Assembly-CSharp:Verse.ThingGrid.DeregisterInCell" />
 		<Publicize Include="Assembly-CSharp:Verse.ThingWithComps.Comps_PostDraw" />
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.curY" />
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.IncrementYIfWillExceedMaxWidth" />
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.IncrementPosition" />
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.LeftX" />
+		<PUblicize Include="mscorlib:System.Array.UnsafeLoad" />
+		<PUblicize Include="mscorlib:System.Array.UnsafeStore" />
+		<Publicize Include="mscorlib:System.Collections.Generic.List`1._items" />
+		<Publicize Include="mscorlib:System.Collections.Generic.List`1._size" />
+		<Publicize Include="mscorlib:System.Collections.Generic.List`1._version" />
+		<PUblicize Include="mscorlib:System.Collections.Generic.List`1.EnsureCapacity" />
+		<PUblicize Include="mscorlib:System.String.m_firstChar" />
+		<PUblicize Include="mscorlib:System.Runtime.CompilerServices.Unsafe" />
+		<PUblicize Include="mscorlib:System.Reflection.Emit.Label.label" />
+		<PUblicize Include="mscorlib:System.Runtime.CompilerServices.JitHelpers.UnsafeEnumCast" />
+		<PUblicize Include="mscorlib:System.Runtime.CompilerServices.JitHelpers.UnsafeEnumCastLong" />
 		<Publicize Include="UnityEngine.CoreModule:UnityEngine.Graphics.Internal_DrawMesh_Injected" />
+		<Publicize Include="0Harmony:HarmonyLib.CodeInstructionExtensions.constantLoadingCodes" />
 	</ItemGroup>
 </Project>

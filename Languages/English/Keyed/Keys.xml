@@ -4,7 +4,22 @@
 	<ASF_Empty>empty</ASF_Empty>
 	<ASF_MapFilled>You have filled the map.</ASF_MapFilled>
 	<ASF_SettingContentsTabSelection>Contents tab to display on adaptive storage buildings:</ASF_SettingContentsTabSelection>
+	<ASF_SettingContentsTabDescription>That's the tab saying 'Contents' on the bottom left panel with a building selected. 'None' displays contents in the vanilla way through 'Select x' gizmos on the bar to the right instead of tab.</ASF_SettingContentsTabDescription>
 	<ASF_MaxNumStacks>maximum number of stacks per cell</ASF_MaxNumStacks> <!-- identical to LWM's https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/_Mod/LWM.DeepStorage/Languages/English/Keyed/LWM.DeepStorage.Keys.xml -->
 	<ASF_MaxNumStacksDesc>The maximum number of stacks that can go in a single space.  Buildings two-cells large will have twice as much storage capacity.\n\nNote that other factors may reduce storage capacity.</ASF_MaxNumStacksDesc>
 	<ASF_DropSpecificCount>Drop specific count</ASF_DropSpecificCount>
+	<ASF_TotalStorageCapacity>total storage capacity</ASF_TotalStorageCapacity>
+	<ASF_StorageCapacityDescriptionCustomized>The maximum number of stacks fitting into this storage building for all cells combined.\n\n{sizeX} * {sizeZ} cells with individually set capacities.</ASF_StorageCapacityDescriptionCustomized>
+	<ASF_StorageCapacityDescriptionStacksPerCell>The maximum number of stacks fitting into this storage building for all cells combined.\n\n{sizeX} * {sizeZ} cells with a maximum capacity of {maxItemsInCell} stacks per cell.</ASF_StorageCapacityDescriptionStacksPerCell>
+	<ASF_AutomaticallyOpenContentsTab>Automatically open contents tab</ASF_AutomaticallyOpenContentsTab>
+	<ASF_AutomaticallyOpenContentsTabDescription>Selecting a storage building automatically opens its Contents tab with this enabled, or storage settings when empty.</ASF_AutomaticallyOpenContentsTabDescription>
+	<ASF_HideLabelsZoomSetting>Hide labels when zoomed out</ASF_HideLabelsZoomSetting>
+	<ASF_HideLabelsZoomDescription>Affects labels shown on the map, like [ count ] or Item xY. Only show them at a close zoom level when enabled.</ASF_HideLabelsZoomDescription>
+	<ASF_HideLabelsMouseOverSetting>Hide labels until mouseover</ASF_HideLabelsMouseOverSetting>
+	<ASF_HideLabelsMouseOverDescription>Affects labels shown on the map, like [ count ] or Item xY. Only show them when pointed at with the mouse when enabled. Overridden by the Toggleable Overlays mod when having that mod enabled.</ASF_HideLabelsMouseOverDescription>
+	<ASF_DefaultLabelStyleSetting>Default label style</ASF_DefaultLabelStyleSetting>
+	<ASF_DefaultLabelStyleDescription>What to display for storage labels on the map. Individual buildings can override this in their config.</ASF_DefaultLabelStyleDescription>
+	<ASF_MaxZoomLevelSetting>Maximum zoom level</ASF_MaxZoomLevelSetting>
+	<ASF_MaxZoomLevelDescription>The maximum zoom level to show labels for. They get hidden past this point.</ASF_MaxZoomLevelDescription>
+	<ASF_OtherItems>Other items</ASF_OtherItems><!-- Displayed at the bottom of long storage labels as Other items xY -->
 </LanguageData>

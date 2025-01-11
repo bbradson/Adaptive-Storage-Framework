@@ -6,7 +6,6 @@
 namespace AdaptiveStorage;
 
 [DefOf]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class InternalDefOf
 {
 	public static ThingDef Shelf;

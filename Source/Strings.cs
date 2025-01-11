@@ -24,6 +24,9 @@ public static class Strings
 		=> TranslatedWithBackup.X_Stacks.Formatted(string.Concat(count.ToStringCached(), " / ",
 				totalSlots.ToStringCached()));
 
+	public static string StorageBuildingCount(int count)
+		=> Translated.NumBuildings.Formatted(count).CapitalizeFirst();
+
 	public static class Keys
 	{
 		public static readonly string
@@ -35,6 +38,7 @@ public static class Strings
 			CommandForbiddenDesc,
 			DesignatorForbidDesc,
 			DesignatorUnforbidDesc,
+			StorageGroup,
 		#endregion
 
 		#region This mod
@@ -61,9 +65,11 @@ public static class Strings
 		#region Vanilla
 			LinkedStorageSettings,
 			StoresThings,
+			StorageGroupLabel,
 			ContainedItems,
 			RemoveSliderText,
 			NumBuildings,
+			OneBuilding,
 			ThingMadeOfStuffLabel,
 			None,
 			DaysUntilRotTip,
@@ -74,7 +80,22 @@ public static class Strings
 		#region This mod
 			ASF_MapFilled,
 			ASF_SettingContentsTabSelection,
-			ASF_DropSpecificCount;
+			ASF_SettingContentsTabDescription,
+			ASF_DropSpecificCount,
+			ASF_TotalStorageCapacity,
+			ASF_StorageCapacityDescriptionCustomized,
+			ASF_StorageCapacityDescriptionStacksPerCell,
+			ASF_AutomaticallyOpenContentsTab,
+			ASF_AutomaticallyOpenContentsTabDescription,
+			ASF_HideLabelsZoomSetting,
+			ASF_HideLabelsZoomDescription,
+			ASF_HideLabelsMouseOverSetting,
+			ASF_HideLabelsMouseOverDescription,
+			ASF_DefaultLabelStyleSetting,
+			ASF_DefaultLabelStyleDescription,
+			ASF_MaxZoomLevelSetting,
+			ASF_MaxZoomLevelDescription,
+			ASF_OtherItems;
 	#endregion
 		
 		static Translated() => AssignAllStringFields(typeof(Translated), Translator.TranslateSimple);

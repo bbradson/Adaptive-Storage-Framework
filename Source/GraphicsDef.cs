@@ -4,7 +4,7 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Linq;
-using System.Xml;
+
 // ReSharper disable NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 
 namespace AdaptiveStorage;
@@ -14,20 +14,26 @@ public class GraphicsDef : Def
 {
 	public List<StorageGraphic> graphics = [];
 
-	public Columns<ItemGraphic>? itemGraphics;
+	public CellTable<ItemGraphic>? itemGraphics;
 	
 	public ThingFilter
-		allowedFilter = new(),
+		allowedFilter = null!,
 		forbiddenFilter = new();
 
-	public AllowedRequirement allowedRequirement = AllowedRequirement.Any;
+	public AllowedRequirement
+		allowedRequirement = AllowedRequirement.Any,
+		forbiddenRequirement = AllowedRequirement.Any;
 
 	public bool
 		showContainedItems = true,
-		useDominantContentColor,
+		showBaseGraphic,
 		onlyAllowRequiredThingDefs;
 
+	public ContentColorSource useDominantContentColor = ContentColorSource.Default;
+
 	public StackBehaviour stackBehaviour;
+
+	public ContentLabelStyleDef? contentLabelStyle;
 
 	public int randomSelectionWeight = 1,
 		minimumThingCount = int.MinValue,
@@ -37,6 +43,8 @@ public class GraphicsDef : Def
 	public List<ThingDef>?
 		requiredThingDefs,
 		disallowedThingDefs;
+
+	public List<Rot4>? allowedRotations;
 
 	public List<ThingCategoryDef>? allowedThingCategories;
 	
@@ -48,6 +56,18 @@ public class GraphicsDef : Def
 	private bool
 		_hasEmptyStackGraphic,
 		_forbidsNothing;
+
+	public Type? workerClass = typeof(GraphicsDefSelector);
+
+	[Unsaved]
+	private ContentLabelStyleDef _activeLabelStyle = null!;
+
+	[Unsaved]
+	private GraphicsDefSelector _worker = null!;
+
+	public ContentLabelStyleDef ActiveLabelStyle => _activeLabelStyle;
+
+	public GraphicsDefSelector Worker => _worker;
 
 	public bool HasEmptyStackGraphic => _hasEmptyStackGraphic;
 
@@ -67,22 +87,72 @@ public class GraphicsDef : Def
 	private static Type? _deepStorageITabType
 		= Type.GetType("LWM.DeepStorage.ITab_DeepStorage_Inventory, LWM.DeepStorage");
 
+	public ContentLabelStyleDef AutomaticLabelStyle
+		=> AdaptiveStorageFrameworkSettings.ContentLabelStyle is
+			{
+				ContentLabelWorker: { } settingsStyleWorker
+			} settingsStyle
+			&& settingsStyleWorker.GetType() != typeof(ContentLabelWorker.Automatic)
+				? settingsStyle
+				: (ContentsFullyHidden ? ContentLabelStyleDefOf.NamesWithCountOrTotalCount : null)
+				?? (DisplaysSingleVisibleItem ? ContentLabelStyleDefOf.Vanilla : ContentLabelStyleDefOf.TotalCount)
+				?? DefDatabase<ContentLabelStyleDef>.AllDefsListForReading.First(static def
+					=> def.ContentLabelWorker.GetType() != typeof(ContentLabelWorker.Automatic));
+
+	private bool ContentsFullyHidden
+		=> (!showContainedItems || graphics.Exists(static graphic => !graphic.showContainedItems ?? false))
+			&& (int)useDominantContentColor <= 0
+			&& (allowedFilter.AllowedDefCount > 1) | (allowedRequirement == AllowedRequirement.Always)
+			&& targetDefs.Exists(static def => def.building?.fixedStorageSettings?.filter?.AllowedDefCount > 1);
+
+	private bool DisplaysSingleVisibleItem
+		=> (showContainedItems || graphics.TrueForAll(static graphic => graphic.showContainedItems ?? false))
+			&& targetDefs.TrueForAll(static def => def.SingleCell() && def.MaxItemsInAnyCell() <= 1);
+
 	public override void ResolveReferences()
+	{
+		ResolveWorker();
+		
+		if (targetDefs.RemoveAll(static def => def is null) is > 0 and var removedCount)
+		{
+			Log.Error($"GraphicsDef '{defName}' from mod '{modContentPack?.Name}' contains {
+				removedCount} null targetDefs. Removing.");
+		}
+
+		if (targetDef != null)
+			targetDefs.AddDistinct(targetDef);
+		else if (targetDefs.NullOrEmpty() && DefDatabase<ThingDef>.GetNamedSilentFail(defName) is { } def)
+			targetDefs.Add(def);
+		
+		ResolveForbiddenFilter();
+		ResolveAllowedFilter();
+		Worker.ResolveReferences();
+	}
+
+	public override void PostLoad()
 	{
 		if (onlyAllowRequiredThingDefs)
 			allowedRequirement = AllowedRequirement.All;
 		
-		if (randomSelectionWeight < 0)
-			randomSelectionWeight = 0;
-		
 		targetDefs ??= [];
-		
-		if (targetDef != null)
-			targetDefs.AddDistinct(targetDef);
-
 		graphics ??= [];
-		ResolveForbiddenFilter();
-		ResolveAllowedFilter();
+	}
+
+	public void UpdateActiveLabelStyle()
+	{
+		_activeLabelStyle = contentLabelStyle ?? AutomaticLabelStyle;
+
+		if (Current.ProgramState != ProgramState.Playing || Find.Maps is not { } allMaps)
+			return;
+
+		foreach (var map in allMaps)
+		{
+			foreach (var thingDef in targetDefs)
+			{
+				foreach (var thing in map.listerThings.ThingsOfDef(thingDef))
+					(thing as ThingClass)?.SetGUIOverlayLabelsDirty();
+			}
+		}
 	}
 
 	private void ResolveForbiddenFilter()
@@ -98,43 +168,60 @@ public class GraphicsDef : Def
 
 	private void ResolveAllowedFilter()
 	{
+		var hasPresetFilter = allowedFilter != null!;
+		
 		allowedFilter ??= new();
 
 		if (allowedThingCategories is [_,..])
-			(allowedFilter.categories ??= []).AddRangeDistinct(allowedThingCategories.Select(static cat => cat.defName));
+		{
+			(allowedFilter.categories ??= [])
+				.AddRangeDistinct(allowedThingCategories.Select(static cat => cat.defName));
+			hasPresetFilter = true;
+		}
 
 		allowedFilter.ResolveReferences();
 
 		if (requiredThingDefs is [_,..])
 			allowedFilter.SetAllowAll(requiredThingDefs, true);
-		
-		if (allowedFilter.AllowedDefCount == 0)
-			allowedFilter.SetAllowAll(StorageSettings.EverStorableFixedSettings().filter);
+		else if (!hasPresetFilter && allowedFilter.AllowedDefCount == 0)
+			allowedRequirement = AllowedRequirement.Always;
 
 		allowedFilter.SetAllowAll(forbiddenFilter.AllowedThingDefs, false);
 	}
 
-	public void Initialize()
+	private void ResolveWorker()
+		=> _worker = WorkerClassMaker<GraphicsDefSelector>.MakeWorker(workerClass, this, this)
+			?? new GraphicsDefSelector(this);
+
+	public virtual void Initialize()
 	{
 		foreach (var def in targetDefs)
 			InitializeOnDef(def);
 
-		if (graphics.Count == 0)
-			graphics.Add(new() { graphicData = targetDefs.FirstOrDefault()?.graphicData });
-		
+		if (!showBaseGraphic && graphics.Count == 0
+			&& StorageGraphicData.GetOrMakeFor(targetDefs.FirstOrDefault()?.graphicData) is { } targetDefGraphic)
+		{
+			var storageGraphic = new StorageGraphic();
+			storageGraphic.graphicDatas.Add(targetDefGraphic);
+			graphics.Add(storageGraphic);
+		}
+
 		foreach (var graphic in graphics)
-			graphic.Initialize();
+			graphic.Initialize(this);
 
 		graphics.Sort(static (x, y)
 			=> x.minimumStackCount.CompareTo(y.minimumStackCount));
 
-		if (targetDefs.Count > 0)
-			itemGraphics?.Initialize(targetDefs);
+		if (targetDefs.Count > 0 && itemGraphics is { } items)
+		{
+			items.Initialize(targetDefs);
+			items.ForEach(itemGraphic => itemGraphic.Initialize(this));
+		}
 
 		var minimumStackCountOnGraphics = graphics.Min(static g => g.minimumStackCount);
 		_hasEmptyStackGraphic = minimumStackCountOnGraphics < 1;
 		
-		if (minimumAllowedThingCount < 0 && !HasEmptyStackGraphic)
+		if (minimumAllowedThingCount < 1 && !HasEmptyStackGraphic)
 			minimumAllowedThingCount = 1;
 
 		if (minimumThingCount < minimumAllowedThingCount)
@@ -142,107 +229,41 @@ public class GraphicsDef : Def
 
 		if (minimumThingCount < minimumStackCountOnGraphics)
 			minimumThingCount = minimumStackCountOnGraphics;
+		
+		UpdateActiveLabelStyle();
 	}
-
-	public bool Allows(int thingCount) => thingCount >= minimumThingCount && thingCount <= maximumThingCount;
-
-	public bool Allows(ThingDef thingDef) => allowedFilter.Allows(thingDef);
-
-	public bool Allows(Thing thing) => allowedFilter.Allows(thing);
-
-	public bool Allows<T>(T things) where T : IList<Thing>
-	{
-		if (!Allows(things.Count))
-			return false;
-
-		var allowedThingCount = 0;
-		var remainingThingCount = 0;
-		for (var i = things.Count; i-- > 0;)
-		{
-			var thing = things[i];
-			if (Allows(thing))
-				allowedThingCount++;
-			else if (OnlyAllowRequiredThingDefs || Forbids(thing))
-				return false;
-			else
-				remainingThingCount++;
-		}
-
-		return allowedThingCount >= minimumAllowedThingCount
-			&& allowedRequirement switch
-			{
-				AllowedRequirement.Majority => allowedThingCount > remainingThingCount,
-				AllowedRequirement.Minority => allowedThingCount < remainingThingCount,
-				_ => true
-			};
-	}
-
-	public bool Allows(IList<ThingDef> thingDefs)
-	{
-		if (thingDefs.Count == 0)
-			return HasEmptyStackGraphic;
-
-		var hasAnyAllowedThing = false;
-		for (var i = thingDefs.Count; i-- > 0;)
-		{
-			var thingDef = thingDefs[i];
-			if (Allows(thingDef))
-				hasAnyAllowedThing = true;
-			else if (OnlyAllowRequiredThingDefs || Forbids(thingDef))
-				return false;
-		}
-
-		return hasAnyAllowedThing;
-	}
-
-	private bool OnlyAllowRequiredThingDefs => allowedRequirement == AllowedRequirement.All;
-
-	public bool Forbids(ThingDef thingDef) => !ForbidsNothing && forbiddenFilter.Allows(thingDef);
-
-	public bool Forbids(Thing thing) => !ForbidsNothing && forbiddenFilter.Allows(thing);
-
-	private void InitializeOnDef(ThingDef def)
+	
+	protected virtual void InitializeOnDef(ThingDef def)
 	{
 		if (!typeof(ThingClass).IsAssignableFrom(def.thingClass))
 			def.thingClass = typeof(ThingClass);
 
 		var contentsITabType = typeof(ContentsITab);
-		if (!def.inspectorTabs.Contains(contentsITabType) && !def.inspectorTabs.Contains(_deepStorageITabType))
+		var inspectorTabs = def.inspectorTabs;
+		if (!inspectorTabs.Contains(contentsITabType) && !inspectorTabs.Contains(_deepStorageITabType))
 		{
-			def.inspectorTabs.Add(contentsITabType);
+			inspectorTabs.Add(contentsITabType);
 			(def.inspectorTabsResolved ??= []).Add(InspectTabManager.GetSharedInstance(contentsITabType));
 		}
 
 		if (!Database.TryGetValue(def, out var list))
 			Database[def] = list = [];
 
-		if (!list.Contains(this))
-			list.Add(this);
+		list.AddDistinct(this);
 	}
 
 	public override IEnumerable<string> ConfigErrors()
 	{
-		if (randomSelectionWeight < 0)
-			yield return ErrorForDef("has negative random selection weight");
-		
 		foreach (var configError in base.ConfigErrors())
 			yield return configError;
 		
-		if (targetDef is null && targetDefs is not [_,..])
+		if (targetDefs is not [_,..])
 		{
-			yield return ErrorForDef("contains no targetDef or targetDefs node. It will not be used anywhere");
+			yield return ErrorForDef("has no valid target ThingDefs. It will not be used anywhere");
 			yield break;
 		}
 
-		var tempDefsToErrorCheck = new List<ThingDef>();
-		
-		if (targetDefs is [_,..])
-			tempDefsToErrorCheck.AddRange(targetDefs);
-		
-		if (targetDef != null && !tempDefsToErrorCheck.Contains(targetDef))
-			tempDefsToErrorCheck.Add(targetDef);
-
-		foreach (var defToCheck in tempDefsToErrorCheck)
+		foreach (var defToCheck in targetDefs)
 		{
 			if (!typeof(Building_Storage).IsAssignableFrom(defToCheck.thingClass))
 			{
@@ -278,10 +299,10 @@ public class GraphicsDef : Def
 	{
 		for (var i = collection.Count; i-- > 0;)
 		{
-			if (collection[i]?.graphicData != null!)
+			if (collection[i]?.graphicDatas is [_, ..])
 				continue;
 
-			yield return ErrorForDef($"loaded with null graphic at index {i} in {name}");
+			yield return ErrorForDef($"loaded with missing graphicData or graphicDatas at index {i} in {name}");
 
 			collection.RemoveAt(i);
 		}
@@ -291,96 +312,5 @@ public class GraphicsDef : Def
 		=> graphics != null! ? null : ErrorForDef("loaded with null graphics");
 
 	private string ErrorForDef(string message)
-		=> $"AdaptiveStorage.GraphicsDef {defName} from mod {modContentPack?.Name ?? "NULL"} {message}";
-	
-	[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-	public class Columns<T> where T : IHasPosition, new()
-	{
-		public List<Rows<T>> columns = [];
-
-		public T? defaults;
-
-		public void Initialize(List<ThingDef> targetDefs)
-		{
-			var targetColumnCount = targetDefs.Max(static def => def.size.x);
-			var targetRowCount = targetDefs.Max(static def => def.size.z);
-		
-			var lastColumnPosition = -1;
-		
-			for (var i = 0; i < targetColumnCount; i++)
-			{
-				var rows = FillAndShuffle(columns, ref i, ref lastColumnPosition).rows;
-			
-				var lastRowPosition = -1;
-
-				for (var j = 0; j < targetRowCount; j++)
-					FillAndShuffle(rows, ref j, ref lastRowPosition);
-			}
-		}
-
-		private static TItem FillAndShuffle<TItem>(List<TItem> list, ref int i, ref int lastPosition)
-			where TItem : IHasPosition, new()
-		{
-			while (list.Count <= i)
-				list.Add(new());
-
-			var item = list[i];
-			item.Position ??= lastPosition + 1;
-			var itemPosition = item.Position.Value;
-
-			if (itemPosition < i)
-			{
-				list.RemoveAt(i);
-				list.Insert(itemPosition, item);
-
-				if (itemPosition == list[itemPosition + 1].Position)
-					list.RemoveAt(itemPosition + 1);
-
-				i = itemPosition;
-			}
-			else
-			{
-				while (itemPosition > i)
-					list.Insert(i++, new());
-			}
-
-			lastPosition = itemPosition;
-			return item;
-		}
-	}
-
-	[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-	public class Rows<T> : IHasPosition where T : IHasPosition
-	{
-		public int? position;
-		public List<T> rows = [];
-	
-		int? IHasPosition.Position
-		{
-			get => position;
-			set => position = value;
-		}
-	
-		public void LoadDataFromXmlCustom(XmlNode xmlRoot)
-		{
-			if (xmlRoot.Name.Length > 1 && int.TryParse(xmlRoot.Name[1..], out var value))
-				position = value;
-
-			foreach (XmlNode childNode in xmlRoot.ChildNodes)
-			{
-				if (childNode.NodeType == XmlNodeType.Comment || childNode.Name != nameof(rows))
-					continue;
-			
-				rows = DirectXmlToObject.ObjectFromXml<List<T>>(childNode, false);
-			}
-		}
-	}
-
-	public enum AllowedRequirement
-	{
-		Any,
-		All,
-		Majority,
-		Minority
-	}
+		=> $"AdaptiveStorage.GraphicsDef '{defName}' from mod '{modContentPack?.Name ?? "NULL"}' {message}";
 }

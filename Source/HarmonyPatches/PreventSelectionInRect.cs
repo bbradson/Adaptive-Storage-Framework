@@ -3,21 +3,19 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Linq;
 using HarmonyLib;
 
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(ThingSelectionUtility), nameof(ThingSelectionUtility.MultiSelectableThingsInScreenRectDistinct))]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class PreventSelectionInRect
 {
 	[HarmonyPostfix]
-	public static IEnumerable<Thing> Postfix(IEnumerable<Thing> __result)
+	public static void Postfix(ref IEnumerable<Thing> __result)
 	{
-		foreach (var thing in __result)
-		{
-			if (HideStoredThingsFromSectionLayerAndOverlayDrawer.Prefix(thing))
-				yield return thing;
-		}
+		var currentEvent = Event.current;
+		if (currentEvent.rawType == EventType.MouseUp && currentEvent.button == 0)
+			__result = __result.Where(HideStoredThingsFromSectionLayerAndOverlayDrawer.Prefix);
 	}
 }

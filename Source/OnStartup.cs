@@ -5,56 +5,29 @@
 
 global using System;
 global using System.Collections.Generic;
+global using System.Runtime.CompilerServices;
+global using AdaptiveStorage.Utility;
 global using JetBrains.Annotations;
 global using RimWorld;
 global using UnityEngine;
 global using Verse;
+global using CodeInstructions = System.Collections.Generic.IEnumerable<HarmonyLib.CodeInstruction>;
 
 namespace AdaptiveStorage;
 
 [StaticConstructorOnStartup]
-[UsedImplicitly]
 public static class OnStartup
 {
 	static OnStartup()
 	{
+		// var sw = new Stopwatch();
+		// sw.Start();
+		
+		// TODO: move parts of patching elsewhere. StaticConstructorOnStartup blocks the UI thread
+		
 		AdaptiveStorageFrameworkMod.Harmony.PatchAll();
-
-		var thingDefs = DefDatabase<ThingDef>.AllDefsListForReading;
-		for (var i = thingDefs.Count; i-- > 0;)
-		{
-			var thingDef = thingDefs[i];
-			if (thingDef is null)
-			{
-				LogDefDatabaseCorruption(thingDefs, i);
-				continue;
-			}
-			
-			if (thingDef.GetModExtension<Extension>() is { } extension)
-				extension.Initialize(thingDef);
-		}
-
-		var graphicsDefs = DefDatabase<GraphicsDef>.AllDefsListForReading;
-		foreach (var graphicsDef in graphicsDefs)
-		{
-			try
-			{
-				graphicsDef.Initialize();
-			}
-			catch (Exception e)
-			{
-				Log.Error($"Error while initializing '{graphicsDef}' from mod '{
-					graphicsDef.modContentPack?.Name ?? "null"}':\n{e}");
-			}
-		}
-	}
-
-	private static void LogDefDatabaseCorruption(List<ThingDef> thingDefs, int i)
-	{
-		Log.Error("DefDatabase contains null defs. This indicates something having broken during loading "
-			+ "of earlier mods");
-
-		thingDefs.RemoveAt(i);
-		DefDatabase<ThingDef>.SetIndices();
+		
+		// sw.Stop();
+		// Log.Message($"Initializing ASF took: {sw.ElapsedMilliseconds} ms");
 	}
 }

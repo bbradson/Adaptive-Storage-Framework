@@ -3,6 +3,8 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using AdaptiveStorage.Fishery;
+
 namespace AdaptiveStorage;
 
 public static class InspectTabUtility
@@ -27,18 +29,21 @@ public static class InspectTabUtility
 			yield return tab;
 		}
 
-		if (!hasUnknownTab && AdaptiveStorageFrameworkSettings.ContentsTab is { } selectedContentsTab)
+		var settingsContentsTab = AdaptiveStorageFrameworkSettings.ContentsTab;
+		if (!hasUnknownTab && settingsContentsTab is { } selectedContentsTab)
 			yield return selectedContentsTab;
+		
+		if (settingsContentsTab is ContentsITab)
+			yield return GroupContentsITab.Instance;
 	}
 
 	public static void TryOpen(ISelectable selectable) // for automatic tab opening, similar to LWM's
 		// https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/Deep_Storage_ITab.cs#L237-L306
 	{
-		if (Find.Selector.NumSelected > 1)
+		if (!AdaptiveStorageFrameworkSettings.AutomaticallyOpenContentsTab || Find.Selector.NumSelected > 1)
 			return;
 
-		using var pooledTabs = selectable.GetInspectTabs().ToPooledList();
-		var tabs = pooledTabs.List;
+		using var tabs = selectable.GetInspectTabs().ToPooledList();
 
 		if (tabs.Exists(static tab
 			=> InspectPaneUtility.IsOpen(tab, (MainTabWindow_Inspect)MainButtonDefOf.Inspect.TabWindow)))

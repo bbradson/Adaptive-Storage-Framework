@@ -19,7 +19,7 @@ public static class LWM
 
 	private static AccessTools.FieldRef<CompProperties, int>? TryGetField(string name)
 		=> CompPropertiesType is { } propsType
-			? AccessTools.FieldRefAccess<CompProperties, int>(AccessTools.Field(propsType, name))
+			? ReflectionUtility.FieldRefAccess<CompProperties, int>(propsType, name)
 			: null;
 
 	public static CompProperties? GetCompProperties(ThingDef thingDef)

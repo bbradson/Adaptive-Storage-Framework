@@ -3,27 +3,50 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using AdaptiveStorage.ModCompatibility;
 
 namespace AdaptiveStorage;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
+public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 {
-	public List<GraphicsDef>? AllGraphics { get => Renderer.AllGraphics; private set => Renderer.AllGraphics = value; }
+	public List<GraphicsDef>? AllGraphics => Renderer?.AllGraphics;
 
 	public int RandomSeed => thingIDNumber;
 
 	public event Action<Thing>?
 		ReceivedThing,
-		LostThing;
+		LostThing,
+		ItemStackChanged;
 
-	public ThingCollection StoredThings { get; } = [];
+	public static event Action<Thing>? Initialized;
 
-	public List<IntVec2> FreeSlots { get; } = [];
+	public event ThingGridEventHandler?
+		ItemRegisteredAtCell,
+		ItemDeregisteredAtCell;
+
+	public event Action<Map, SpawnMode>?
+		Spawning,
+		PostSpawned;
+
+	public event Action<DestroyMode, SpawnMode>?
+		DeSpawning,
+		DeSpawned;
+
+	public event Action?
+		StorageSettingsChanged,
+		SlotLimitChanged;
+
+	public event Action<StorageCell>? SlotLimitChangedAtCell;
+
+	public ThingCollection StoredThings => _storedThings;
+
+	public ReadOnlyCollection<StorageCell> FreeStorageSlots => _storedThings.FreeStorageSlots;
+
+	public IEnumerable<IntVec3> FreeMapCells => _storedThings.FreeMapCells;
 	
 	public int CurrentSlotLimit
 	{
@@ -33,38 +56,19 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 			_currentSlotLimitPerCell = ((value - 1) / CellCount) + 1;
 			_currentSlotLimit = value;
 			UpdateMaxItemsInCell();
-			UpdateFreeSlots();
+			SlotLimitChanged?.Invoke();
 		}
 	}
 
-	public bool AnyFreeSlots => StoredThings.Count < CurrentSlotLimit;
+	public bool AnyFreeSlots => StoredThings.CellWiseCount < CurrentSlotLimit;
 
 	public int TotalSlots { get; private set; }
 
-	public int TotalThingCount
-	{
-		get
-		{
-			var count = 0;
-			var storedThings = StoredThings;
-			for (var i = storedThings.Count; i-- > 0;)
-				count += storedThings[i].stackCount;
+	public bool ContentsPacked => _contentsPacked;
 
-			return count;
-		}
-	}
+	public int TotalThingCount => StoredThings.TotalThingCount;
 
-	public virtual string GUIOverlayLabel
-	{
-		get
-		{
-			var currentTotalThingCount = TotalThingCount;
-
-			return currentTotalThingCount == _cachedTotalThingCount
-				? _cachedGUIOverlayLabel!
-				: UpdateGUIOverlayLabel(currentTotalThingCount);
-		}
-	}
+	public virtual string?[]? GUIOverlayLabels => _cachedGUIOverlayLabels;
 
 	public override string LabelNoCount
 		=> HitPoints == _cachedLabelHitPoints && _cachedLabel is { } text ? text : UpdateLabelNoCount();
@@ -75,31 +79,90 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 		=> SpawnedOrAnyParentSpawned && MapHeld.mapDrawer is { sections: not null} drawer
 			? drawer.SectionAt(PositionHeld).GetLayer(typeof(SectionLayer_ThingsGeneral))
 			: null;
+	
+	public CellRect OccupiedRect { get; private set; }
 
 	public IntVec3 BottomLeftCell { get; private set; }
-
-	public virtual int GetMaxItemsForCell(in IntVec3 cell) => MaxItemsForCell(cell);
-
-	private ref int MaxItemsForCell(in IntVec3 cell)
+	
+	public IntVec2 Size { get; private set; }
+	
+	public bool HasMouseOver
 	{
-		var position = BottomLeftCell;
-		return ref _maxItemsByCell[((cell.z - position.z) * RotatedSize.x) + cell.x - position.x];
+		get
+		{
+			var size = Size.RotatedFor(this);
+			var bottomLeft = BottomLeftCell;
+			var mousePosition = HarmonyPatches.CacheZoomAndMousePosition.Position;
+
+			return ((uint)(mousePosition.x - bottomLeft.x) < (uint)size.x)
+				& ((uint)(mousePosition.z - bottomLeft.z) < (uint)size.z);
+		}
 	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public bool ContainsAndAllows(Thing thing) => _storedThings.ContainsAndAllows(thing);
+
+	public StorageCell GetStorageCell(in IntVec3 mapCell)
+	{
+		var bottomLeftCell = BottomLeftCell;
+		IntVec2 result;
+		result.x = mapCell.x - bottomLeftCell.x;
+		result.z = mapCell.z - bottomLeftCell.z;
+
+		return new(Size.x, Rotation.IsHorizontal ? default(IntVec2) with { x = result.z, z = result.x } : result);
+	}
+
+	public IntVec3 GetMapCell(StorageCell storageCell)
+	{
+		var bottomLeftCell = BottomLeftCell;
+		var result = storageCell.AsIntVec3;
+		result.x += bottomLeftCell.x;
+		result.y = 0;
+		result.z += bottomLeftCell.z;
+
+		return Rotation.IsHorizontal ? default(IntVec3) with { x = result.z, z = result.x } : result;
+	}
+
+	public Vector3 GetOffsetFromCenter(IntVec2 storageCell) => def.GetOffsetFromCenter(storageCell).RotatedFor(this);
+
+	public int GetMaxItemsForCell(in IntVec3 cell) => GetMaxItemsForStorageCell(GetStorageCell(cell));
+
+	public virtual int GetMaxItemsForStorageCell(StorageCell storageCell) => MaxItemsForBuildingCell(storageCell);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	private ref int MaxItemsForBuildingCell(StorageCell storageCell)
+		=> ref _maxItemsByCell[storageCell.Index];
 
 	private void UpdateMaxItemsInCell()
 	{
-		var itemsPerCell = _maxItemsInCell = Math.Min(DefaultMaxItemsInCell(), _currentSlotLimitPerCell);
-		var cells = AllSlotCellsList();
-		var cellCount = cells.Count;
-		
-		Array.Fill(_maxItemsByCell, itemsPerCell);
-
-		var assignedSlots = itemsPerCell * cellCount;
 		var slotLimit = CurrentSlotLimit;
-		for (var i = cellCount; i-- > 0 && assignedSlots > slotLimit;)
+
+		var maxItemsByCell = _maxItemsByCell;
+
+		Span<int> previousMaxItemsByCell = stackalloc int[maxItemsByCell.Length];
+		maxItemsByCell.CopyTo(previousMaxItemsByCell);
+		
+		ResetMaxItemsByCell(Extension?.maxItemsByCell is null ? _currentSlotLimitPerCell : slotLimit);
+
+		var cellCount = maxItemsByCell.Length;
+		var assignedSlots = maxItemsByCell.Sum();
+
+		for (var i = cellCount; assignedSlots > slotLimit;)
 		{
-			MaxItemsForCell(cells[i])--;
+			i = (i <= 0 ? cellCount : i) - 1;
+
+			ref var maxItemsForCell = ref maxItemsByCell[i];
+			if (maxItemsForCell <= 0)
+				continue;
+
+			maxItemsForCell--;
 			assignedSlots--;
+		}
+
+		for (var i = maxItemsByCell.Length; --i >= 0;)
+		{
+			if (maxItemsByCell[i] != previousMaxItemsByCell[i])
+				SlotLimitChangedAtCell?.Invoke(new(Size.x, i));
 		}
 	}
 
@@ -121,15 +184,19 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 		return base.MaxItemsInCell;
 	}
 
-	public StorageRenderer Renderer { get; private set; } = null!;
+	public StorageRenderer? Renderer { get; private set; }
+
+	private ThingCollection _storedThings = null!;
 	
 	public Extension? Extension { get; private set; }
 	
 	public CompQuality? CompQuality { get; private set; }
 
-	public int CellCount => AllSlotCellsList().Count;
+	public QualityCategory QualityCategory => CompQuality?.Quality ?? QualityCategory.Normal;
 
-	private int[] _maxItemsByCell = [];
+	public int CellCount => _maxItemsByCell.Length;
+
+	private int[] _maxItemsByCell = Array.Empty<int>();
 
 	private int
 		_cachedLabelHitPoints = -69,
@@ -138,30 +205,85 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 		_currentSlotLimit = int.MaxValue,
 		_currentSlotLimitPerCell = int.MaxValue;
 
-	private string? _cachedLabel, _cachedGUIOverlayLabel;
+	private bool _contentsPacked, _packingNow;
+
+	private string? _cachedLabel;
+
+	private string?[]? _cachedGUIOverlayLabels;
+
+	private ContentLabelWorker? _currentLabelStyle;
 
 	private StorageSettings? _fixedStorageSettings;
 	
-	protected virtual void PostInitialize() // why does this not exist on Thing ???
+	protected virtual void PostInitialize() // why does this not exist on Thing?
 	{
-		Extension = def.GetModExtension<Extension>();
-		CompQuality = GetComp<CompQuality>();
-		
-		if (_maxItemsByCell.Length == 0)
+		try
 		{
-			_maxItemsByCell = new int[def.Size.Area];
-			Array.Fill(_maxItemsByCell, _maxItemsInCell = Math.Min(DefaultMaxItemsInCell(), _currentSlotLimitPerCell));
+			Extension = def.GetModExtension<Extension>();
+			Size = def.Size;
+			CompQuality = GetComp<CompQuality>();
+			InitializeMaxItemsByCell();
+			TotalSlots = _maxItemsByCell.Sum();
+
+			_storedThings = new(this);
+			Renderer = new(this);
+			Renderer.CurrentGraphicChanged += SetGUIOverlayLabelsDirty;
+			_godModeGizmos = new(this);
+			_currentGodModeGizmos = GetGodModeGizmos();
+			_statDrawEntries = new(this);
+			Initialized?.Invoke(this);
 		}
-		
-		Renderer = new(this);
-		_godModeGizmos = new(this);
-		_statDrawEntries = new(this);
+		catch (Exception ex)
+		{
+			Log.Error(ex.ToString());
+		}
 	}
 
-	private string UpdateGUIOverlayLabel(int newTotalThingCount)
-		=> _cachedGUIOverlayLabel = (_cachedTotalThingCount = newTotalThingCount) > 0
-			? string.Concat("[ ", newTotalThingCount.ToStringCached(), " ]")
-			: string.Empty;
+	private void InitializeMaxItemsByCell()
+	{
+		_maxItemsByCell = new int[Size.Area];
+		ResetMaxItemsByCell();
+	}
+
+	private void ResetMaxItemsByCell(int maxValue = int.MaxValue)
+	{
+		var defaultMaxItemsInCell = Math.Min(DefaultMaxItemsInCell(), maxValue);
+		
+		if (Extension?.maxItemsByCell is { } maxItemsByCell)
+		{
+			var maxValueCopy = maxValue;
+			var defaultMaxItemsInCellCopy = defaultMaxItemsInCell;
+			var quality = QualityCategory;
+			maxItemsByCell.ToArray(_maxItemsByCell, value
+				=> Math.Min(value.GetFor(quality) ?? defaultMaxItemsInCellCopy, maxValueCopy));
+			_maxItemsInCell = _maxItemsByCell.Max();
+		}
+		else
+		{
+			Array.Fill(_maxItemsByCell, _maxItemsInCell = defaultMaxItemsInCell);
+		}
+	}
+
+	private string?[]? UpdateGUIOverlayLabels(int newTotalThingCount)
+	{
+		string?[]? newGUIOverlayLabels;
+		if ((_cachedTotalThingCount = newTotalThingCount) > 0)
+		{
+			var graphicsDef = Renderer?.CurrentGraphicVariation;
+			newGUIOverlayLabels = (_currentLabelStyle = (graphicsDef?.ActiveLabelStyle
+						?? ContentLabelStyleDefOf.Vanilla)?.ContentLabelWorker
+					?? ContentLabelWorker.TotalCount.Instance)
+				.UpdateLabels(this, newTotalThingCount, graphicsDef);
+		}
+		else
+		{
+			newGUIOverlayLabels = Array.Empty<string>();
+		}
+
+		return _cachedGUIOverlayLabels = newGUIOverlayLabels;
+	}
+
+	public void SetGUIOverlayLabelsDirty() => _cachedTotalThingCount = -1;
 
 	private string UpdateLabelNoCount()
 	{
@@ -187,7 +309,9 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 			};
 	}
 	
-	// IStoreSettingsParent, this returns the fixed baseline settings
+	/// <summary>
+	/// IStoreSettingsParent, this returns the fixed baseline settings
+	/// </summary>
 	public new StorageSettings GetParentStoreSettings() => _fixedStorageSettings ??= PrepareFixedStorageSettings();
 
 	private StorageSettings PrepareFixedStorageSettings()
@@ -206,8 +330,20 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 
 	public new bool Accepts(Thing t) => HasCapacityForThing(t) && base.Accepts(t);
 
+	public bool SettingsAllow(Thing t) => GetStoreSettings().filter.Allows(t) && FixedFilterAllows(t);
+
+	public bool FixedFilterAllows(Thing t) => GetParentStoreSettings().filter.Allows(t);
+
+	/// <summary>
+	/// for the contents tab
+	/// </summary>
+	public virtual bool AllowItemForbiddingAccess => true;
+
 	public bool HasCapacityForThing(Thing t)
-		=> AnyFreeSlots || t.StoringThing() == this || AcceptsForStacking(t);
+		=> AnyFreeSlots
+			|| (t.Spawned && OccupiedRect.Contains(t.Position)
+				? ContainsAndAllows(t)
+				: AcceptsForStacking(t));
 
 	public bool AcceptsForStacking(Thing t)
 	{
@@ -234,86 +370,148 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 		PostInitialize();
 	}
 
-	public override void SpawnSetup(Map map, bool respawningAfterLoad)
+	public virtual Thing? Eject(Thing item, int count = int.MaxValue, bool forbid = true,
+		in IntVec3 dropOffset = default)
+		=> ThingMakerUtility.EjectFromStorage(this, item, count, forbid, in dropOffset);
+
+	public sealed override void SpawnSetup(Map map, bool respawningAfterLoad)
+		=> OnSpawn(map, (respawningAfterLoad ? SpawnMode.RespawningAfterLoad : SpawnMode.Default)
+			| (ContentsPacked ? SpawnMode.PackContents : SpawnMode.Default));
+
+	protected virtual void OnSpawn(Map map, SpawnMode spawnMode)
 	{
-		BottomLeftCell = this.OccupiedRect()
+		BottomLeftCell = (OccupiedRect = this.OccupiedRect())
 #if V1_4
 			.BottomLeft;
 #else
 			.Min; // wtf? why was this renamed?
 #endif
+		
+		Spawning?.Invoke(map, spawnMode);
+		base.SpawnSetup(map, (spawnMode & SpawnMode.RespawningAfterLoad) != 0);
 
-		base.SpawnSetup(map, respawningAfterLoad);
+		if ((spawnMode & SpawnMode.PackContents) != 0)
+			UnpackStoredItems(map);
 
-		TotalSlots = CellCount * DefaultMaxItemsInCell();
 		CurrentSlotLimit = _currentSlotLimit;
 		InitializeStoredThings();
-		Renderer.InitializeStoredThingGraphics(CurrentSectionLayer);
+		Renderer?.InitializeStoredThingGraphics(CurrentSectionLayer);
+		PostSpawned?.Invoke(map, spawnMode);
 	}
 
-	public override void DeSpawn(DestroyMode mode = DestroyMode.Vanish)
+	private void UnpackStoredItems(Map map)
 	{
-		for (var i = 0; i < StoredThings.Count; i++)
-			Renderer.RegenerateThingGraphic(StoredThings[i]);
-
-		base.DeSpawn(mode);
-	}
-
-	private void InitializeStoredThings()
-	{
-		StoredThings.Clear();
-		FreeSlots.Clear();
-		var cells = AllSlotCellsList();
-
-		for (var i = cells.Count; i-- > 0;)
+		_contentsPacked = false;
+		var storedThings = StoredThings;
+		for (var i = 0; i < storedThings.Count; i++)
 		{
-			var thingListAtCell = cells[i].GetThingListUnchecked(Map);
-			var storedThingsAtCell = 0;
+			var thing = storedThings[i];
+			try
+			{
+				var itemPosition = storedThings.MapPositionOf(thing);
+				storedThings.Remove(thing, itemPosition);
+				GenSpawn.Spawn(thing, itemPosition, map);
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"Exception spawning packed item '{thing}' in storage '{this}' at cell {
+					Position}:\n{ex}");
+			}
+		}
+	}
 
-			for (var j = thingListAtCell.Count; j-- > 0;)
+	public sealed override void DeSpawn(DestroyMode mode = DestroyMode.Vanish) => OnDeSpawn(mode, SpawnMode.Default);
+
+	protected virtual void OnDeSpawn(DestroyMode destroyMode, SpawnMode deSpawnMode)
+	{
+		if ((deSpawnMode & SpawnMode.PackContents) == 0)
+			FreeAllThingGraphics();
+		else
+			PackStoredThings();
+
+		DeSpawning?.Invoke(destroyMode, deSpawnMode);
+		base.DeSpawn(destroyMode);
+		DeSpawned?.Invoke(destroyMode, deSpawnMode);
+	}
+
+	internal void FreeAllThingGraphics()
+	{
+		if (Renderer is not { } renderer)
+			return;
+
+		var storedThings = StoredThings;
+		for (var i = storedThings.Count; --i >= 0;)
+			renderer.FreeThingGraphic(storedThings[i], null, false);
+	}
+
+	private void PackStoredThings()
+	{
+		try
+		{
+			_packingNow = true;
+			DeSpawnStoredThings();
+		}
+		finally
+		{
+			_packingNow = false;
+			_contentsPacked = true;
+		}
+	}
+
+	private void DeSpawnStoredThings()
+	{
+		var storedThings = StoredThings;
+		for (var i = storedThings.Count; --i >= 0;)
+		{
+			var thing = storedThings[i];
+			try
+			{
+				thing.DeSpawn();
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"Exception despawning packed item '{thing}' in storage '{this}' at cell {
+					Position}:\n{ex}");
+			}
+		}
+	}
+
+	public void Minify() => Minify(def.minifiedDef.GetModExtension<MinifiedExtension>()?.packContents ?? false);
+
+	public void Minify(bool packContents)
+		=> Minify(DestroyMode.Vanish, packContents ? SpawnMode.PackContents : SpawnMode.Default);
+
+	public void Minify(DestroyMode destroyMode)
+	{
+		if (destroyMode == DestroyMode.Vanish)
+			Minify();
+		else
+			Minify(destroyMode, SpawnMode.Default);
+	}
+
+	public void Minify(DestroyMode destroyMode, SpawnMode deSpawnMode)
+		=> OnDeSpawn(destroyMode, SpawnMode.Minify | deSpawnMode);
+
+	internal void InitializeStoredThings()
+	{
+		var storedThings = _storedThings;
+		storedThings.Clear();
+		var cells = AllSlotCellsList();
+		var map = Map;
+
+		for (var i = cells.Count; --i >= 0;)
+		{
+			var mapCell = cells[i];
+			var storageCell = GetStorageCell(mapCell);
+			var thingListAtCell = mapCell.GetThingListUnchecked(map);
+
+			for (var j = thingListAtCell.Count; --j >= 0;)
 			{
 				var thing = thingListAtCell[j];
-				if (!thing.IsItem())
-					continue;
-
-				StoredThings.Add(thing);
-				storedThingsAtCell++;
+				
+				if (thing.IsItem())
+					storedThings.Add(thing, storageCell, thing.Position == mapCell);
 			}
-
-			if (storedThingsAtCell < MaxItemsInCell)
-				FreeSlots.Add(cells[i].ToIntVec2);
-		}
-	}
-
-	private void UpdateFreeSlots()
-	{
-		var cells = AllSlotCellsList();
-		for (var i = cells.Count; i-- > 0;)
-			UpdateFreeSlotsAt(cells[i].ToIntVec2);
-	}
-
-	private void UpdateFreeSlotsAt(IntVec2 cell)
-	{
-		var thingListAtCell = cell.GetThingListUnchecked(Map);
-		var storedThingsAtCell = 0;
-
-		for (var j = thingListAtCell.Count; j-- > 0;)
-		{
-			var thing = thingListAtCell[j];
-			if (!thing.IsItem())
-				continue;
-
-			storedThingsAtCell++;
-		}
-		
-		if (storedThingsAtCell >= MaxItemsInCell)
-		{
-			FreeSlots.Remove(cell);
-		}
-		else
-		{
-			if (!FreeSlots.Contains(cell))
-				FreeSlots.Add(cell);
 		}
 	}
 
@@ -322,67 +520,118 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 		base.ExposeData();
 		
 		Scribe_Values.Look(ref _currentSlotLimit, nameof(CurrentSlotLimit), int.MaxValue);
+		Scribe_Values.Look(ref _contentsPacked, nameof(ContentsPacked));
 
-		if (Scribe.mode != LoadSaveMode.LoadingVars)
-			return;
-		
-		PostInitialize();
+		if (Scribe.mode == LoadSaveMode.LoadingVars)
+			PostInitialize();
+
+		if (ContentsPacked)
+		{
+			Scribe_Deep.Look(ref _storedThings, nameof(StoredThings), this);
+			_storedThings ??= new(this);
+		}
 	}
 
-	public override void Notify_ReceivedThing(Thing newItem)
+	public new void Notify_SettingsChanged()
 	{
-		if (!newItem.IsItem())
-			return;
-		
+		base.Notify_SettingsChanged();
+		Renderer?.SetAllPrintDatasDirty();
+		StorageSettingsChanged?.Invoke();
+	}
+
+	[Obsolete("Replaced with Notify_ItemRegisteredAtCell as a workaround for bugs caused by mods not calling this method")]
+	public sealed override void Notify_ReceivedThing(Thing newItem)
+	{
 		base.Notify_ReceivedThing(newItem);
-		StoredThings.Add(newItem);
-		Renderer.AssignThingGraphic(newItem, CurrentSectionLayer);
-		Renderer.UpdateCurrentGraphic();
-		// UpdateFreeSlotsAt(newItem.Position.ToIntVec2); // Stacking can result in multiple positions changing
-		UpdateFreeSlots();
-		
-		ReceivedThing?.Invoke(newItem);
+		if (newItem.def.ShouldRealTimeDraw() && newItem.TryGetMap() is { } map && StoredThings.Contains(newItem))
+			newItem.DisableItemDrawing(map); // 2nd time because of call order in Thing.SpawnSetup
 	}
 
-	public override void Notify_LostThing(Thing newItem)
+	[Obsolete("Replaced with Notify_ItemDeregisteredAtCell as a workaround for bugs caused by mods not calling this method")]
+	public sealed override void Notify_LostThing(Thing newItem)
 	{
-		if (!newItem.IsItem())
+		if (!_packingNow)
+			base.Notify_LostThing(newItem);
+	}
+
+	protected internal virtual void Notify_ItemRegisteredAtCell(Thing item, in IntVec3 cell)
+	{
+		_cachedTotalThingCount = -1;
+		StoredThings.Add(item, cell);
+
+		if (item.def.SingleCell() || cell == item.Position)
+		{
+			Renderer?.AssignThingGraphic(item, CurrentSectionLayer);
+			ReceivedThing?.Invoke(item);
+		}
+
+		ItemRegisteredAtCell?.Invoke(item, in cell);
+	}
+
+	protected internal virtual void Notify_ItemDeregisteredAtCell(Thing item, in IntVec3 cell)
+	{
+		if (_packingNow)
 			return;
 		
-		base.Notify_LostThing(newItem);
-		StoredThings.Remove(newItem);
-		Renderer.FreeThingGraphic(newItem, CurrentSectionLayer);
-		Renderer.UpdateCurrentGraphic();
-		// UpdateFreeSlotsAt(newItem.Position.ToIntVec2); // Stacking can result in multiple positions changing
-		UpdateFreeSlots();
+		_cachedTotalThingCount = -1;
+		
+		if (!StoredThings.Remove(item, cell))
+		{
+			LogWarningForFailedRemoval(item);
+			return;
+		}
 
-		LostThing?.Invoke(newItem);
+		if (item.def.SingleCell() || cell == item.Position)
+		{
+			Renderer?.FreeThingGraphic(item, CurrentSectionLayer);
+			LostThing?.Invoke(item);
+		}
+
+		ItemDeregisteredAtCell?.Invoke(item, in cell);
 	}
+
+	/// <summary>
+	/// listens to ListerMergeables.Notify_ThingStackChanged, which is unfortunately not guaranteed to be called on
+	/// changes to stackCount, especially by mods
+	/// </summary>
+	protected internal virtual void Notify_ItemStackChanged(Thing item)
+	{
+		_cachedTotalThingCount = -1;
+		Renderer?.SetPrintDataDirty(item);
+		ItemStackChanged?.Invoke(item);
+	}
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private void LogWarningForFailedRemoval(Thing thing)
+		=> Log.Warning($"Tried removing thing '{thing}' with position {thing.Position} from storage '{this}' at {
+			Position}, where it was not stored in. This is likely the result of a bug.\n{
+				new StackTrace(2, true)}");
 
 	internal void BasePrint(SectionLayer layer) => base.Print(layer);
 
 	internal void BaseDrawAt(in Vector3 drawLoc, bool flip = false) => base.DrawAt(drawLoc, flip);
 
-	public override void Print(SectionLayer layer) => Renderer.PrintAt(layer, DrawPos);
+	public sealed override void Print(SectionLayer layer) => PrintAt(layer, new(DrawPos));
 
-	public virtual void PrintAt(SectionLayer layer, in Vector3 drawLoc) => Renderer.PrintAt(layer, drawLoc);
-
-	public virtual void PrintAt(SectionLayer layer, in Vector3 drawLoc, in Vector2 drawSize)
-		=> Renderer.PrintAt(layer, drawLoc, drawSize);
+	public virtual void PrintAt(SectionLayer layer, in TransformData transformData)
+		=> Renderer?.PrintAt(layer, transformData);
 
 #if V1_4
 	public
 #else
 	protected
 #endif
-		override void DrawAt(Vector3 drawLoc, bool flip = false) => Renderer.DrawAt(drawLoc, flip);
+		override void DrawAt(Vector3 drawLoc, bool flip = false)
+		=> Renderer?.DrawAt(new(drawLoc, flip ? Vector2.one.Flip() : Vector2.one, Rotation));
+
+	public virtual void DrawAt(in TransformData transformData) => Renderer?.DrawAt(transformData);
 
 #if !V1_4
 	internal void BaseDynamicDrawPhaseAt(DrawPhase phase, in Vector3 drawLoc, bool flip = false)
 		=> base.DynamicDrawPhaseAt(phase, drawLoc, flip);
 	
 	public override void DynamicDrawPhaseAt(DrawPhase phase, Vector3 drawLoc, bool flip = false)
-		=> Renderer.DynamicDrawPhaseAt(phase, drawLoc, flip);
+		=> Renderer?.DynamicDrawPhaseAt(phase, new(drawLoc, flip ? Vector2.one.Flip() : Vector2.one, Rotation));
 #endif
 
 	public override IEnumerable<Gizmo> GetGizmos()
@@ -390,18 +639,21 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 		var gizmos = GizmoUtility.Filter(base.GetGizmos());
 
 		if (DebugSettings.godMode)
-			AppendGodModeGizmos(ref gizmos);
+			gizmos = gizmos.Concat(_currentGodModeGizmos);
 
 		return gizmos;
 	}
 
-	private void AppendGodModeGizmos(ref IEnumerable<Gizmo> gizmos)
+	protected virtual IEnumerable<Gizmo> GetGodModeGizmos()
 	{
 		if (AnyFreeSlots && Spawned)
-			gizmos = gizmos.Append(_godModeGizmos.AddStack);
+			yield return _godModeGizmos.AddStack;
 
-		if (!Renderer.AllGraphics.NullOrEmpty())
-			gizmos = gizmos.Append(_godModeGizmos.EditGraphics).Append(_godModeGizmos.UpdateGraphics);
+		if (Renderer is { } renderer && !renderer.AllGraphics.NullOrEmpty())
+		{
+			yield return _godModeGizmos.EditGraphics;
+			yield return _godModeGizmos.UpdateGraphics;
+		}
 	}
 
 	public override void Notify_ThingSelected() => InspectTabUtility.TryOpen(this);
@@ -409,26 +661,61 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 	// LWM's: https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/Deep_Storage_Display.cs#L364-L490
 	public override void DrawGUIOverlay()
 	{
-		if (Find.CameraDriver.CurrentZoom != CameraZoomRange.Closest
-			|| !ToggleableOverlays.CheckMouseOver(this))
-		{
+		if (LabelHidden)
 			return;
+		
+		var cachedTotalThingCount = _cachedTotalThingCount;
+		if (cachedTotalThingCount < 0 || (Time.frameCount & 31) == 0)
+		{
+			var currentTotalThingCount = TotalThingCount;
+			if (currentTotalThingCount != cachedTotalThingCount)
+				UpdateGUIOverlayLabels(currentTotalThingCount);
 		}
 
-		var overlayLabel = GUIOverlayLabel;
-		if (!string.IsNullOrEmpty(overlayLabel))
-			GenMapUI.DrawThingLabel(this, overlayLabel);
+		_currentLabelStyle?.DrawGUIOverlayLabels(this);
 
 		var comps = AllComps;
-		for (var i = 0; i < comps.Count; ++i)
+		for (var i = 0; i < comps.Count; i++)
 			comps[i].DrawGUIOverlay();
 	}
 
+	public virtual bool LabelHidden
+		=> (AdaptiveStorageFrameworkSettings.HideLabelsWhenZoomedOut
+				&& HarmonyPatches.CacheZoomAndMousePosition.ZoomValue
+				>= HarmonyPatches.CacheZoomAndMousePosition.LabelHidingZoom)
+			|| !ToggleableOverlays.CheckMouseOver(this);
+
 	public override string GetInspectString() => InspectStringUtility.GetString(this);
+
+#if !V1_4
+	public override void Notify_DefsHotReloaded()
+	{
+		base.Notify_DefsHotReloaded();
+
+		Extension = def.GetModExtension<Extension>();
+		Size = def.Size;
+		CompQuality = GetComp<CompQuality>();
+		_fixedStorageSettings = PrepareFixedStorageSettings();
+		Renderer!.Notify_DefsHotReloaded();
+		_godModeGizmos = new(this);
+		_statDrawEntries = new(this);
+		_currentGodModeGizmos = GetGodModeGizmos();
+		
+		try
+		{
+			_godModeGizmos.UpdateGraphics.action();
+		}
+		catch (Exception ex)
+		{
+			Log.Error(ex.ToString());
+		}
+	}
+#endif
 
 	// https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/CompProperties.cs#L19-L39
 	public override IEnumerable<StatDrawEntry> SpecialDisplayStats()
-		=> LWM.Active ? base.SpecialDisplayStats() : base.SpecialDisplayStats().Append(_statDrawEntries.ItemsPerCell);
+		=> (LWM.Active ? base.SpecialDisplayStats() : base.SpecialDisplayStats().Append(_statDrawEntries.ItemsPerCell))
+			.Append(_statDrawEntries.StorageCapacity);
 
 	public override IEnumerable<InspectTabBase> GetInspectTabs() => InspectTabs;
 	
@@ -445,97 +732,11 @@ public class ThingClass : Building_Storage, ISlotGroupParent, IPrintable
 
 	private GodModeGizmos _godModeGizmos = null!;
 
+	private IEnumerable<Gizmo> _currentGodModeGizmos = null!;
+
 	private StatDrawEntries _statDrawEntries = null!;
 
 	private InspectTabBase[]? _inspectTabs;
 
 	private InspectTabBase? _shownContentsTab;
-
-	private record GodModeGizmos(ThingClass Parent)
-	{
-		public readonly Command_AddStack AddStack = new(Parent)
-		{
-			defaultLabel = "Add stack",
-			action = () => GenSpawn.Spawn(ThingMakerUtility.Make(Parent.GetStoreSettings().filter.AnyAllowedDef
-				?? Parent.GetParentStoreSettings().filter.AnyAllowedDef), Parent.FreeSlots[0].ToIntVec3, Parent.Map)
-		};
-
-		public readonly CommandWithFloatMenu EditGraphics = new()
-		{
-			defaultLabel = "Edit graphics",
-			action = () => Find.WindowStack.Add(new DefEditorWindow(Parent.Renderer.CurrentGraphicVariation
-				?? Parent.Renderer.AllGraphics!.First())),
-			floatMenuOptionsInitializer = () => Parent.Renderer.AllGraphics!.Select(static graphic
-					=> new FloatMenuOption(graphic.defName, () => Find.WindowStack.Add(new DefEditorWindow(graphic))))
-				.ToArray()
-		};
-
-		public readonly Command_Action UpdateGraphics = new()
-		{
-			defaultLabel = "Update graphics", action = () =>
-			{
-				var renderer = Parent.Renderer;
-				foreach (var graphic in renderer.AllGraphics!)
-				{
-					foreach (var storageGraphic in graphic.graphics)
-					{
-						foreach (var graphicData in storageGraphic.graphicDatas)
-							graphicData.Init();
-					}
-				}
-
-				Parent.def.graphicData.Init();
-				
-				renderer.InitializeStoredThingGraphics(Parent.CurrentSectionLayer);
-				renderer.NotifyCurrentGraphicChanged();
-				LongEventHandler.ExecuteWhenFinished(() => Parent.DirtyMapMesh(Parent.Map));
-			}
-		};
-
-		public class Command_AddStack : Command_Action
-		{
-			private (ThingDef def, FloatMenuOption option)[]? _floatMenuOptionsByDef;
-			private IEnumerable<FloatMenuOption>? _filteredFloatMenuOptions, _unfilteredFloatMenuOptions;
-			private readonly ThingClass _parent;
-
-			private (ThingDef def, FloatMenuOption option)[] FloatMenuOptionsByDef
-				=> _floatMenuOptionsByDef
-					??= _parent.GetParentStoreSettings().filter.AllowedThingDefs
-						.Select(def => (def,
-							new FloatMenuOption(def.label, () => GenSpawn.Spawn(ThingMakerUtility.Make(def),
-								_parent.FreeSlots[0].ToIntVec3, _parent.Map))))
-						.ToArray();
-
-			private IEnumerable<FloatMenuOption> FilteredFloatMenuOptions
-				=> _filteredFloatMenuOptions ??= InitializeFilteredFloatMenuOptions();
-
-			private IEnumerable<FloatMenuOption> InitializeFilteredFloatMenuOptions()
-			{
-				var filter = _parent.GetStoreSettings().filter;
-				
-				return FloatMenuOptionsByDef
-					.Where(tuple => filter.Allows(tuple.def))
-					.Select(static tuple => tuple.option);
-			}
-
-			private IEnumerable<FloatMenuOption> UnfilteredFloatMenuOptions
-				=> _unfilteredFloatMenuOptions ??= FloatMenuOptionsByDef.Select(static tuple => tuple.option);
-
-			public Command_AddStack(ThingClass parent) => _parent = parent;
-
-			public override IEnumerable<FloatMenuOption> RightClickFloatMenuOptions
-				=> !_parent.AnyFreeSlots
-					? base.RightClickFloatMenuOptions
-					: _parent.GetStoreSettings().filter.AnyAllowedDef != null
-						? FilteredFloatMenuOptions
-						: UnfilteredFloatMenuOptions;
-		}
-	}
-
-	private record StatDrawEntries(ThingClass Parent)
-	{
-		public readonly StatDrawEntry ItemsPerCell
-			= new(StatCategoryDefOf.Building, Strings.TranslatedWithBackup.MaxNumStacks,
-				Parent.DefaultMaxItemsInCell().ToStringCached(), Strings.TranslatedWithBackup.MaxNumStacksDesc, 11);
-	}
 }

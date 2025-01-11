@@ -13,12 +13,11 @@ using HarmonyLib;
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(GridsUtility), nameof(GridsUtility.GetMaxItemsAllowedInCell))]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class StorageLimit
 {
 	[HarmonyTranspiler]
-	public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions,
-		ILGenerator generator, MethodBase targetMethod)
+	public static CodeInstructions Transpiler(CodeInstructions instructions, ILGenerator generator,
+		MethodBase targetMethod)
 	{
 		var codes = instructions.ToList();
 
@@ -39,9 +38,9 @@ public static class StorageLimit
 		var jumpLabel = generator.DefineLabel();
 		
 		// if (building is not ThingClass adaptive)
-		codes.Insert(maxItemsInCellIndex++, new(OpCodes.Dup));
-		codes.Insert(maxItemsInCellIndex++, new(OpCodes.Isinst, typeof(ThingClass)));
-		codes.Insert(maxItemsInCellIndex++, new(OpCodes.Brtrue_S, jumpLabel));
+		codes.Insert(maxItemsInCellIndex++, Code.Dup);
+		codes.Insert(maxItemsInCellIndex++, Code.Isinst[typeof(ThingClass)]);
+		codes.Insert(maxItemsInCellIndex++, Code.Brtrue_S[jumpLabel]);
 		
 		// return building.MaxItemsInCell;
 
@@ -63,9 +62,11 @@ public static class StorageLimit
 			CodeInstruction.LoadArgument(
 #endif
 				cellArgument, true).WithLabels(jumpLabel));
+
+		codes.Insert(++nextReturnIndex,
+			CodeInstruction.Call(typeof(ThingClass), nameof(ThingClass.GetMaxItemsForCell)));
 		
-		codes.Insert(++nextReturnIndex, CodeInstruction.Call(typeof(ThingClass), nameof(ThingClass.GetMaxItemsForCell)));
-		codes.Insert(++nextReturnIndex, new(OpCodes.Ret));
+		codes.Insert(++nextReturnIndex, Code.Ret);
 		
 		return codes;
 	}

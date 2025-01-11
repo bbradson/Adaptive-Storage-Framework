@@ -8,7 +8,6 @@ using HarmonyLib;
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(Selector), nameof(Selector.SelectableObjectsUnderMouse))]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class PreventSelectionUnderMouse
 {
 	[HarmonyPostfix]

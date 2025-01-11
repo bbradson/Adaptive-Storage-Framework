@@ -8,7 +8,6 @@ using HarmonyLib;
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(Thing), nameof(Thing.GetInspectTabs))]
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public static class AddITabToLegacyStorages
 {
 	[HarmonyPostfix]

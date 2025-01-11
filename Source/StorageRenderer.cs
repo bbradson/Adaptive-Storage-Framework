@@ -3,23 +3,25 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using AdaptiveStorage.ModCompatibility;
-using AdaptiveStorage.Pools;
+using AdaptiveStorage.Fishery;
+using AdaptiveStorage.Fishery.Pools;
+using AdaptiveStorage.PrintDatas;
 
 namespace AdaptiveStorage;
 
-public class StorageRenderer
+[PublicAPI]
+public class StorageRenderer : ITransformable
 {
 	public ThingClass Parent { get; }
 
-	public List<GraphicsDef>? AllGraphics { get; set; }
-
-	public List<PrintData> Printables { get; } = [];
-
-	public List<PrintData> Drawables { get; } = [];
+	public List<GraphicsDef>? AllGraphics { get; private set; }
+	
+	public ReadOnlyCollection<PrintData> Printables { get; }
+	
+	public ReadOnlyCollection<PrintData> Drawables { get; }
 
 	public bool ShowContainedItems { get; private set; } = true;
 
@@ -60,252 +62,246 @@ public class StorageRenderer
 	public event Action? CurrentGraphicChanged;
 
 	private bool ShouldRealTimeDraw => Parent.def.drawerType == DrawerType.RealtimeOnly || !Parent.Spawned;
+	
+	public Color[]? ContentColors { get; private set; }
+
+	public bool ContentColorsDirty
+	{
+		get => ContentColors?[0] is { r: float.NaN };
+		set
+		{
+			if (ContentColors is not { } colors)
+				return;
+
+			if (value)
+				colors[0].r = float.NaN;
+			else
+				UpdateDirtyData();
+		}
+	}
+
+	public bool VisibleBaseGraphic
+		=> CurrentGraphic is not { } currentGraphic
+			|| (currentGraphic.showBaseGraphic ?? CurrentGraphicVariation.showBaseGraphic);
+
+	private readonly List<PrintData>
+		_printables = [],
+		_drawables = [];
 
 	private int
 		_currentVariationIndex = -1,
 		_currentGraphicIndex = -1,
 		_lastMapMeshDirtyFrame = -1;
-
-	private static Vector2 _drawScale = Vector2.one;
+	
+	public bool AnyPrintDatasDirty { get; private set; }
 
 	public StorageRenderer(ThingClass parent)
 	{
 		Parent = parent;
-		AllGraphics = GraphicsDef.Database!.TryGetValue(parent.def);
+		Printables = new(_printables);
+		Drawables = new(_drawables);
 		CurrentGraphicChanged += OnCurrentGraphicChanged;
+		InitializeAllGraphics();
+	}
+
+	private void InitializeAllGraphics()
+	{
+		var graphics = AllGraphics = GraphicsDef.Database!.TryGetValue(Parent.def);
+
+		if (graphics is not [_, ..])
+			return;
+
+		var maxColorSourceIndex = graphics.Max(static def
+				=> def.graphics.Max(static graphic
+					=> graphic.graphicDatas.Max(static graphicData
+						=> graphicData is null
+							? 0
+							: Math.Max((int)graphicData.colorOneSource, (int)graphicData.colorTwoSource))));
+
+		if (maxColorSourceIndex >= 1 || graphics.Exists(static graphicsDef
+			=> (int)graphicsDef.useDominantContentColor > 0
+			|| graphicsDef.graphics.Exists(static graphic
+				=> graphic.useDominantContentColor > 0)))
+		{
+			ContentColors = new Color[Math.Max(maxColorSourceIndex + 1, 1)];
+			ContentColorsDirty = true;
+		}
 	}
 
 #if !V1_4
-	public virtual void DynamicDrawPhaseAt(DrawPhase phase, in Vector3 drawLoc, bool flip = false)
+	public virtual void Notify_DefsHotReloaded() => InitializeAllGraphics();
+
+	public virtual void DynamicDrawPhaseAt(DrawPhase phase, in TransformData transform)
 	{
 		if (CurrentGraphic is null)
 		{
-			Parent.BaseDynamicDrawPhaseAt(phase, drawLoc, flip);
+			Parent.BaseDynamicDrawPhaseAt(phase, transform.Position, transform.IsFlipped);
 			return;
 		}
 
+		UpdateDirtyData();
+
 		if (phase == DrawPhase.Draw && ShouldRealTimeDraw)
 		{
-			DrawBuilding(drawLoc);
-			DrawPrintableThings(drawLoc, Printables);
+			DrawBuilding(transform);
+			DrawItems(_printables, transform);
 		}
 
-		DynamicDrawPhaseOnThings(phase, drawLoc, flip, Drawables);
+		DynamicDrawPhaseOnItems(_drawables, phase, transform);
 
 		if (phase == DrawPhase.Draw)
 			Parent.Comps_PostDraw();
 	}
 
-	private static void DynamicDrawPhaseOnThings(DrawPhase phase, in Vector3 drawLoc, bool flip,
-		List<PrintData> drawables)
-	{
-		for (var i = drawables.Count; i-- > 0;)
-		{
-			var drawable = drawables[i];
-			drawable.Thing.DynamicDrawPhaseAt(phase, drawLoc + drawable.DrawOffset, flip);
-		}
-	}
+	private void DynamicDrawPhaseOnItems(List<PrintData> printDatas, DrawPhase phase, in TransformData transformData)
+		=> ForEachAtItemBase(printDatas, phase, transformData,
+			static (PrintData data, DrawPhase phase, in TransformData transform)
+				=> data.DynamicDrawPhaseAt(phase, transform));
 #endif
 
-	public void DrawAt(in Vector3 drawLoc, bool flip = false)
+	public virtual void DrawAt(in TransformData transformData)
 	{
 		if (CurrentGraphic is null)
 		{
-			Parent.BaseDrawAt(drawLoc, flip);
+			Parent.BaseDrawAt(transformData.Position, transformData.IsFlipped);
 			return;
 		}
 
+		UpdateDirtyData();
+
 		if (ShouldRealTimeDraw)
 		{
-			DrawBuilding(drawLoc);
-			DrawPrintableThings(drawLoc, Printables);
+			DrawBuilding(transformData);
+			DrawItems(_printables, transformData);
 		}
 
-		DrawThings(drawLoc, flip, Drawables);
+		DrawItems(_drawables, transformData);
 
 		Parent.Comps_PostDraw();
 	}
 
-	private void DrawBuilding(in Vector3 drawLoc)
+	private void DrawBuilding(in TransformData transform)
 	{
-		GetBuildingDrawColors(out var drawColor, out var drawColorTwo);
-
 		var parent = Parent;
-		var rotation = parent.Rotation;
+		var drawColor = parent.DrawColor;
+		var drawColorTwo = parent.DrawColorTwo;
+		var rotation = parent.Rotation.Rotated(transform.RotationDirection);
+		
 		if (!TryGetStyleGraphic(drawColor, drawColorTwo, out var styleGraphic))
 		{
-			var graphicDatas = CurrentGraphic!.graphicDatas;
-			for (var i = 0; i < graphicDatas.Count; i++)
-				graphicDatas[i].GraphicColoredFor(drawColor, drawColorTwo).Draw(drawLoc, rotation, parent);
+			if (VisibleBaseGraphic)
+				parent.Graphic.Draw(transform.Position, rotation, parent);
+			
+			CurrentGraphic!.Worker.DrawAt(this, transform);
 		}
 		else
 		{
-			styleGraphic.Draw(drawLoc, rotation, parent);
+			styleGraphic.Draw(transform.Position, rotation, parent);
 		}
 	}
 
-	private static void DrawThings(in Vector3 drawLoc, bool flip, List<PrintData> drawables)
+	private void DrawItems(List<PrintData> printDatas, in TransformData transformData)
+		=> ForEachAtItemBase(printDatas, 0, transformData,
+			static (PrintData data, int _, in TransformData transform) => data.DrawAt(transform));
+
+	private void ForEachAtItemBase<T>(List<PrintData> printDatas, T context, in TransformData transformData,
+		PrintAction<T> action)
 	{
-		for (var i = drawables.Count; i-- > 0;)
-		{
-			var drawable = drawables[i];
-			drawable.Thing.DrawNowAt(drawLoc + drawable.DrawOffset, flip);
-		}
+		var transform = transformData;
+		transform.Rot4 = Rot4.North;
+		transform.Position.y -= Parent.DrawPos.y;
+
+		printDatas.UnwrapReadOnlyArray(out var array, out var count);
+		for (var i = count; --i >= 0;)
+			action(array[i], context, transform);
 	}
 
-	private static void DrawPrintableThings(in Vector3 drawLoc, List<PrintData> printables)
-	{
-		for (var i = printables.Count; i-- > 0;)
-			printables[i].DrawAt(drawLoc);
-	}
-
-	private bool TryGetCurrentDrawSize(out Vector2 drawSize)
-	{
-		drawSize = Vector2.one;
-		if (CurrentGraphic is not { } currentGraphic)
-			return false;
-
-		if (TryGetStyleGraphic(Color.white, Color.white, out var styleGraphic))
+	public delegate void PrintAction<T>(PrintData printData, T context, in TransformData transformData);
+	
+	public Color GetColorFromSource(ContentColorSource colorSource)
+		=> colorSource switch
 		{
-			var styleDrawSize = styleGraphic.drawSize;
-			if (1f > styleDrawSize.x * styleDrawSize.y)
-				return false;
-
-			drawSize = styleDrawSize;
-			return true;
-		}
-
-		var graphicDatas = currentGraphic.graphicDatas;
-		var i = graphicDatas.Count;
-		if (i == 0)
-			return false;
-
-		var result = false;
-		while (i-- > 0)
-		{
-			var otherDrawSize = graphicDatas[i].drawSize;
-			if (drawSize.x * drawSize.y > otherDrawSize.x * otherDrawSize.y)
-				continue;
-
-			drawSize = otherDrawSize;
-			result = true;
-		}
-
-		return result;
-	}
+			ContentColorSource.ColorOne => Parent.DrawColor,
+			ContentColorSource.ColorTwo => Parent.DrawColorTwo,
+			ContentColorSource.White => Color.white,
+			_ => ContentColors![(int)colorSource]
+		};
 
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private void LogFailedPrintAttempt(in Vector3 drawLoc)
 		=> Log.Error($"Print for '{Parent}' at drawLoc '{drawLoc}' had null section layer passed in. Sections "
-			+ $"should never be null and could be an indicator for parts of the map having failed to load.\n{
+			+ $"should never be null. This could be an indicator for parts of the map having failed to load.\n{
 				new StackTrace(true)}");
 
-	public void PrintAt(SectionLayer layer, in Vector3 drawLoc, in Vector2 drawSize)
-	{
-		_drawScale = TryGetCurrentDrawSize(out var size) ? drawSize / size : Vector2.one;
-		PrintAt(layer, drawLoc);
-	}
+	public void PrintAt(SectionLayer layer, in Vector3 drawLoc) => PrintAt(layer, new TransformData(drawLoc));
 
-	public void PrintAt(SectionLayer layer, in Vector3 drawLoc)
+	public virtual void PrintAt(SectionLayer layer, in TransformData transformData)
 	{
 		if (layer == null!)
 		{
-			LogFailedPrintAttempt(drawLoc);
+			LogFailedPrintAttempt(transformData.Position);
 			return;
 		}
-		
+
 		if (CurrentGraphic is null)
 		{
 			Parent.BasePrint(layer);
 			return;
 		}
 
-		PrintBuilding(layer, drawLoc);
+		UpdateDirtyData(layer);
 
-		UpdateAllPrintDatas(layer);
-		for (var i = Printables.Count; i-- > 0;)
-			Printables[i].PrintAt(layer, drawLoc);
+		PrintBuilding(layer, transformData);
+		PrintItems(_printables, layer, transformData);
 
 		PostPrintComps(layer);
 	}
 
-	private void PrintBuilding(SectionLayer layer, in Vector3 drawLoc)
+	private void PrintItems(List<PrintData> printDatas, SectionLayer layer, in TransformData transformData)
+		=> ForEachAtItemBase(printDatas, layer, transformData,
+			static (PrintData data, SectionLayer layer, in TransformData transform) => data.PrintAt(layer, transform));
+
+	private void PrintBuilding(SectionLayer layer, in TransformData transform)
 	{
-		GetBuildingDrawColors(out var drawColor, out var drawColorTwo);
+		var parent = Parent;
+		var drawColor = parent.DrawColor;
+		var drawColorTwo = parent.DrawColorTwo;
 
 		if (!TryGetStyleGraphic(drawColor, drawColorTwo, out var styleGraphic))
 		{
-			var graphicDatas = CurrentGraphic!.graphicDatas;
-			for (var i = 0; i < graphicDatas.Count; i++)
-				PrintGraphicAt(layer, drawLoc, graphicDatas[i].GraphicColoredFor(drawColor, drawColorTwo));
+			if (VisibleBaseGraphic)
+				Parent.Graphic.PrintAt(layer, Parent, transform);
+			
+			CurrentGraphic!.Worker.PrintAt(layer, this, transform);
 		}
 		else
 		{
-			PrintGraphicAt(layer, drawLoc, styleGraphic);
+			styleGraphic.PrintAt(layer, Parent, transform);
 		}
 	}
-
-	private void PrintGraphicAt(SectionLayer layer, in Vector3 drawLoc, Graphic graphic)
-		=> graphic.PrintAt(layer, Parent, drawLoc, graphic.drawSize * _drawScale, 0f);
 
 	private bool TryGetStyleGraphic(Color drawColor, Color drawColorTwo, [NotNullWhen(true)] out Graphic? styleGraphic)
 		=> (styleGraphic = Parent.StyleDef?.graphicData?.GraphicColoredFor(drawColor, drawColorTwo)) != null;
 
-	private void GetBuildingDrawColors(out Color drawColor, out Color drawColorTwo)
+	private void UpdateDirtyData(SectionLayer? layer = null)
 	{
-		drawColor = CurrentGraphic!.useDominantContentColor
-			?? CurrentGraphicVariation.useDominantContentColor
-				? ComputeDominantDrawColor()
-				: Parent.DrawColor;
-
-		drawColorTwo = Parent.DrawColorTwo;
+		if (ContentColorsDirty)
+			ComputeDominantDrawColors();
+		
+		if (AnyPrintDatasDirty)
+			UpdateDirtyPrintDatas(layer ?? Parent.CurrentSectionLayer!);
 	}
 
 	public void InitializeStoredThingGraphics(SectionLayer? layer)
 	{
-		Printables.Clear();
-		Drawables.Clear();
+		_printables.Clear();
+		_drawables.Clear();
 
 		var storedThings = Parent.StoredThings;
-		for (var i = storedThings.Count; i-- > 0;)
+		for (var i = storedThings.Count; --i >= 0;)
 			AssignThingGraphic(storedThings[i], layer, false);
 
 		UpdateCurrentGraphic();
-	}
-
-	public void RegenerateThingGraphic(Thing thing)
-	{
-		if (!thing.Spawned)
-			return;
-
-		var drawerType = thing.def.drawerType;
-
-		var drawable = drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly;
-		var printable = drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime;
-
-		if (drawable)
-		{
-			Drawables.Remove(thing);
-			Parent.Map.dynamicDrawManager.RegisterDrawable(thing); // drawThings is a HashSet
-		}
-
-		if (printable)
-		{
-			Printables.Remove(thing);
-			TryDirtyParentMapMesh();
-		}
-
-		if (!ThingRequestGroup.HasGUIOverlay.Includes(thing.def))
-			return;
-
-		var lister = Parent.Map.listerThings;
-		var guiOverlayGroup = lister.ThingsInGroup(ThingRequestGroup.HasGUIOverlay);
-
-		if (guiOverlayGroup.Contains(thing))
-			return;
-
-		if (!PerformanceFish.AddToGroupList(lister, thing, ThingRequestGroup.HasGUIOverlay))
-			guiOverlayGroup.Add(thing);
 	}
 
 	internal void NotifyCurrentGraphicChanged() => CurrentGraphicChanged?.Invoke();
@@ -319,13 +315,16 @@ public class StorageRenderer
 		CurrentGraphic
 			= CurrentVariationGraphics[Mathf.Clamp(CurrentGraphicIndex, 0, CurrentVariationGraphics.Count - 1)];
 		ShowContainedItems = CurrentGraphic.showContainedItems ?? CurrentGraphicVariation.showContainedItems;
+		
+		SetAllPrintDatasDirtyNowOrLater();
+		TryDirtyParentMapMesh();
 	}
 
 	private void CalculateGraphicIndex()
 	{
 		CurrentVariationIndex = GetGraphicVariationIndexForStoredThings();
 
-		var itemCount = Parent.StoredThings.Count;
+		var itemCount = Parent.StoredThings.CellWiseCount;
 		var currentVariationGraphics = CurrentVariationGraphics;
 
 		if (currentVariationGraphics is null)
@@ -334,7 +333,7 @@ public class StorageRenderer
 			return;
 		}
 
-		for (var i = currentVariationGraphics.Count; i-- > 0;)
+		for (var i = currentVariationGraphics.Count; --i >= 0;)
 		{
 			if (currentVariationGraphics[i].minimumStackCount > itemCount)
 				continue;
@@ -346,19 +345,22 @@ public class StorageRenderer
 
 	private int GetGraphicVariationIndexForStoredThings()
 	{
-		var allGraphics = AllGraphics!;
-		var seed = Parent.RandomSeed;
-		var storedThings = Parent.StoredThings;
+		var allGraphics = AllGraphics;
+		if (allGraphics is null)
+			return 0;
+		
+		var building = Parent;
+		var seed = building.RandomSeed;
 
-		using var allowedGraphicsPooled = new PooledIList<List<GraphicsDef>>();
-		using var forbiddenGraphicsPooled = new PooledIList<List<GraphicsDef>>();
+		using var allowedGraphicsPooled = new PooledList<GraphicsDef>();
+		using var forbiddenGraphicsPooled = new PooledList<GraphicsDef>();
 		var allowedGraphics = allowedGraphicsPooled.List;
 		var forbiddenGraphics = forbiddenGraphicsPooled.List;
 
 		for (var i = allGraphics.Count; i-- > 0;)
 		{
 			var graphic = allGraphics[i];
-			if (graphic.Allows(storedThings))
+			if (graphic.Worker.AllowedFor(building))
 				allowedGraphics.Add(graphic);
 			else
 				forbiddenGraphics.Add(graphic);
@@ -386,191 +388,168 @@ public class StorageRenderer
 		GraphicsDef.PositiveWeightSelector, GraphicsDef.NegativeWeightSelector, GraphicsDef.NullWeightSelector
 	];
 
-	private void AssignToDrawablesNowOrLater(Thing newItem, SectionLayer? layer)
+	public void AssignThingGraphic(Thing item, SectionLayer? layer, bool updateOthers = true)
+	{
+		if (updateOthers && !TryUpdateCurrentGraphic())
+		{
+			if (item.def.SingleCell())
+			{
+				SetPrintDataDirtyAtCellNowOrLater(layer, item.Position);
+			}
+			else
+			{
+				foreach (var cell in item.OccupiedRect())
+					SetPrintDataDirtyAtCellNowOrLater(layer, cell);
+			}
+		}
+		else
+		{
+			SetPrintDataDirtyNowOrLater(item);
+		}
+	}
+
+	private void SetPrintDataDirtyAtCellNowOrLater(SectionLayer? layer, IntVec3 position, Thing? except = null)
 	{
 		if (UnityData.IsInMainThread)
-			AssignToDrawables(newItem, layer);
+			SetPrintDataDirtyAtCell(layer, position, except);
 		else
-			LongEventHandler.ExecuteWhenFinished(() => AssignToDrawables(newItem, layer));
+			LongEventHandler.ExecuteWhenFinished(() => SetPrintDataDirtyAtCell(layer, position, except));
 	}
 
-	private void AssignToDrawables(Thing newItem, SectionLayer? layer)
+	private void SetPrintDataDirtyAtCell(SectionLayer? layer, IntVec3 position, Thing? except = null)
 	{
-		if (MakePrintData(newItem, layer) is { } printData)
-			Drawables.Add(printData);
-
-		Parent.Map.dynamicDrawManager.DeRegisterDrawable(newItem);
+		var storedThingsAtCell = Parent.StoredThings.ItemsAtMapCell(position);
+		for (var i = storedThingsAtCell.Length; --i >= 0;)
+		{
+			var thing = storedThingsAtCell[i];
+			if (thing != except)
+				SetPrintDataDirty(thing);
+		}
 	}
 
-	private void AssignToPrintablesNowOrLater(Thing newItem, SectionLayer? layer)
+	private void UpdateDirtyPrintDatas(SectionLayer layer)
+	{
+		UpdateDirtyPrintDatas(_printables, layer);
+		UpdateDirtyPrintDatas(_drawables, layer);
+		AnyPrintDatasDirty = false;
+	}
+
+	private void UpdateDirtyPrintDatas(List<PrintData> printDatas, SectionLayer? layer)
+	{
+		var anyUpdated = false;
+		for (var i = printDatas.Count; --i >= 0;)
+		{
+			var printable = printDatas[i];
+			if (!printable.Dirty)
+				continue;
+
+			printable.Dirty = false;
+			anyUpdated = true;
+
+			if (GetItemGraphicIfVisible(printable.Thing) is { } itemGraphic)
+				itemGraphic.Worker.UpdatePrintData(printable, Parent);
+			else
+				printDatas.Remove(printable);
+		}
+
+		ContentColorsDirty = anyUpdated;
+	}
+
+	public void SetAllPrintDatasDirtyNowOrLater()
 	{
 		if (UnityData.IsInMainThread)
-			AssignToPrintables(newItem, layer);
+			SetAllPrintDatasDirty();
 		else
-			LongEventHandler.ExecuteWhenFinished(() => AssignToPrintables(newItem, layer));
+			LongEventHandler.ExecuteWhenFinished(SetAllPrintDatasDirty);
 	}
 
-	private void AssignToPrintables(Thing newItem, SectionLayer? layer)
+	public void SetPrintDataDirtyNowOrLater(Thing thing)
 	{
-		if (MakePrintData(newItem, layer) is not { } printData)
-			return;
+		if (UnityData.IsInMainThread)
+			SetPrintDataDirty(thing);
+		else
+			LongEventHandler.ExecuteWhenFinished(() => SetPrintDataDirty(thing));
+	}
 
-		Printables.Add(printData);
+	public void SetAllPrintDatasDirty()
+	{
+		var storedThings = Parent.StoredThings;
+		for (var i = 0; i < storedThings.Count; i++)
+			SetPrintDataDirty(storedThings[i]);
+	}
+
+	public void SetPrintDataDirty(Thing thing) => SetPrintDataDirty(thing, thing.def.drawerType);
+
+	private void SetPrintDataDirty(Thing thing, DrawerType drawerType)
+	{
+		if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
+			SetPrintDataDirty(_drawables, thing);
+
+		if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
+			SetPrintDataDirty(_printables, thing);
+	}
+
+	private void SetPrintDataDirty(List<PrintData> printDatas, Thing thing)
+	{
+		if (GetItemGraphicIfVisible(thing) != null)
+		{
+			printDatas.GetOrAdd(thing).Dirty = true;
+			AnyPrintDatasDirty = true;
+		}
+		else
+		{
+			printDatas.Remove(thing);
+		}
+
 		TryDirtyParentMapMesh();
 	}
 
-	public void AssignThingGraphic(Thing newItem, SectionLayer? layer, bool updateOthers = true)
-	{
-		var newItemDef = newItem.def;
-		var drawerType = newItemDef.drawerType;
-
-		if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
-			AssignToDrawablesNowOrLater(newItem, layer);
-
-		if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
-			AssignToPrintablesNowOrLater(newItem, layer);
-
-		if (updateOthers)
-			UpdateAllPrintDatasNowOrLater(layer, newItem);
-
-		if (!ThingRequestGroup.HasGUIOverlay.Includes(newItem.def))
-			return;
-
-		var lister = Parent.Map.listerThings;
-
-		if (!PerformanceFish.RemoveFromGroupList(lister, newItem, ThingRequestGroup.HasGUIOverlay))
-			lister.ThingsInGroup(ThingRequestGroup.HasGUIOverlay).Remove(newItem);
-	}
-
-	private void UpdateAllPrintDatasNowOrLater(SectionLayer? layer, Thing? except = null)
-	{
-		if (UnityData.IsInMainThread)
-			UpdateAllPrintDatas(layer, except);
-		else
-			LongEventHandler.ExecuteWhenFinished(() => UpdateAllPrintDatas(layer, except));
-	}
-
-	private void UpdateAllPrintDatas(SectionLayer? layer, Thing? except = null)
-	{
-		var allStoredThings = Parent.StoredThings;
-		for (var i = allStoredThings.Count; i-- > 0;)
-		{
-			var thing = allStoredThings[i];
-			if (thing == except)
-				continue;
-
-			var drawerType = allStoredThings.DefAt(i).drawerType;
-
-			if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
-				UpdatePrintDataFor(Drawables, layer, thing);
-
-			if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
-				UpdatePrintDataFor(Printables, layer, thing);
-		}
-	}
-
-	private void UpdatePrintDataFor(List<PrintData> printDatas, SectionLayer? layer, Thing thing)
-	{
-		var itemGraphic = GetItemGraphicIfVisible(thing);
-		if (itemGraphic != null)
-		{
-			PrintData? printData;
-			if ((printData = printDatas.TryGet(thing)) != null)
-			{
-				if (UpdatePrintData(printData, layer, itemGraphic))
-					return;
-			}
-			else if ((printData = MakePrintData(thing, layer, itemGraphic)) != null)
-			{
-				printDatas.Add(printData);
-				return;
-			}
-		}
-
-		printDatas.Remove(thing);
-	}
-
-	private PrintData? MakePrintData(Thing thing, SectionLayer? layer)
-	{
-		var itemGraphic = GetItemGraphicIfVisible(thing);
-		return itemGraphic is null ? null : MakePrintData(thing, layer, itemGraphic);
-	}
-
-	private PrintData MakePrintData(Thing thing, SectionLayer? layer, ItemGraphic itemGraphic)
-	{
-		var thingRotation = itemGraphic.textureOrientation ?? thing.Rotation;
-		var parentDrawLoc = Parent.DrawPos;
-
-		var result = new PrintData(thing, parentDrawLoc,
-			DrawOffsetForThing(thing, parentDrawLoc, thingRotation, itemGraphic, out var stackRotation),
-			thingRotation, layer,
-			thing.MultipleItemsPerCellDrawn() ? itemGraphic.drawScale * 0.8f : itemGraphic.drawScale,
-			itemGraphic.rotation + stackRotation, itemGraphic.drawShadow, itemGraphic.maxDrawSize);
-		
-		if (_drawScale != Vector2.one)
-			result.DrawSize *= _drawScale;
-		
-		return result;
-	}
-
-	private bool ParentAccepts(Thing thing) => Parent.GetParentStoreSettings().AllowedToAccept(thing);
-
-	private bool UpdatePrintData(PrintData printData, SectionLayer? layer, ItemGraphic itemGraphic)
-	{
-		var thing = printData.Thing;
-		printData.Layer = layer;
-
-		var thingRotation = printData.ThingRotation = itemGraphic.textureOrientation ?? thing.Rotation;
-		var parentDrawLoc = printData.DrawLoc = Parent.DrawPos;
-
-		printData.DrawOffset
-			= DrawOffsetForThing(thing, parentDrawLoc, thingRotation, itemGraphic, out var stackRotation);
-
-		printData.SetDrawSize(printData.Graphic.drawSize,
-			thing.MultipleItemsPerCellDrawn() ? itemGraphic.drawScale * 0.8f : itemGraphic.drawScale,
-			itemGraphic.maxDrawSize);
-		
-		if (_drawScale != Vector2.one)
-			printData.DrawSize *= _drawScale;
-
-		printData.ExtraRotation = itemGraphic.rotation + stackRotation;
-		printData.DrawShadow = itemGraphic.drawShadow;
-
-		return true;
-	}
-
 	private ItemGraphic? GetItemGraphicIfVisible(Thing thing)
-		=> (ShowContainedItems || !ParentAccepts(thing)) && GetItemGraphicFor(thing) is { visible: true } graphic
-			? graphic
+		=> (ShowContainedItems || !Parent.FixedFilterAllows(thing))
+			&& (TryGetItemGraphicFor(thing) ?? ItemGraphic.Default) is { visible: true } graphic
+				? graphic
 			: null;
 
 	public void UpdateCurrentGraphic()
 	{
-		var currentIndex = CurrentGraphicIndex;
-		CalculateGraphicIndex();
-		if (currentIndex != CurrentGraphicIndex)
-			TryDirtyParentMapMesh();
+		TryUpdateCurrentGraphic();
+		TryDirtyParentMapMesh();
 	}
 
-	public void FreeThingGraphic(Thing newItem, SectionLayer? layer, bool updateOthers = true)
+	public bool TryUpdateCurrentGraphic()
 	{
-		var newItemDef = newItem.def;
-		var drawerType = newItemDef.drawerType;
+		var currentVariationIndex = CurrentVariationIndex;
+		var currentIndex = CurrentGraphicIndex;
+		CalculateGraphicIndex();
+		
+		return currentIndex != CurrentGraphicIndex || currentVariationIndex != CurrentVariationIndex;
+	}
 
-		var drawable = drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly;
-		var printable = drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime;
+	public void FreeThingGraphic(Thing item, SectionLayer? layer, bool updateOthers = true)
+	{
+		var drawerType = item.def.drawerType;
 
-		if (drawable)
-			Drawables.Remove(newItem);
+		if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
+			_drawables.Remove(item);
 
-		if (printable)
+		if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
 		{
-			Printables.Remove(newItem);
+			_printables.Remove(item);
 			TryDirtyParentMapMesh();
 		}
 
-		if (updateOthers)
-			UpdateAllPrintDatasNowOrLater(layer, newItem);
+		if (updateOthers && !TryUpdateCurrentGraphic())
+		{
+			if (item.def.SingleCell())
+			{
+				SetPrintDataDirtyAtCellNowOrLater(layer, item.Position, item);
+			}
+			else
+			{
+				foreach (var cell in item.OccupiedRect())
+					SetPrintDataDirtyAtCellNowOrLater(layer, cell, item);
+			}
+		}
 	}
 
 	public void TryDirtyParentMapMesh()
@@ -588,16 +567,19 @@ public class StorageRenderer
 
 	private void PostPrintComps(SectionLayer layer)
 	{
-		var comps = Parent.AllComps;
-		for (var i = comps.Count; i-- > 0;)
+		Parent.AllComps.UnwrapReadOnlyArray(out var comps, out var count);
+		for (var i = count; --i >= 0;)
 			comps[i].PostPrintOnto(layer);
 	}
 
-	private Color ComputeDominantDrawColor()
+	private void ComputeDominantDrawColors()
 	{
 		var storedThings = Parent.StoredThings;
-		if (storedThings.Count == 0)
-			return GetColorFromIngredients();
+		if (storedThings.CellWiseCount == 0)
+		{
+			GetColorFromIngredients();
+			return;
+		}
 
 		var dict = SimplePool<Dictionary<Color, int>>.Get();
 		dict.Clear();
@@ -614,202 +596,103 @@ public class StorageRenderer
 				? parentDef.GetColorForStuff(storedThingDef)
 				: storedThings[i].DrawColor;
 
-			dict[color] = dict.TryGetValue(color, out var value) ? value + 1 : 1;
+			var cellCount = storedThingDef.SingleCell() ? 1 : storedThings.CellWiseCountOf(storedThings[i]);
+			dict[color] = dict.TryGetValue(color, out var value) ? value + cellCount : cellCount;
 		}
-
-		var dominantColorPair = new KeyValuePair<Color, int>(Color.white, 0);
 
 		if (dict.Count > 0)
 		{
+			using var pooledList = new PooledList<KeyValuePair<Color, int>>();
+			var sortedList = pooledList.List;
 			foreach (var pair in dict)
-			{
-				if (pair.Value > dominantColorPair.Value)
-					dominantColorPair = pair;
-			}
+				sortedList.Add(pair);
+			
+			sortedList.Sort(static (x, y) => y.Value.CompareTo(x.Value));
+			var contentColors = ContentColors!;
+			var contentCount = sortedList.Count;
+			for (var i = 0; i < contentColors.Length; i++)
+				contentColors[i] = sortedList[i % contentCount].Key;
 		}
 		else
 		{
-			dominantColorPair = new(GetColorFromIngredients(), 0);
+			GetColorFromIngredients();
 		}
 
 		dict.Clear();
 		SimplePool<Dictionary<Color, int>>.Return(dict);
-
-		return dominantColorPair.Key;
 	}
 
-	private Color GetColorFromIngredients()
-		=> Parent.Stuff != null
-			? Parent.def.GetColorForStuff(Parent.Stuff)
-			: GetColorFromRecipe();
-
-	private Color GetColorFromRecipe()
+	private void GetColorFromIngredients()
 	{
+		if (Parent.Stuff == null)
+		{
+			GetColorFromRecipe();
+			return;
+		}
+
+		var stuffColor = Parent.def.GetColorForStuff(Parent.Stuff);
+		Array.Fill(ContentColors, stuffColor);
+	}
+
+	private void GetColorFromRecipe()
+	{
+		var contentColors = ContentColors!;
 		var costList = Parent.def.CostList;
 		if (costList is not [_, ..])
 			goto DefaultColor;
 
-		var max = costList[0];
-		for (var i = costList.Count; i-- > 0;)
 		{
-			var thingDefCountClass = costList[i];
-			if (thingDefCountClass.count > max.count
-				&& thingDefCountClass.thingDef.graphicData != null)
+			using var pooledList = costList.ToPooledList();
+			var sortedCostList = pooledList.List;
+			
+			sortedCostList.RemoveAll(static defCount
+				=> defCount.thingDef is not { } def || (def.stuffProps is null && def.graphicData is null));
+
+			if (sortedCostList.Count > 0)
 			{
-				max = thingDefCountClass;
+				sortedCostList.Sort(static (x, y) => x.count.CompareTo(y.count));
+
+				var ingredientCount = sortedCostList.Count;
+				for (var i = 0; i < contentColors.Length; i++)
+				{
+					var ingredientDef = sortedCostList[i % ingredientCount].thingDef;
+					contentColors[i] = ingredientDef.stuffProps != null
+						? Parent.def.GetColorForStuff(ingredientDef)
+						: ingredientDef.graphicData.color;
+				}
+
+				return;
 			}
 		}
 
-		if (max.thingDef is { } maxThingDef)
-		{
-			if (maxThingDef.stuffProps != null)
-				return Parent.def.GetColorForStuff(maxThingDef);
-			else if (maxThingDef.graphicData is { } graphicData)
-				return graphicData.color;
-		}
-
 	DefaultColor:
-		return Color.white;
+		Array.Fill(contentColors, Color.white);
 	}
 
-	private ItemGraphic GetItemGraphicFor(Thing thing)
+	public ItemGraphic? TryGetItemGraphicFor(Thing thing)
 	{
-		var thingPosition = thing.Position - Parent.BottomLeftCell;
+		if (CurrentGraphicVariation?.itemGraphics is not { Area: > 0 } itemGraphics)
+			return null;
 
-		if (Parent.Rotation.IsHorizontal)
-			(thingPosition.x, thingPosition.z) = (thingPosition.z, thingPosition.x);
+		var thingPosition = (thing.Position - Parent.BottomLeftCell).ToIntVec2.RotatedFor(Parent); // TODO: use storage cell
 
-		return CurrentGraphicVariation?.itemGraphics?.columns[thingPosition.x].rows[thingPosition.z]
-			?? ItemGraphic.Default;
+		if (((uint)thingPosition.x < (uint)itemGraphics.Width) & ((uint)thingPosition.z < (uint)itemGraphics.Height))
+			return itemGraphics[thingPosition];
+
+		FailureGettingItemGraphicAtPosition(thing);
+		return null;
 	}
 
-	private Vector3 DrawOffsetForThing(Thing thing, in Vector3 parentDrawLoc, Rot4 thingRotation,
-		ItemGraphic itemGraphic, out float stackRotation)
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private void FailureGettingItemGraphicAtPosition(Thing thing)
 	{
-		var parentRotation = Parent.Rotation;
-		var position = ItemOffsetAt(thing.Position, thing.Map, parentRotation, thing.thingIDNumber, itemGraphic,
-			CurrentGraphicVariation, out stackRotation);
-
-		position += itemGraphic.DrawOffsetForRot(parentRotation);
-
-		if (thing is Pawn pawn)
-		{
-			position += pawn.Drawer.DrawPos;
-		}
-		else
-		{
-			position += thing.Position.ToVector3Shifted()
-				+ thing.Graphic.DrawOffset(thingRotation);
-
-			position.y += thing.def.Altitude;
-		}
-
-		return position - parentDrawLoc;
+		Log.Warning($"Failed rendering thing '{thing}' with position {thing.Position} within storage building '{
+			Parent}', which has a position of {Parent.Position}. This is likely the result of a bug that occured when "
+			+ $"the thing's position changed, perhaps through ragdoll or teleportation effects.\n{
+				new StackTrace(1, true)}");
+		
+		Parent.FreeAllThingGraphics();
+		Parent.InitializeStoredThings();
+		InitializeStoredThingGraphics(Parent.CurrentSectionLayer);
 	}
-
-	private static Vector3 ItemOffsetAt(in IntVec3 position, Map map, Rot4 parentRotation, int thingID,
-		ItemGraphic itemGraphic, GraphicsDef? graphicsDef, out float stackRotation)
-	{
-		var itemCount = 0;
-		var precedingItemCount = 0;
-		var stackBehaviour = itemGraphic.stackBehaviour;
-		if (stackBehaviour == StackBehaviour.Default && graphicsDef != null)
-			stackBehaviour = graphicsDef.stackBehaviour;
-
-		var isWeaponButNotWood = false; // fish and beer is fine
-		var defMatchesForAllItems = true;
-		ThingDef? firstValidThingDefInCell = null;
-
-		var thingList = position.GetThingListUnchecked(map);
-
-		for (var i = 0; i < thingList.Count; i++)
-		{
-			var thing = thingList[i];
-			if (!thing.IsItem())
-				continue;
-
-			itemCount++;
-			if (thing.thingIDNumber < thingID)
-				precedingItemCount++;
-
-			if (stackBehaviour != StackBehaviour.Default || isWeaponButNotWood)
-				continue;
-
-			if (thing.def.IsWeapon && thing.def != ThingDefOf.WoodLog)
-				isWeaponButNotWood = true;
-
-			firstValidThingDefInCell ??= thing.def;
-			if (thing.def != firstValidThingDefInCell)
-				defMatchesForAllItems = false;
-		}
-
-		var precedingItemCountFloat = (float)precedingItemCount;
-
-		var stackOffset = itemGraphic.StackOffsetForRot(parentRotation);
-
-		stackOffset.y = precedingItemCountFloat
-			* (stackOffset.y == 0f ? ItemGraphic.DEFAULT_STACK_OFFSET_Y : stackOffset.y);
-
-		if (itemCount <= 1)
-		{
-			stackOffset.x = stackOffset.z = 0f;
-			stackRotation = 0f;
-			return stackOffset;
-		}
-
-		if (stackBehaviour == StackBehaviour.Default)
-		{
-			stackBehaviour = isWeaponButNotWood ? StackBehaviour.Weapons
-				: defMatchesForAllItems ? StackBehaviour.Stack
-				: StackBehaviour.Circle;
-		}
-
-		var stackBehaviourOffset = stackBehaviour switch
-		{
-			StackBehaviour.Weapons => ComputeStackOffsetForWeapons(position, map, itemCount,
-				precedingItemCountFloat,
-				precedingItemCount),
-			StackBehaviour.Stack => ComputeStackOffsetForStack(ref stackOffset, precedingItemCountFloat),
-			// ReSharper disable once PatternIsRedundant
-			StackBehaviour.Circle or _ => ComputeStackOffsetForCircle(position, itemCount, precedingItemCount)
-		};
-
-		stackBehaviourOffset *= itemGraphic.stackOffsetFactor;
-
-		stackOffset.x = stackBehaviourOffset.x;
-		stackOffset.z = stackBehaviourOffset.y;
-
-		stackRotation = precedingItemCountFloat * itemGraphic.stackRotation;
-		return stackOffset;
-	}
-
-	private static Vector2 ComputeStackOffsetForWeapons(in IntVec3 position, Map map, int itemCount,
-		float precedingItemCountFloat, int precedingItemCount)
-		=> new(-0.5f + ((1f / itemCount) * (precedingItemCountFloat + 0.5f)),
-			((GetRowItemCountForWeapons(new(position.x - 1, position.y, position.z), map) + precedingItemCount) & 1)
-			== 0
-				? -0.02f
-				: 0.2f);
-
-	private static int GetRowItemCountForWeapons(IntVec3 x, Map rowMap) // wtf is this doing? why did ludeon write this?
-	{
-		if (!x.InBounds(rowMap))
-			return 0;
-
-		var rowItemCount = x.GetItemCount(rowMap);
-		if (rowItemCount <= 1)
-			return 0;
-
-		x.x--;
-		return rowItemCount + GetRowItemCountForWeapons(x, rowMap);
-	}
-
-	private static Vector2 ComputeStackOffsetForStack(ref Vector3 stackOffset, float precedingItemCountFloat)
-		=> new((precedingItemCountFloat * stackOffset.x) - (stackOffset.x / 1.375f), // default - 0.08f
-			(precedingItemCountFloat * stackOffset.z) - (stackOffset.z / 4.8f));     // default - 0.05f
-
-	private static Vector2 ComputeStackOffsetForCircle(in IntVec3 position, int itemCount, int precedingItemCount)
-		=> GenGeo.RegularPolygonVertexPosition(itemCount, precedingItemCount,
-				((position.x + position.z) & 1) == 0 ? 0f : 60f)
-			* 0.3f;
 }
