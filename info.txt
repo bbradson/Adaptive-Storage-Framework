@@ -202,6 +202,13 @@
 			<itemStatOffsetsByQuality>
 				<!-- same format as itemStatFactorsByQuality -->
 			</itemStatOffsetsByQuality>
+
+			<temperature> <!-- having an optional power comp automatically causes these to require power -->
+				<coolingOffset>0.0</coolingOffset> <!-- offset to cool contained items by -->
+				<heatingOffset>0.0</heatingOffset> <!-- offset to heat contained items by -->
+				<coolingMin>NegativeInfinity</coolingMin> <!-- min temperature to cool down to -->
+				<heatingMax>PositiveInfinity</heatingMax> <!-- max temperature to heat up to -->
+			</temperature>
 		</li>
 	</modExtensions>
 </ThingDef>
