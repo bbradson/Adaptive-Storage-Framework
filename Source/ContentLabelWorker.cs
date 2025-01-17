@@ -175,9 +175,8 @@ public abstract class ContentLabelWorker
 
 				var item = storedThings[i];
 				GenMapUI.DrawThingLabel(LabelDrawPosFor(!drawAtDefaultPosition
-					&& renderer!.TryGetItemGraphicFor(item) is { visible: true } itemGraphic
-						? itemGraphic.Worker.DrawOffsetForItem(building, item,
-							itemGraphic.textureOrientation ?? item.Rotation, out _)
+					&& renderer!.TryGetPrintDataOf(item) is { } printData
+						? printData.DrawOffset
 						+ buildingDrawPos
 						: item.DrawPos), itemLabel, GenMapUI.DefaultThingLabelColor);
 			}
