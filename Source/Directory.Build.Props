@@ -52,6 +52,11 @@
 		<Publicize Include="Assembly-CSharp:Verse.Listing.curX" />
 		<Publicize Include="Assembly-CSharp:Verse.Listing.curY" />
 		<Publicize Include="Assembly-CSharp:Verse.MapDrawer.sections" />
+		<Publicize Include="Assembly-CSharp:Verse.Pawn.DrawAt" />
+		<Publicize Include="Assembly-CSharp:Verse.PawnRenderer.GetBlitMeshUpdatedFrame" />
+		<Publicize Include="Assembly-CSharp:Verse.PawnRenderer.OverrideMaterialIfNeeded" />
+		<Publicize Include="Assembly-CSharp:Verse.PawnRenderer.results" />
+		<Publicize Include="Assembly-CSharp:Verse.PawnRenderer+PreRenderResults" />
 		<Publicize Include="Assembly-CSharp:Verse.PlayDataLoader.ResetStaticDataPost" />
 		<Publicize Include="Assembly-CSharp:Verse.SectionLayer_ThingsGeneral.TakePrintFrom" />
 		<Publicize Include="Assembly-CSharp:Verse.Text.tmpTextGUIContent" />

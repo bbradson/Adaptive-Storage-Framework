@@ -915,7 +915,7 @@ public partial class IntFishTable<TValue> : IDictionary<int, TValue>, IDictionar
 	}
 
 	[CollectionAccess(CollectionAccessType.ModifyExistingContent)]
-	public bool Remove(int key, out TValue? value)
+	public bool Remove(int key, [MaybeNullWhen(false)] out TValue value)
 	{
 		if (!RemoveInternal(key, out var removedEntry))
 		{

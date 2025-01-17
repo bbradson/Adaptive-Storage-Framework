@@ -10,6 +10,8 @@ namespace AdaptiveStorage;
 [PublicAPI]
 public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 {
+	public virtual Graphic? GetGraphicFor(Thing thing, StorageRenderer? renderer) => thing.Graphic;
+	
 	public virtual void UpdatePrintData(PrintData printData, ThingClass building)
 	{
 		var thing = printData.Thing;
@@ -17,8 +19,7 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 		var thingRotation = printData.ThingRotation = graphic.textureOrientation ?? thing.Rotation;
 		printData.NotifyMaterialPossiblyChanged();
 
-		printData.DrawOffset = DrawOffsetForItem(building, thing, building.DrawPos, thingRotation,
-			out var stackRotation);
+		printData.DrawOffset = DrawOffsetForItem(building, thing, thingRotation, out var stackRotation);
 
 		printData.SetDrawScale(DrawScaleForItem(thing, building), graphic.maxDrawSize);
 		
@@ -36,33 +37,30 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 			&& storedThings.TryGetStoragePositionOf(thing, out var storagePosition)
 			&& storedThings.ItemCountAtStorageCell(storagePosition) >= 2;
 
-	public virtual Vector3 DrawOffsetForItem(ThingClass building, Thing item, in Vector3 parentDrawLoc,
-		Rot4 thingRotation, out float stackRotation)
+	public virtual Vector3 DrawOffsetForItem(ThingClass building, Thing item, Rot4 thingRotation,
+		out float stackRotation)
 	{
 		var buildingRotation = building.Rotation;
 		var storedThings = building.StoredThings;
 		var storageCell = storedThings.StoragePositionOf(item);
-		var position = ItemOffsetAt(storageCell, storedThings, item.Map, buildingRotation, item, out stackRotation);
+		var position = ItemOffsetAt(storageCell, storedThings, buildingRotation, item, out stackRotation);
 
 		if (storedThings.ContainsAndAllows(item))
 			position += graphic.DrawOffsetForRot(buildingRotation);
 
 		position += building.GetOffsetFromCenter(storageCell.AsIntVec2)
-				+ item.Graphic.DrawOffset(thingRotation).WithY(0f);
+				+ (GetGraphicFor(item, building.Renderer)?.DrawOffset(thingRotation).WithY(0f) ?? default(Vector3));
 
 		position.y += AltitudeLayer.Item.AltitudeFor(); // default would be item.def.Altitude
 
 		return position;
 	}
 
-	protected virtual Vector3 ItemOffsetAt(StorageCell storageCell, ThingCollection storedThings, Map map,
-		Rot4 parentRotation, Thing item, out float stackRotation)
+	protected virtual Vector3 ItemOffsetAt(StorageCell storageCell, ThingCollection storedThings, Rot4 parentRotation,
+		Thing item, out float stackRotation)
 	{
 		if (!storedThings.ContainsAndAllows(item))
-		{
-			return GetOffsetForUnstoredItem(item, storedThings.ItemCountAtStorageCell(storageCell), map,
-				out stackRotation);
-		}
+			return GetOffsetForUnstoredItem(item, storageCell, storedThings, out stackRotation);
 		
 		var validStoredThings = storedThings.ValidItemsAtStorageCell(storageCell);
 		var precedingItemCount = 0;
@@ -118,8 +116,8 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 
 		var stackBehaviourOffset = stackBehaviour switch
 		{
-			StackBehaviour.Weapons => ComputeStackOffsetForWeapons(itemPosition,
-				map, itemCount, precedingItemCountFloat, precedingItemCount),
+			StackBehaviour.Weapons => ComputeStackOffsetForWeapons(itemPosition, itemCount, precedingItemCountFloat,
+				precedingItemCount),
 			StackBehaviour.Stack => ComputeStackOffsetForStack(ref stackOffset, precedingItemCountFloat),
 			// ReSharper disable once PatternIsRedundant
 			StackBehaviour.Circle or _ => ComputeStackOffsetForCircle(itemPosition, itemCount, precedingItemCount)
@@ -133,7 +131,7 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 		stackRotation = precedingItemCountFloat * graphic.stackRotation;
 
 		var itemDef = item.def;
-		if (IsWeaponButNotWood(itemDef))
+		if (IsWeaponButNotWood(itemDef) && !itemDef.IsIngestible) // beer has an angle of -150 ???
 		{
 			stackRotation += itemDef.equippedAngleOffset; // GraphicData seems to lack fields for this
 			if (!itemDef.IsRangedWeapon)
@@ -197,20 +195,31 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 
 	protected virtual float RotateInShelvesValue => -90f; // see Graphic_RandomRotated.GetRotInRack
 
-	protected static Vector3 GetOffsetForUnstoredItem(Thing item, int itemCount, Map map, out float stackRotation)
+	protected static Vector3 GetOffsetForUnstoredItem(Thing item, StorageCell storageCell, ThingCollection storedThings,
+		out float stackRotation)
 	{
+		var thingIDNumber = item.thingIDNumber;
+		var itemsAtCell = storedThings.ItemsAtStorageCell(storageCell);
+		var itemCount = itemsAtCell.Length;
+		var itemIndex = -1;
+		
 		if (itemCount == 0)
-			itemCount = item.thingIDNumber & 7;
+			itemCount = thingIDNumber & 7;
+		else
+			itemIndex = itemsAtCell.IndexOf(item);
+
+		if (itemIndex < 0)
+			itemIndex = thingIDNumber % itemCount;
+
+		stackRotation = Mathf.Lerp(-60f, 60f,
+			Utility.CollectionExtensions.RandomizeUsingPcgRxsMXs((ulong)thingIDNumber) / (float)ulong.MaxValue);
 		
-		const ulong FIBONACCI = 11400714819323198485UL;
-		stackRotation = Mathf.Lerp(-60f, 60f, (uint)item.thingIDNumber * FIBONACCI / (float)ulong.MaxValue);
-		
-		var circularOffset = GenGeo.RegularPolygonVertexPosition(itemCount, item.thingIDNumber % itemCount);
+		var circularOffset = GenGeo.RegularPolygonVertexPosition(itemCount, itemIndex);
 		circularOffset *= 0.35f;
 		return new(circularOffset.x, 0f, circularOffset.y);
 	}
 
-	protected static Vector2 ComputeStackOffsetForWeapons(IntVec2 position, Map map, int itemCount,
+	protected static Vector2 ComputeStackOffsetForWeapons(IntVec2 position, int itemCount,
 		float precedingItemCountFloat, int precedingItemCount)
 		=> new(-0.5f + ((1f / itemCount) * (precedingItemCountFloat + 0.5f)),
 			((((itemCount & 1) == 0 ? 0 : position.x) + precedingItemCount) & 1) == 0 ? -0.02f : 0.2f);

@@ -15,9 +15,7 @@ public class ContentLabelStyleDef : Def
 
 	public ContentLabelWorker ContentLabelWorker => _contentLabelWorker!;
 
-	public override void ResolveReferences() => ContentLabelWorker.ResolveReferences();
-
-	public override void PostLoad()
-		=> _contentLabelWorker = WorkerClassMaker<ContentLabelWorker>.MakeWorker(workerClass, this)
-			?? new ContentLabelWorker.Automatic();
+	public override void ResolveReferences()
+		=> (_contentLabelWorker = WorkerClassMaker<ContentLabelWorker>.MakeWorker(workerClass, this)
+			?? new ContentLabelWorker.Automatic()).ResolveReferences();
 }

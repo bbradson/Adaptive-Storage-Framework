@@ -88,7 +88,7 @@ public class Minified : MinifiedThing, ITransformable
 
 		if (innerThing is ITransformable scalable)
 		{
-			DrawScalableInnerThing(innerThing, transformData, scalable);
+			DrawScalableInnerThing(innerThing, transformData, scalable, innerThingRotation);
 		}
 		else
 		{
@@ -98,10 +98,10 @@ public class Minified : MinifiedThing, ITransformable
 	}
 
 	private void DrawScalableInnerThing(Thing innerThing, TransformData transformData,
-		ITransformable transformable)
+		ITransformable transformable, Rot4 innerThingRotation)
 	{
 #if !V1_4
-		transformData.Position += innerThing.def.minifiedDrawOffset;
+		transformData.Position += GetMinifiedThingDrawOffset(innerThing, innerThing.Graphic, innerThingRotation);
 #endif
 		transformData.Scale *= innerThing.GetVisualSize().Bounded(VisualSize);
 		
@@ -116,11 +116,17 @@ public class Minified : MinifiedThing, ITransformable
 		{
 			thingGraphic.Draw(drawLoc
 #if !V1_4
-				+ innerThing.def.minifiedDrawOffset
+				+ GetMinifiedThingDrawOffset(innerThing, thingGraphic, innerThingRotation)
 #endif
-				+ thingGraphic.DrawOffset(innerThingRotation), innerThingRotation, innerThing);
+				, innerThingRotation, innerThing);
 		}
 	}
+
+#if !V1_4
+	private static Vector3 GetMinifiedThingDrawOffset(Thing innerThing, Graphic innerThingGraphic,
+		Rot4 innerThingRotation)
+		=> innerThing.def.minifiedDrawOffset - innerThingGraphic.DrawOffset(innerThingRotation);
+#endif
 
 	public sealed override void Print(SectionLayer layer) => PrintAt(layer, new(DrawPos));
 

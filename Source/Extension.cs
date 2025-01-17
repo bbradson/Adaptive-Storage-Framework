@@ -22,6 +22,8 @@ public class Extension : DefModExtension
 
 	public CellTable<ValuesByQuality>? maxItemsByCell;
 
+	public TemperatureProperties? temperature;
+
 	public void Initialize(ThingDef parent)
 	{
 		if (graphics is null)
@@ -31,5 +33,18 @@ public class Extension : DefModExtension
 			graphics[i].targetDefs.AddDistinct(parent);
 		
 		maxItemsByCell?.Initialize([parent]);
+
+		if (temperature is { coolingOffset: 0f, heatingOffset: 0f })
+			temperature = null;
+	}
+
+	[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+	public class TemperatureProperties
+	{
+		public float
+			coolingOffset,
+			heatingOffset,
+			coolingMin = float.NegativeInfinity,
+			heatingMax = float.PositiveInfinity;
 	}
 }

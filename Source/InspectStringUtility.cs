@@ -3,7 +3,6 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
-using System.Linq;
 using System.Text;
 using AdaptiveStorage.Fishery;
 using AdaptiveStorage.Fishery.Pools;
@@ -65,9 +64,7 @@ public static class InspectStringUtility
 		bool includeCount = true, int max = int.MaxValue, Comparison<KeyValuePair<ThingDef, int>>? sortBy = null,
 		string? overflowText = null)
 	{
-		using var pooledStoredThingCountList = includeCount
-			? GetThingCountPairs(storedThings)
-			: new(storedThings.Select(static thing => new KeyValuePair<ThingDef, int>(thing.def, 1)));
+		using var pooledStoredThingCountList = GetThingCountPairs(storedThings);
 		
 		var storedThingCountList = pooledStoredThingCountList.List;
 		

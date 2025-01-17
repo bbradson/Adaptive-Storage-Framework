@@ -5,20 +5,24 @@
 
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using AdaptiveStorage.Fishery;
 using AdaptiveStorage.Fishery.Collections;
+using AdaptiveStorage.Fishery.Pools;
 using AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 namespace AdaptiveStorage;
 
-public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDef>, IReadOnlyList<ThingDef>, IExposable
+public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, IList<ThingDef>, IReadOnlyList<ThingDef>
 {
+	public static readonly ThingCollection Empty = new(null!); // null parent throws on Add
+	
 	private readonly ThingClass _parent;
 	private readonly int _parentSizeX, _parentSizeZ;
 	private ThingDef[] _defs = Array.Empty<ThingDef>();
 	private Thing[] _things = Array.Empty<Thing>();
 	private int[] _positions = Array.Empty<int>();
-	private int[] _thingIDNumbers = Array.Empty<int>();
+	private readonly IntFishTable<int> _indices = [];
 	private readonly List<int> _cellWiseThingIDNumbers = [];
 	private readonly List<Thing> _cellWiseThings = [];
 	private readonly List<Thing>[] _validThingsPerCell, _thingsPerCell;
@@ -28,7 +32,11 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 
 	public ThingClass Parent => _parent;
 
-	public int Count => _count;
+	public sealed override int Count
+	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		get => _count;
+	}
 
 	public int CellWiseCount => _cellWiseThingIDNumbers.Count;
 
@@ -38,7 +46,7 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 
 	public CellWise AsCellWise => new(this);
 
-	public int TotalThingCount
+	public new int TotalStackCount
 	{
 		get
 		{
@@ -51,6 +59,10 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 	}
 
 	public ReadOnlyCollection<StorageCell> FreeStorageSlots { get; }
+
+	public event Action<Thing, StorageCell>?
+		Added,
+		Removed;
 
 	public IEnumerable<IntVec3> FreeMapCells
 	{
@@ -79,7 +91,7 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 	
 	public bool TryGetStoragePositionOf(Thing thing, out StorageCell position)
 	{
-		if (IndexOf(thing) is >= 0 and var index)
+		if (TryGetIndex(thing, out var index))
 		{
 			position = StoragePositionAt(index);
 			return true;
@@ -91,18 +103,24 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		}
 	}
 
-	public Thing this[int index]
+	public new Thing this[int index]
 	{
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		get => _things[index];
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	protected sealed override Thing GetAt(int index) => _things[index];
+
+	[SuppressMessage("ReSharper", "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract")]
 	public ThingCollection(ThingClass parent)
 	{
 		_parent = parent;
-		var parentSize = parent.Size;
+		var parentSize = parent?.Size ?? default;
 		_parentSizeX = parentSize.x;
 		_parentSizeZ = parentSize.z;
+
+		contentsLookMode = LookMode.Undefined;
 		
 		var buildingArea = parentSize.Area;
 		
@@ -116,21 +134,26 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		}
 
 		_freeSlots = new(buildingArea);
-		ResetFreeSlots();
+		
+		if (parent != null)
+			ResetFreeSlots();
 
 		FreeStorageSlots = new(_freeSlots);
 
-		parent.StorageSettingsChanged += UpdateAllValidStoredItems;
-		parent.SlotLimitChangedAtCell += UpdateValidStoredItemsAt;
-		parent.ItemStackChanged += UpdateValidStoredItemsAtItemPosition;
-		parent.DeSpawning += RemoveAllIfNotPacking;
+		if (parent != null)
+		{
+			parent.StorageSettingsChanged += UpdateAllValidStoredItems;
+			parent.SlotLimitChangedAtCell += UpdateValidStoredItemsAt;
+			parent.ItemStackChanged += UpdateValidStoredItemsAtItemPosition;
+			parent.DeSpawning += RemoveAllIfNotPacking;
+		}
 	}
 
 	private void RemoveAllIfNotPacking(DestroyMode _, SpawnMode spawnMode)
 	{
 		if ((spawnMode & SpawnMode.PackContents) != 0)
 			return;
-		
+
 		foreach (var cell in StorageCells)
 		{
 			var storageCell = cell.ToStorageCell(_parent);
@@ -172,6 +195,10 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		get => _defs[index];
 	}
 
+	public override bool TryAdd(Thing item, bool canMergeWithExistingStacks = true) => false;
+
+	public override int TryAdd(Thing item, int count, bool canMergeWithExistingStacks = true) => 0;
+
 	public void Add(Thing thing) => Add(thing, thing.Position);
 
 	public void Add(Thing thing, IntVec3 mapCell) => Add(thing, GetStorageCell(mapCell), mapCell == thing.Position);
@@ -192,9 +219,10 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 			TryAddToThingsForOtherOccupiedStorageCells(thing, storageCell);
 
 		ExpandIfNeeded();
-		SetInternal(_count++, thing, thing.def, thing.thingIDNumber, storageCell);
+		SetInternal(_count++, thing, thing.def, storageCell);
 
 		thing.DisableItemRendering();
+		Added?.Invoke(thing, storageCell);
 	}
 
 	[MethodImpl(MethodImplOptions.NoInlining)]
@@ -216,11 +244,21 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private void SetInternal(int index, Thing thing, ThingDef def, int thingIDNumber, StorageCell storageCell)
+	private void SetInternal(int index, Thing? thing, ThingDef? def, StorageCell storageCell)
 	{
-		_things[index] = thing;
-		_defs[index] = def;
-		_thingIDNumbers[index] = thingIDNumber;
+		if (thing is null)
+		{
+			var thingIDNumber = _things[index].thingIDNumber;
+			if (_indices.TryGetValue(thingIDNumber, out var assignedIndex) && assignedIndex == index)
+				_indices.Remove(thingIDNumber);
+		}
+		else
+		{
+			_indices[thing.thingIDNumber] = index;
+		}
+		
+		_things[index] = thing!;
+		_defs[index] = def!;
 		_positions[index] = storageCell.Index;
 	}
 
@@ -367,8 +405,8 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		return destinationArray;
 	}
 
-	public bool Contains(ThingDef item) => IndexOf(item) >= 0;
-	public bool Contains(Thing item) => IndexOf(item) >= 0;
+	public new bool Contains(ThingDef item) => IndexOf(item) >= 0;
+	public new bool Contains(Thing item) => _indices.ContainsKey(item.thingIDNumber);
 
 	/// <summary>
 	/// Things in storage cells that pass the storage filter and don't exceed item limits
@@ -395,11 +433,11 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 
 		Array.Resize(ref _defs, size);
 		Array.Resize(ref _things, size);
-		Array.Resize(ref _thingIDNumbers, size);
 		Array.Resize(ref _positions, size);
 	}
 
-	public bool Remove(Thing thing) => Remove(thing, thing.Position);
+	public sealed override bool Remove(Thing? thing)
+		=> thing != null && TryGetStoragePositionOf(thing, out var position) && Remove(thing, position);
 
 	public bool Remove(Thing thing, in IntVec3 mapCell)
 		=> Remove(thing, GetStorageCell(mapCell), mapCell == thing.Position);
@@ -409,11 +447,7 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 
 	public bool Remove(Thing thing, StorageCell storageCell)
 	{
-		if (!RemoveCellWise(thing, storageCell))
-			return false;
-
-		var index = _thingIDNumbers.IndexOf(thing.thingIDNumber, _count);
-		if (index < 0)
+		if (!RemoveCellWise(thing, storageCell) || !_indices.TryGetValue(thing.thingIDNumber, out var index))
 			return false;
 
 		if (_positions[index] != storageCell.Index)
@@ -421,6 +455,10 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		
 		RemoveAtInternal(index);
 		thing.RestoreItemRendering();
+		if (thing.holdingOwner == this)
+			thing.holdingOwner = null;
+		
+		Removed?.Invoke(thing, storageCell);
 
 		return true;
 	}
@@ -457,38 +495,44 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		Guard.IsLessThan(index, count);
 
 		var lastIndex = count-- - 1;
-		Move(lastIndex, index);
+		Copy(lastIndex, index);
 		ClearAt(lastIndex);
 	}
 
-	private void Move(int from, int to)
+	private void Copy(int from, int to)
 	{
 		if (from == to)
 			return;
 
 		var things = _things;
-		things[to] = things[from];
+		var thing = things[to] = things[from];
 
 		var defs = _defs;
 		defs[to] = defs[from];
 
-		var thingIDNumbers = _thingIDNumbers;
-		thingIDNumbers[to] = thingIDNumbers[from];
-
 		var positions = _positions;
 		positions[to] = positions[from];
+
+		_indices[thing.thingIDNumber] = to;
 	}
 
-	private void ClearAt(int index) => SetInternal(index, null!, null!, default, default);
+	private void ClearAt(int index) => SetInternal(index, null, null, default);
 
-	internal void Clear()
+	internal new void Clear()
 	{
 		ref var count = ref _count;
+
+		using var thingsAndCells = new PooledList<(Thing thing, StorageCell cell)>();
+		var things = _things;
+		var positions = _positions;
+		for (var i = 0; i < things.Length; i++)
+			thingsAndCells.Add((things[i], new(_parentSizeX, positions[i])));
 		
-		Array.Clear(_things, 0, count);
+		Array.Clear(things, 0, count);
 		Array.Clear(_defs, 0, count);
-		Array.Clear(_thingIDNumbers, 0, count);
-		Array.Clear(_positions, 0, count);
+		Array.Clear(positions, 0, count);
+		
+		_indices.Clear();
 		
 		foreach (var validThingsAtCell in _validThingsPerCell)
 			validThingsAtCell.Clear();
@@ -503,16 +547,38 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 		ResetFreeSlots();
 		
 		count = 0;
+
+		if (Removed is { } removed)
+		{
+			foreach (var tac in thingsAndCells)
+				removed(tac.thing, tac.cell);
+		}
 	}
 
-	IEnumerator<ThingDef> IEnumerable<ThingDef>.GetEnumerator() => ((IList<ThingDef>)_defs).GetEnumerator();
+	IEnumerator<ThingDef> IEnumerable<ThingDef>.GetEnumerator()
+	{
+		var defs = _defs;
+		var count = _count;
+		for (var i = 0; i < count; i++)
+			yield return defs[i];
+	}
 
-	public IEnumerator<Thing> GetEnumerator() => ((IList<Thing>)_things).GetEnumerator();
+	public IEnumerator<Thing> GetEnumerator()
+	{
+		var things = _things;
+		var count = _count;
+		for (var i = 0; i < count; i++)
+			yield return things[i];
+	}
 
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	public int IndexOf(ThingDef item) => Array.IndexOf(_defs, item, 0, _count);
-	public int IndexOf(Thing item) => _thingIDNumbers.IndexOf(item.thingIDNumber, _count);
+
+	public sealed override int IndexOf(Thing? item)
+		=> item != null && _indices.TryGetValue(item.thingIDNumber, out var index) ? index : -1;
+
+	public bool TryGetIndex(Thing item, out int index) => _indices.TryGetValue(item.thingIDNumber, out index);
 
 #region Unsupported interface members
 	void ICollection<ThingDef>.Add(ThingDef item) => ThrowHelper.ThrowNotSupportedException();
@@ -525,10 +591,12 @@ public class ThingCollection : IList<Thing>, IReadOnlyList<Thing>, IList<ThingDe
 	void IList<ThingDef>.RemoveAt(int index) => ThrowHelper.ThrowNotSupportedException();
 #endregion
 
-	public bool Any() => _count > 0;
+	public new bool Any() => _count > 0;
 
-	public void ExposeData()
+	public override void ExposeData()
 	{
+		base.ExposeData();
+		
 		using var pooledThingList = _things.ToPooledList();
 		var thingList = pooledThingList.List;
 		Scribe_Collections.Look(ref thingList, "Things", LookMode.Deep);

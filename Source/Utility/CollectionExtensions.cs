@@ -86,17 +86,16 @@ public static class CollectionExtensions
 		return null;
 	}
 
-	public static PrintData GetOrAdd(this List<PrintData> printDatas, Thing thing)
+	public static int IndexOf<T>(this in ReadOnlySpan<T> span, T element) where T : class
 	{
-		for (var i = printDatas.Count; i-- > 0;)
+		ref var dataReference = ref span.DangerousGetPinnableReference();
+		for (var i = span.Length; --i >= 0;)
 		{
-			if (printDatas[i].Thing == thing)
-				return printDatas[i];
+			if (Unsafe.Add(ref dataReference, i) == element)
+				return i;
 		}
 
-		var result = PrintData.Create(thing, thing.Graphic);
-		printDatas.Add(result);
-		return result;
+		return -1;
 	}
 
 	public static int TryGetSeededIndex<T>(this List<T> list, int seed, Func<T, uint> weightSelector)
@@ -288,6 +287,8 @@ public static class CollectionExtensions
 		return result;
 	}
 
+	public static T[] Copy<T>(this T[] array) => [..array];
+
 	public static int Max(this int[] array)
 	{
 		var result = int.MinValue;
@@ -343,5 +344,28 @@ public static class CollectionExtensions
 		
 		list.Add(item);
 		return true;
+	}
+
+	public static IEnumerable<TElement> Where<TElement>(this List<TElement> list, Predicate<TElement> predicate)
+	{
+		list.UnwrapReadOnlyArray(out var array, out var count);
+		for (var i = 0; i < count; i++)
+		{
+			var element = array[i];
+			if (predicate(element))
+				yield return element;
+		}
+	}
+
+	public static IEnumerable<TElement> Where<TContext, TElement>(this List<TElement> list, TContext context,
+		Predicate<TContext, TElement> predicate)
+	{
+		list.UnwrapReadOnlyArray(out var array, out var count);
+		for (var i = 0; i < count; i++)
+		{
+			var element = array[i];
+			if (predicate(context, element))
+				yield return element;
+		}
 	}
 }

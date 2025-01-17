@@ -11,7 +11,7 @@ using AdaptiveStorage.ModCompatibility;
 namespace AdaptiveStorage;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
+public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable, IThingHolder
 {
 	public List<GraphicsDef>? AllGraphics => Renderer?.AllGraphics;
 
@@ -66,7 +66,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 
 	public bool ContentsPacked => _contentsPacked;
 
-	public int TotalThingCount => StoredThings.TotalThingCount;
+	public int TotalThingCount => StoredThings.TotalStackCount;
 
 	public virtual string?[]? GUIOverlayLabels => _cachedGUIOverlayLabels;
 
@@ -191,6 +191,8 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 	public Extension? Extension { get; private set; }
 	
 	public CompQuality? CompQuality { get; private set; }
+	
+	public CompPowerTrader? CompPowerTrader { get; private set; }
 
 	public QualityCategory QualityCategory => CompQuality?.Quality ?? QualityCategory.Normal;
 
@@ -222,12 +224,17 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 			Extension = def.GetModExtension<Extension>();
 			Size = def.Size;
 			CompQuality = GetComp<CompQuality>();
+			CompPowerTrader = GetComp<CompPowerTrader>();
 			InitializeMaxItemsByCell();
 			TotalSlots = _maxItemsByCell.Sum();
 
-			_storedThings = new(this);
-			Renderer = new(this);
+			var storedThings = _storedThings = new(this);
+			storedThings.Added += NotifyReceivedThing;
+			storedThings.Removed += NotifyLostThing;
+			
+			Renderer = new(this, storedThings);
 			Renderer.CurrentGraphicChanged += SetGUIOverlayLabelsDirty;
+			
 			_godModeGizmos = new(this);
 			_currentGodModeGizmos = GetGodModeGizmos();
 			_statDrawEntries = new(this);
@@ -238,6 +245,10 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 			Log.Error(ex.ToString());
 		}
 	}
+
+	private void NotifyReceivedThing(Thing thing, StorageCell cell) => ReceivedThing?.Invoke(thing);
+
+	private void NotifyLostThing(Thing thing, StorageCell cell) => LostThing?.Invoke(thing);
 
 	private void InitializeMaxItemsByCell()
 	{
@@ -395,7 +406,6 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 
 		CurrentSlotLimit = _currentSlotLimit;
 		InitializeStoredThings();
-		Renderer?.InitializeStoredThingGraphics(CurrentSectionLayer);
 		PostSpawned?.Invoke(map, spawnMode);
 	}
 
@@ -418,30 +428,20 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 					Position}:\n{ex}");
 			}
 		}
+
+		storedThings.contentsLookMode = LookMode.Undefined;
 	}
 
 	public sealed override void DeSpawn(DestroyMode mode = DestroyMode.Vanish) => OnDeSpawn(mode, SpawnMode.Default);
 
 	protected virtual void OnDeSpawn(DestroyMode destroyMode, SpawnMode deSpawnMode)
 	{
-		if ((deSpawnMode & SpawnMode.PackContents) == 0)
-			FreeAllThingGraphics();
-		else
+		if ((deSpawnMode & SpawnMode.PackContents) != 0)
 			PackStoredThings();
 
 		DeSpawning?.Invoke(destroyMode, deSpawnMode);
 		base.DeSpawn(destroyMode);
 		DeSpawned?.Invoke(destroyMode, deSpawnMode);
-	}
-
-	internal void FreeAllThingGraphics()
-	{
-		if (Renderer is not { } renderer)
-			return;
-
-		var storedThings = StoredThings;
-		for (var i = storedThings.Count; --i >= 0;)
-			renderer.FreeThingGraphic(storedThings[i], null, false);
 	}
 
 	private void PackStoredThings()
@@ -467,6 +467,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 			try
 			{
 				thing.DeSpawn();
+				thing.holdingOwner = storedThings;
 			}
 			catch (Exception ex)
 			{
@@ -474,6 +475,8 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 					Position}:\n{ex}");
 			}
 		}
+
+		storedThings.contentsLookMode = LookMode.Deep;
 	}
 
 	public void Minify() => Minify(def.minifiedDef.GetModExtension<MinifiedExtension>()?.packContents ?? false);
@@ -526,10 +529,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 			PostInitialize();
 
 		if (ContentsPacked)
-		{
-			Scribe_Deep.Look(ref _storedThings, nameof(StoredThings), this);
-			_storedThings ??= new(this);
-		}
+			Exposable.Scribe(_storedThings, nameof(StoredThings));
 	}
 
 	public new void Notify_SettingsChanged()
@@ -558,13 +558,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 	{
 		_cachedTotalThingCount = -1;
 		StoredThings.Add(item, cell);
-
-		if (item.def.SingleCell() || cell == item.Position)
-		{
-			Renderer?.AssignThingGraphic(item, CurrentSectionLayer);
-			ReceivedThing?.Invoke(item);
-		}
-
+		
 		ItemRegisteredAtCell?.Invoke(item, in cell);
 	}
 
@@ -574,17 +568,11 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 			return;
 		
 		_cachedTotalThingCount = -1;
-		
+
 		if (!StoredThings.Remove(item, cell))
 		{
 			LogWarningForFailedRemoval(item);
 			return;
-		}
-
-		if (item.def.SingleCell() || cell == item.Position)
-		{
-			Renderer?.FreeThingGraphic(item, CurrentSectionLayer);
-			LostThing?.Invoke(item);
 		}
 
 		ItemDeregisteredAtCell?.Invoke(item, in cell);
@@ -600,6 +588,16 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 		Renderer?.SetPrintDataDirty(item);
 		ItemStackChanged?.Invoke(item);
 	}
+
+	public void GetChildHolders(List<IThingHolder> outChildren)
+	{
+		if (!Spawned)
+			ThingOwnerUtility.AppendThingHoldersFromThings(outChildren, StoredThings);
+	}
+
+	public ThingOwner GetDirectlyHeldThings() => Spawned ? ThingCollection.Empty : StoredThings;
+	// gets null checked everywhere, except for Verse.Selector, where it throws badly enough to make buildings entirely
+	// unselectable
 
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private void LogWarningForFailedRemoval(Thing thing)
@@ -695,6 +693,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable
 		Extension = def.GetModExtension<Extension>();
 		Size = def.Size;
 		CompQuality = GetComp<CompQuality>();
+		CompPowerTrader = GetComp<CompPowerTrader>();
 		_fixedStorageSettings = PrepareFixedStorageSettings();
 		Renderer!.Notify_DefsHotReloaded();
 		_godModeGizmos = new(this);

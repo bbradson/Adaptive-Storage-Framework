@@ -10,7 +10,7 @@ public class UnsupportedGraphicPrintData : PrintData
 	public override void PrintAt(SectionLayer layer, in TransformData transformData)
 	{
 		var transform = transformData;
-		var graphic = Graphic;
+		var graphic = Graphic!;
 		var thing = Thing;
 		var previousRotation = thing.Rotation;
 
@@ -38,7 +38,7 @@ public class UnsupportedGraphicPrintData : PrintData
 	public override void DrawAt(in TransformData transformData)
 	{
 		var transform = transformData;
-		var graphic = Graphic;
+		var graphic = Graphic!;
 		var thing = Thing;
 
 		if (thing.MultipleItemsPerCellDrawn())
@@ -46,16 +46,16 @@ public class UnsupportedGraphicPrintData : PrintData
 		
 		using (graphic.Scaled(transform.Scale * RotatedDrawScale))
 		{
-			Graphic.DrawWorker(transform.Position + DrawOffset, ThingRotation, thing.def, thing,
+			graphic.DrawWorker(transform.Position + DrawOffset, ThingRotation, thing.def, thing,
 				transform.CombinedRotation.AsFloat + ExtraRotation);
 		}
 	}
 
 	public new class Factory : PrintData.Factory
 	{
-		public override bool IsCompatibleWith(Thing thing, Graphic graphic)
-			=> OptimizedPrintData.IsCompatibleThing(thing);
+		public override bool IsCompatibleWith(Thing thing, Graphic? graphic)
+			=> OptimizedPrintData.IsCompatibleThing(thing) && graphic != null;
 
-		public override PrintData CreateFor(Thing thing, Graphic graphic) => new UnsupportedGraphicPrintData();
+		public override PrintData CreateFor(Thing thing, Graphic? graphic) => new UnsupportedGraphicPrintData();
 	}
 }

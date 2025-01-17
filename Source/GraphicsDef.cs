@@ -246,6 +246,9 @@ public class GraphicsDef : Def
 			(def.inspectorTabsResolved ??= []).Add(InspectTabManager.GetSharedInstance(contentsITabType));
 		}
 
+		if (!def.drawGUIOverlay && contentLabelStyle?.ContentLabelWorker is not ContentLabelWorker.None)
+			def.drawGUIOverlay = true;
+
 		if (!Database.TryGetValue(def, out var list))
 			Database[def] = list = [];
 

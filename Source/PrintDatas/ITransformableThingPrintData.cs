@@ -13,7 +13,7 @@ public class ITransformableThingPrintData(ITransformable thing) : PrintData
 	{
 		var transform = transformData;
 		transform.Position += DrawOffset;
-		transform.Scale *= DrawScale;
+		transform.Scale *= RotatedDrawScale;
 		transform.CombinedRotation += RotationAngle;
 		Transformable.DrawAt(transform);
 	}
@@ -22,16 +22,16 @@ public class ITransformableThingPrintData(ITransformable thing) : PrintData
 	{
 		var transform = transformData;
 		transform.Position += DrawOffset;
-		transform.Scale *= DrawScale;
+		transform.Scale *= RotatedDrawScale;
 		transform.CombinedRotation += RotationAngle;
 		Transformable.PrintAt(layer, transform);
 	}
 
 	public new class Factory : PrintData.Factory
 	{
-		public override bool IsCompatibleWith(Thing thing, Graphic graphic) => thing is ITransformable;
+		public override bool IsCompatibleWith(Thing thing, Graphic? graphic) => thing is ITransformable;
 
-		public override PrintData CreateFor(Thing thing, Graphic graphic)
+		public override PrintData CreateFor(Thing thing, Graphic? graphic)
 			=> new ITransformableThingPrintData((ITransformable)thing);
 	}
 }

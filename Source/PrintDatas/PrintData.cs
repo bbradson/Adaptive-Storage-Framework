@@ -22,7 +22,7 @@ public abstract class PrintData : ITransformable
 	
 	public Thing Thing { get; protected set; }
 
-	public Graphic Graphic { get; protected set; }
+	public Graphic? Graphic { get; protected set; }
 
 	public bool Dirty { get; set; }
 
@@ -35,7 +35,7 @@ public abstract class PrintData : ITransformable
 	public Vector2 RotatedScaledDrawSize
 		=> ScaledDrawSize is var scaledDrawSize && ShouldRotateDrawSize ? scaledDrawSize.Rotated() : scaledDrawSize;
 
-	protected bool ShouldRotateDrawSize => !Graphic.ShouldDrawRotated && ThingRotation.IsHorizontal;
+	protected bool ShouldRotateDrawSize => Graphic is { ShouldDrawRotated: false } && ThingRotation.IsHorizontal;
 
 	protected bool ShouldFlip
 		=> Graphic is { ShouldDrawRotated: false } graphic
@@ -140,9 +140,13 @@ public abstract class PrintData : ITransformable
 		get => _shadowData != null;
 		set
 			=> _shadowData = value
-				? (_shadowData == _defaultShadowData ? Graphic.ShadowGraphic?.shadowInfo : null) ?? _defaultShadowData
+				? (_shadowData == _defaultShadowData ? Graphic?.ShadowGraphic?.shadowInfo : null) ?? _defaultShadowData
 				: null;
 	}
+
+	public virtual bool ShouldPrint => Thing.def.drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime;
+
+	public virtual bool ShouldDraw => Thing.def.drawerType is DrawerType.RealtimeOnly or DrawerType.MapMeshAndRealTime;
 
 	public void PrintAt(SectionLayer layer, in Vector3 drawLoc) => PrintAt(layer, new TransformData(drawLoc));
 
@@ -162,7 +166,7 @@ public abstract class PrintData : ITransformable
 
 	public virtual void NotifyMaterialPossiblyChanged()
 	{
-		var newDrawSize = Graphic.drawSize;
+		var newDrawSize = Graphic?.drawSize ?? Vector2.one;
 		if (newDrawSize == DrawSize)
 			return;
 
@@ -199,10 +203,9 @@ public abstract class PrintData : ITransformable
 
 	private static readonly ShadowData _defaultShadowData = new();
 	
-	public static PrintData Create(Thing thing, Graphic graphic)
+	public static PrintData Create(Thing thing, Graphic? graphic)
 	{
 		Guard.IsNotNull(thing);
-		Guard.IsNotNull(graphic);
 		
 		var result = Factories
 				.Find((thing, graphic), static (c, factory) => factory.IsCompatibleWith(c.thing, c.graphic))
@@ -211,8 +214,8 @@ public abstract class PrintData : ITransformable
 
 		result.Thing = thing;
 		result.Graphic = graphic;
-		result.DrawSize = graphic.drawSize;
-		result.ShadowData = graphic.ShadowGraphic?.shadowInfo ?? _defaultShadowData;
+		result.DrawSize = graphic?.drawSize ?? Vector2.one;
+		result.ShadowData = graphic?.ShadowGraphic?.shadowInfo ?? _defaultShadowData;
 		result.ThingRotation = Rot4.North;
 
 		return result;
@@ -229,6 +232,7 @@ public abstract class PrintData : ITransformable
 		new OptimizedPrintData.Factory(),
 		new ITransformableGraphicPrintData.Factory(),
 		new ITransformableThingPrintData.Factory(),
+		new MinifiedThingPrintData.Factory(),
 		new CorpsePrintData.Factory(),
 		new UnsupportedGraphicPrintData.Factory(),
 		new UnsupportedThingPrintData.Factory()
@@ -236,8 +240,8 @@ public abstract class PrintData : ITransformable
 
 	public abstract class Factory
 	{
-		public abstract bool IsCompatibleWith(Thing thing, Graphic graphic);
+		public abstract bool IsCompatibleWith(Thing thing, Graphic? graphic);
 		
-		public abstract PrintData CreateFor(Thing thing, Graphic graphic);
+		public abstract PrintData CreateFor(Thing thing, Graphic? graphic);
 	}
 }

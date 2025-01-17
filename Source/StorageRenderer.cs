@@ -7,6 +7,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using AdaptiveStorage.Fishery;
+using AdaptiveStorage.Fishery.Collections;
 using AdaptiveStorage.Fishery.Pools;
 using AdaptiveStorage.PrintDatas;
 
@@ -23,7 +24,11 @@ public class StorageRenderer : ITransformable
 	
 	public ReadOnlyCollection<PrintData> Drawables { get; }
 
+	public ReadOnlyCollection<PrintData> CurrentBuildingGraphics { get; }
+
 	public bool ShowContainedItems { get; private set; } = true;
+	
+	private ThingCollection StoredThings { get; }
 
 	public int CurrentGraphicIndex
 	{
@@ -59,7 +64,11 @@ public class StorageRenderer : ITransformable
 	[MemberNotNull(nameof(CurrentGraphicVariation))]
 	public StorageGraphic? CurrentGraphic { get; set; }
 
-	public event Action? CurrentGraphicChanged;
+	public event Action?
+		CurrentGraphicChanged,
+		PostDraw;
+
+	public event Action<SectionLayer>? PostPrint;
 
 	private bool ShouldRealTimeDraw => Parent.def.drawerType == DrawerType.RealtimeOnly || !Parent.Spawned;
 	
@@ -67,16 +76,18 @@ public class StorageRenderer : ITransformable
 
 	public bool ContentColorsDirty
 	{
-		get => ContentColors?[0] is { r: float.NaN };
+		get => ContentColors is { } colors && float.IsNaN(colors[0].r);
 		set
 		{
 			if (ContentColors is not { } colors)
 				return;
 
+			ref var dirtyFlag = ref colors[0].r;
+
 			if (value)
-				colors[0].r = float.NaN;
-			else
-				UpdateDirtyData();
+				dirtyFlag = float.NaN;
+			else if (float.IsNaN(dirtyFlag))
+				UpdateContentColors();
 		}
 	}
 
@@ -86,22 +97,30 @@ public class StorageRenderer : ITransformable
 
 	private readonly List<PrintData>
 		_printables = [],
-		_drawables = [];
+		_drawables = [],
+		_buildingGraphics = [];
+
+	private readonly IntFishTable<PrintData> _printDatasByThing = [];
 
 	private int
 		_currentVariationIndex = -1,
 		_currentGraphicIndex = -1,
 		_lastMapMeshDirtyFrame = -1;
-	
-	public bool AnyPrintDatasDirty { get; private set; }
 
-	public StorageRenderer(ThingClass parent)
+	public bool AnyPrintDatasDirty { get; private set; } = true;
+
+	public StorageRenderer(ThingClass parent, ThingCollection thingCollection)
 	{
 		Parent = parent;
+		var storedThings = StoredThings = thingCollection;
 		Printables = new(_printables);
 		Drawables = new(_drawables);
+		CurrentBuildingGraphics = new(_buildingGraphics);
 		CurrentGraphicChanged += OnCurrentGraphicChanged;
 		InitializeAllGraphics();
+
+		storedThings.Added += AssignThingGraphic;
+		storedThings.Removed += FreeThingGraphic;
 	}
 
 	private void InitializeAllGraphics()
@@ -110,13 +129,15 @@ public class StorageRenderer : ITransformable
 
 		if (graphics is not [_, ..])
 			return;
+		
+		InitializeParentComps();
 
 		var maxColorSourceIndex = graphics.Max(static def
-				=> def.graphics.Max(static graphic
-					=> graphic.graphicDatas.Max(static graphicData
-						=> graphicData is null
-							? 0
-							: Math.Max((int)graphicData.colorOneSource, (int)graphicData.colorTwoSource))));
+			=> def.graphics.Max(static graphic
+				=> graphic.graphicDatas.Max(static graphicData
+					=> graphicData is null
+						? 0
+						: Math.Max((int)graphicData.colorOneSource, (int)graphicData.colorTwoSource))));
 
 		if (maxColorSourceIndex >= 1 || graphics.Exists(static graphicsDef
 			=> (int)graphicsDef.useDominantContentColor > 0
@@ -125,6 +146,21 @@ public class StorageRenderer : ITransformable
 		{
 			ContentColors = new Color[Math.Max(maxColorSourceIndex + 1, 1)];
 			ContentColorsDirty = true;
+		}
+	}
+
+	private void InitializeParentComps()
+	{
+		PostDraw = null;
+		
+		var comps = Parent.AllComps;
+		foreach (var comp in comps)
+		{
+			if (comp.OverridesPostDraw())
+				PostDraw += comp.PostDraw;
+
+			if (comp.OverridesPostPrint())
+				PostPrint += comp.PostPrintOnto;
 		}
 	}
 
@@ -139,7 +175,8 @@ public class StorageRenderer : ITransformable
 			return;
 		}
 
-		UpdateDirtyData();
+		if (phase != DrawPhase.ParallelPreDraw)
+			UpdateDirtyData();
 
 		if (phase == DrawPhase.Draw && ShouldRealTimeDraw)
 		{
@@ -150,7 +187,7 @@ public class StorageRenderer : ITransformable
 		DynamicDrawPhaseOnItems(_drawables, phase, transform);
 
 		if (phase == DrawPhase.Draw)
-			Parent.Comps_PostDraw();
+			PostDraw?.Invoke();
 	}
 
 	private void DynamicDrawPhaseOnItems(List<PrintData> printDatas, DrawPhase phase, in TransformData transformData)
@@ -177,17 +214,15 @@ public class StorageRenderer : ITransformable
 
 		DrawItems(_drawables, transformData);
 
-		Parent.Comps_PostDraw();
+		PostDraw?.Invoke();
 	}
 
 	private void DrawBuilding(in TransformData transform)
 	{
 		var parent = Parent;
-		var drawColor = parent.DrawColor;
-		var drawColorTwo = parent.DrawColorTwo;
 		var rotation = parent.Rotation.Rotated(transform.RotationDirection);
 		
-		if (!TryGetStyleGraphic(drawColor, drawColorTwo, out var styleGraphic))
+		if (TryGetStyleGraphic() is not { } styleGraphic)
 		{
 			if (VisibleBaseGraphic)
 				parent.Graphic.Draw(transform.Position, rotation, parent);
@@ -249,12 +284,12 @@ public class StorageRenderer : ITransformable
 			return;
 		}
 
-		UpdateDirtyData(layer);
+		UpdateDirtyData();
 
 		PrintBuilding(layer, transformData);
 		PrintItems(_printables, layer, transformData);
 
-		PostPrintComps(layer);
+		PostPrint?.Invoke(layer);
 	}
 
 	private void PrintItems(List<PrintData> printDatas, SectionLayer layer, in TransformData transformData)
@@ -264,42 +299,43 @@ public class StorageRenderer : ITransformable
 	private void PrintBuilding(SectionLayer layer, in TransformData transform)
 	{
 		var parent = Parent;
-		var drawColor = parent.DrawColor;
-		var drawColorTwo = parent.DrawColorTwo;
-
-		if (!TryGetStyleGraphic(drawColor, drawColorTwo, out var styleGraphic))
+		if (TryGetStyleGraphic() is not { } styleGraphic)
 		{
 			if (VisibleBaseGraphic)
-				Parent.Graphic.PrintAt(layer, Parent, transform);
+				parent.Graphic.PrintAt(layer, parent, transform);
 			
 			CurrentGraphic!.Worker.PrintAt(layer, this, transform);
 		}
 		else
 		{
-			styleGraphic.PrintAt(layer, Parent, transform);
+			styleGraphic.PrintAt(layer, parent, transform);
 		}
 	}
 
-	private bool TryGetStyleGraphic(Color drawColor, Color drawColorTwo, [NotNullWhen(true)] out Graphic? styleGraphic)
-		=> (styleGraphic = Parent.StyleDef?.graphicData?.GraphicColoredFor(drawColor, drawColorTwo)) != null;
-
-	private void UpdateDirtyData(SectionLayer? layer = null)
+	private Graphic? TryGetStyleGraphic()
 	{
-		if (ContentColorsDirty)
-			ComputeDominantDrawColors();
-		
-		if (AnyPrintDatasDirty)
-			UpdateDirtyPrintDatas(layer ?? Parent.CurrentSectionLayer!);
+		var parent = Parent;
+		return parent.StyleDef?.graphicData?.GraphicColoredFor(parent.DrawColor, parent.DrawColorTwo);
 	}
 
-	public void InitializeStoredThingGraphics(SectionLayer? layer)
+	private void UpdateDirtyData()
+	{
+		if (ContentColorsDirty)
+			UpdateContentColors();
+		
+		if (AnyPrintDatasDirty)
+			UpdateDirtyPrintDatas();
+	}
+
+	public void InitializeStoredThingGraphics()
 	{
 		_printables.Clear();
 		_drawables.Clear();
+		_printDatasByThing.Clear();
 
 		var storedThings = Parent.StoredThings;
 		for (var i = storedThings.Count; --i >= 0;)
-			AssignThingGraphic(storedThings[i], layer, false);
+			AssignThingGraphic(storedThings[i], storedThings.StoragePositionAt(i), false);
 
 		UpdateCurrentGraphic();
 	}
@@ -316,7 +352,7 @@ public class StorageRenderer : ITransformable
 			= CurrentVariationGraphics[Mathf.Clamp(CurrentGraphicIndex, 0, CurrentVariationGraphics.Count - 1)];
 		ShowContainedItems = CurrentGraphic.showContainedItems ?? CurrentGraphicVariation.showContainedItems;
 		
-		SetAllPrintDatasDirtyNowOrLater();
+		SetAllPrintDatasDirty();
 		TryDirtyParentMapMesh();
 	}
 
@@ -388,37 +424,34 @@ public class StorageRenderer : ITransformable
 		GraphicsDef.PositiveWeightSelector, GraphicsDef.NegativeWeightSelector, GraphicsDef.NullWeightSelector
 	];
 
-	public void AssignThingGraphic(Thing item, SectionLayer? layer, bool updateOthers = true)
+	private void AssignThingGraphic(Thing item, StorageCell cell) => AssignThingGraphic(item, cell, true);
+
+	private void AssignThingGraphic(Thing item, StorageCell itemPosition, bool updateOthers)
 	{
 		if (updateOthers && !TryUpdateCurrentGraphic())
 		{
 			if (item.def.SingleCell())
 			{
-				SetPrintDataDirtyAtCellNowOrLater(layer, item.Position);
+				SetPrintDataDirtyAtCell(itemPosition);
 			}
 			else
 			{
 				foreach (var cell in item.OccupiedRect())
-					SetPrintDataDirtyAtCellNowOrLater(layer, cell);
+					SetPrintDataDirtyAtCell(cell);
 			}
 		}
 		else
 		{
-			SetPrintDataDirtyNowOrLater(item);
+			SetPrintDataDirty(item);
 		}
 	}
 
-	private void SetPrintDataDirtyAtCellNowOrLater(SectionLayer? layer, IntVec3 position, Thing? except = null)
-	{
-		if (UnityData.IsInMainThread)
-			SetPrintDataDirtyAtCell(layer, position, except);
-		else
-			LongEventHandler.ExecuteWhenFinished(() => SetPrintDataDirtyAtCell(layer, position, except));
-	}
+	private void SetPrintDataDirtyAtCell(IntVec3 position, Thing? except = null)
+		=> SetPrintDataDirtyAtCell(Parent.GetStorageCell(position), except);
 
-	private void SetPrintDataDirtyAtCell(SectionLayer? layer, IntVec3 position, Thing? except = null)
+	private void SetPrintDataDirtyAtCell(StorageCell cell, Thing? except = null)
 	{
-		var storedThingsAtCell = Parent.StoredThings.ItemsAtMapCell(position);
+		var storedThingsAtCell = Parent.StoredThings.ItemsAtStorageCell(cell);
 		for (var i = storedThingsAtCell.Length; --i >= 0;)
 		{
 			var thing = storedThingsAtCell[i];
@@ -427,16 +460,15 @@ public class StorageRenderer : ITransformable
 		}
 	}
 
-	private void UpdateDirtyPrintDatas(SectionLayer layer)
+	private void UpdateDirtyPrintDatas()
 	{
-		UpdateDirtyPrintDatas(_printables, layer);
-		UpdateDirtyPrintDatas(_drawables, layer);
+		UpdateDirtyPrintDatas(_printables);
+		UpdateDirtyPrintDatas(_drawables);
 		AnyPrintDatasDirty = false;
 	}
 
-	private void UpdateDirtyPrintDatas(List<PrintData> printDatas, SectionLayer? layer)
+	private void UpdateDirtyPrintDatas(List<PrintData> printDatas)
 	{
-		var anyUpdated = false;
 		for (var i = printDatas.Count; --i >= 0;)
 		{
 			var printable = printDatas[i];
@@ -444,31 +476,28 @@ public class StorageRenderer : ITransformable
 				continue;
 
 			printable.Dirty = false;
-			anyUpdated = true;
 
-			if (GetItemGraphicIfVisible(printable.Thing) is { } itemGraphic)
-				itemGraphic.Worker.UpdatePrintData(printable, Parent);
+			var thing = printable.Thing;
+
+			if (GetItemGraphicIfVisible(thing) is not { } itemGraphic)
+			{
+				printDatas.RemoveAt(i);
+			}
 			else
-				printDatas.Remove(printable);
+			{
+				var itemWorker = itemGraphic.Worker;
+				var itemWorkerGraphic = itemWorker.GetGraphicFor(thing, this);
+
+				if (printable.Graphic != itemWorkerGraphic)
+				{
+					RemovePrintData(printable);
+					printable = AddPrintData(thing, itemWorkerGraphic);
+				}
+				
+				itemWorker.UpdatePrintData(printable, Parent);
+				printable.Dirty = false;
+			}
 		}
-
-		ContentColorsDirty = anyUpdated;
-	}
-
-	public void SetAllPrintDatasDirtyNowOrLater()
-	{
-		if (UnityData.IsInMainThread)
-			SetAllPrintDatasDirty();
-		else
-			LongEventHandler.ExecuteWhenFinished(SetAllPrintDatasDirty);
-	}
-
-	public void SetPrintDataDirtyNowOrLater(Thing thing)
-	{
-		if (UnityData.IsInMainThread)
-			SetPrintDataDirty(thing);
-		else
-			LongEventHandler.ExecuteWhenFinished(() => SetPrintDataDirty(thing));
 	}
 
 	public void SetAllPrintDatasDirty()
@@ -478,37 +507,61 @@ public class StorageRenderer : ITransformable
 			SetPrintDataDirty(storedThings[i]);
 	}
 
-	public void SetPrintDataDirty(Thing thing) => SetPrintDataDirty(thing, thing.def.drawerType);
-
-	private void SetPrintDataDirty(Thing thing, DrawerType drawerType)
+	public void SetPrintDataDirty(Thing thing)
 	{
-		if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
-			SetPrintDataDirty(_drawables, thing);
+		var itemGraphic = GetItemGraphicIfVisible(thing);
 
-		if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
-			SetPrintDataDirty(_printables, thing);
-	}
-
-	private void SetPrintDataDirty(List<PrintData> printDatas, Thing thing)
-	{
-		if (GetItemGraphicIfVisible(thing) != null)
+		if (itemGraphic == null)
 		{
-			printDatas.GetOrAdd(thing).Dirty = true;
-			AnyPrintDatasDirty = true;
+			if (_printDatasByThing.Remove(thing.thingIDNumber, out var printData))
+				RemovePrintData(printData);
 		}
 		else
 		{
-			printDatas.Remove(thing);
+			if (TryGetPrintDataOf(thing) is not { } printData)
+				printData = AddPrintData(thing, itemGraphic.Worker);
+			
+			printData.Dirty = true;
+			AnyPrintDatasDirty = true;
 		}
 
+		ContentColorsDirty = true;
 		TryDirtyParentMapMesh();
 	}
 
-	private ItemGraphic? GetItemGraphicIfVisible(Thing thing)
-		=> (ShowContainedItems || !Parent.FixedFilterAllows(thing))
-			&& (TryGetItemGraphicFor(thing) ?? ItemGraphic.Default) is { visible: true } graphic
+	private PrintData AddPrintData(Thing thing, ItemGraphicWorker itemWorker)
+		=> AddPrintData(thing, UnityData.IsInMainThread ? itemWorker.GetGraphicFor(thing, this) : null);
+
+	private PrintData AddPrintData(Thing thing, Graphic? graphic)
+	{
+		var printData = PrintData.Create(thing, graphic);
+		_printDatasByThing[thing.thingIDNumber] = printData;
+
+		if (printData.ShouldPrint)
+			_printables.Add(printData);
+		
+		if (printData.ShouldDraw)
+			_drawables.Add(printData);
+
+		return printData;
+	}
+
+	private void RemovePrintData(PrintData printData)
+	{
+		if (printData.ShouldPrint)
+			_printables.Remove(printData);
+		
+		if (printData.ShouldDraw)
+			_drawables.Remove(printData);
+	}
+
+	public ItemGraphic? GetItemGraphicIfVisible(Thing item)
+		=> (ShowContainedItems || !Parent.FixedFilterAllows(item))
+			&& (TryGetItemGraphicFor(item) ?? ItemGraphic.Default) is { visible: true } graphic
 				? graphic
 			: null;
+
+	public PrintData? TryGetPrintDataOf(Thing item) => _printDatasByThing.TryGetValue(item.thingIDNumber);
 
 	public void UpdateCurrentGraphic()
 	{
@@ -516,7 +569,7 @@ public class StorageRenderer : ITransformable
 		TryDirtyParentMapMesh();
 	}
 
-	public bool TryUpdateCurrentGraphic()
+	public bool TryUpdateCurrentGraphic() // true sets all printDatas and the map mesh to dirty
 	{
 		var currentVariationIndex = CurrentVariationIndex;
 		var currentIndex = CurrentGraphicIndex;
@@ -525,29 +578,28 @@ public class StorageRenderer : ITransformable
 		return currentIndex != CurrentGraphicIndex || currentVariationIndex != CurrentVariationIndex;
 	}
 
-	public void FreeThingGraphic(Thing item, SectionLayer? layer, bool updateOthers = true)
+	private void FreeThingGraphic(Thing item, StorageCell cell) => FreeThingGraphic(item, cell, true);
+
+	private void FreeThingGraphic(Thing item, StorageCell itemPosition, bool updateOthers)
 	{
-		var drawerType = item.def.drawerType;
-
-		if (drawerType is DrawerType.MapMeshAndRealTime or DrawerType.RealtimeOnly)
-			_drawables.Remove(item);
-
-		if (drawerType is DrawerType.MapMeshOnly or DrawerType.MapMeshAndRealTime)
+		if (_printDatasByThing.Remove(item.thingIDNumber, out var printData))
 		{
-			_printables.Remove(item);
-			TryDirtyParentMapMesh();
+			RemovePrintData(printData);
+
+			if (printData.ShouldPrint)
+				TryDirtyParentMapMesh();
 		}
 
 		if (updateOthers && !TryUpdateCurrentGraphic())
 		{
 			if (item.def.SingleCell())
 			{
-				SetPrintDataDirtyAtCellNowOrLater(layer, item.Position, item);
+				SetPrintDataDirtyAtCell(itemPosition, item);
 			}
 			else
 			{
 				foreach (var cell in item.OccupiedRect())
-					SetPrintDataDirtyAtCellNowOrLater(layer, cell, item);
+					SetPrintDataDirtyAtCell(cell, item);
 			}
 		}
 	}
@@ -565,14 +617,7 @@ public class StorageRenderer : ITransformable
 		_lastMapMeshDirtyFrame = Time.frameCount;
 	}
 
-	private void PostPrintComps(SectionLayer layer)
-	{
-		Parent.AllComps.UnwrapReadOnlyArray(out var comps, out var count);
-		for (var i = count; --i >= 0;)
-			comps[i].PostPrintOnto(layer);
-	}
-
-	private void ComputeDominantDrawColors()
+	private void UpdateContentColors()
 	{
 		var storedThings = Parent.StoredThings;
 		if (storedThings.CellWiseCount == 0)
@@ -624,20 +669,21 @@ public class StorageRenderer : ITransformable
 
 	private void GetColorFromIngredients()
 	{
-		if (Parent.Stuff == null)
+		if (Parent.Stuff is not { } stuff)
 		{
 			GetColorFromRecipe();
 			return;
 		}
 
-		var stuffColor = Parent.def.GetColorForStuff(Parent.Stuff);
+		var stuffColor = Parent.def.GetColorForStuff(stuff);
 		Array.Fill(ContentColors, stuffColor);
 	}
 
 	private void GetColorFromRecipe()
 	{
 		var contentColors = ContentColors!;
-		var costList = Parent.def.CostList;
+		var parentDef = Parent.def;
+		var costList = parentDef.CostList;
 		if (costList is not [_, ..])
 			goto DefaultColor;
 
@@ -657,7 +703,7 @@ public class StorageRenderer : ITransformable
 				{
 					var ingredientDef = sortedCostList[i % ingredientCount].thingDef;
 					contentColors[i] = ingredientDef.stuffProps != null
-						? Parent.def.GetColorForStuff(ingredientDef)
+						? parentDef.GetColorForStuff(ingredientDef)
 						: ingredientDef.graphicData.color;
 				}
 
@@ -674,10 +720,16 @@ public class StorageRenderer : ITransformable
 		if (CurrentGraphicVariation?.itemGraphics is not { Area: > 0 } itemGraphics)
 			return null;
 
-		var thingPosition = (thing.Position - Parent.BottomLeftCell).ToIntVec2.RotatedFor(Parent); // TODO: use storage cell
+		if (Parent.StoredThings.TryGetStoragePositionOf(thing, out var storageCell))
+		{
+			var thingPosition = storageCell.AsIntVec2.RotatedFor(Parent);
 
-		if (((uint)thingPosition.x < (uint)itemGraphics.Width) & ((uint)thingPosition.z < (uint)itemGraphics.Height))
-			return itemGraphics[thingPosition];
+			if (((uint)thingPosition.x < (uint)itemGraphics.Width)
+				& ((uint)thingPosition.z < (uint)itemGraphics.Height))
+			{
+				return itemGraphics[thingPosition];
+			}
+		}
 
 		FailureGettingItemGraphicAtPosition(thing);
 		return null;
@@ -691,8 +743,7 @@ public class StorageRenderer : ITransformable
 			+ $"the thing's position changed, perhaps through ragdoll or teleportation effects.\n{
 				new StackTrace(1, true)}");
 		
-		Parent.FreeAllThingGraphics();
 		Parent.InitializeStoredThings();
-		InitializeStoredThingGraphics(Parent.CurrentSectionLayer);
+		InitializeStoredThingGraphics();
 	}
 }

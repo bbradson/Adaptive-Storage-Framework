@@ -9,7 +9,7 @@ namespace AdaptiveStorage;
 #pragma warning disable CS8618
 public static class ContentLabelStyleDefOf
 {
-	[MayRequire("😂💯💯,_!-\0")]
+	[MayRequire("<😂💯💯,_!-\0>")]
 	public static ContentLabelStyleDef?
 		NamesWithCountOrTotalCount,
 		TotalCount,

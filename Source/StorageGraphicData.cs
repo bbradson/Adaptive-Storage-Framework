@@ -21,14 +21,19 @@ public class StorageGraphicData : GraphicData
 
 	protected AltitudeLayer altitudeLayer = (AltitudeLayer)byte.MaxValue;
 
+	public virtual Graphic GraphicColoredFor(StorageRenderer storageRenderer)
+		=> this.GraphicColoredFor(ColorOneFor(storageRenderer), ColorTwoFor(storageRenderer));
+
 	public float AltitudeFor(ThingDef thingDef) => AltitudeFor(thingDef.Altitude);
 
 	public float AltitudeFor(float thingDefAltitude)
 		=> altitudeLayer != (AltitudeLayer)byte.MaxValue ? altitudeLayer.AltitudeFor() : thingDefAltitude;
 
-	public virtual Graphic GraphicColoredFor(StorageRenderer storageRenderer)
-		=> this.GraphicColoredFor(storageRenderer.GetColorFromSource(colorOneSource) * color,
-			storageRenderer.GetColorFromSource(colorTwoSource) * colorTwo);
+	public Color ColorOneFor(StorageRenderer storageRenderer)
+		=> storageRenderer.GetColorFromSource(colorOneSource) * color;
+
+	public Color ColorTwoFor(StorageRenderer storageRenderer)
+		=> storageRenderer.GetColorFromSource(colorTwoSource) * colorTwo;
 
 	private static Dictionary<GraphicData, StorageGraphicData> _database = [];
 

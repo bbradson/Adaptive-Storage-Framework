@@ -60,7 +60,7 @@ public abstract class ContentLabelWorker
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0
-				? building.StoredThings.ToStringsThingLabels(sort: true, max: GetMaxLabelLines(building))
+				? building.StoredThings.ToStringsThingLabels(true, true, GetMaxLabelLines(building))
 				: null;
 	}
 	
@@ -69,7 +69,7 @@ public abstract class ContentLabelWorker
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0
 				? GetMaxLabelLines(building) is var maxLabelLines
-				&& building.StoredThings.ToStringsThingLabels(sort: true, max: maxLabelLines + 1) is var labels
+				&& building.StoredThings.ToStringsThingLabels(true, true, maxLabelLines + 1) is var labels
 				&& labels.Length <= maxLabelLines
 					? labels
 					: TotalCount.Instance.UpdateLabels(building, totalThingCount, graphicsDef)
@@ -103,6 +103,19 @@ public abstract class ContentLabelWorker
 				&& labels.Length <= maxLabelLines
 					? labels
 					: TotalCount.Instance.UpdateLabels(building, totalThingCount, graphicsDef)
+				: null;
+
+		protected override int GetMaxLabelLines(ThingClass building) => 3;
+	}
+
+	public class NamesOrNameCount : NamesOrTotalCount
+	{
+		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
+			=> totalThingCount > 0
+				? building.StoredThings.ToStringsThingLabels(false, true) is var labels
+				&& labels.Length <= GetMaxLabelLines(building)
+					? labels
+					: TotalCount.Instance.UpdateLabels(building, labels.Length, graphicsDef)
 				: null;
 
 		protected override int GetMaxLabelLines(ThingClass building) => 3;
@@ -163,8 +176,9 @@ public abstract class ContentLabelWorker
 				var item = storedThings[i];
 				GenMapUI.DrawThingLabel(LabelDrawPosFor(!drawAtDefaultPosition
 					&& renderer!.TryGetItemGraphicFor(item) is { visible: true } itemGraphic
-						? itemGraphic.Worker.DrawOffsetForItem(building, item, buildingDrawPos,
-							itemGraphic.textureOrientation ?? item.Rotation, out _) + buildingDrawPos
+						? itemGraphic.Worker.DrawOffsetForItem(building, item,
+							itemGraphic.textureOrientation ?? item.Rotation, out _)
+						+ buildingDrawPos
 						: item.DrawPos), itemLabel, GenMapUI.DefaultThingLabelColor);
 			}
 		}

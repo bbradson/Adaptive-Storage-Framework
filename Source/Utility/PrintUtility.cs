@@ -18,18 +18,17 @@ public static class PrintUtility
 		PrintMinifiedThing(minifiedThing, layer, transformData);
 	}
 
-	private static void PrintMinifiedThing(MinifiedThing minifiedThing, SectionLayer layer, TransformData transformData)
+	private static void PrintMinifiedThing(MinifiedThing minifiedThing, SectionLayer layer,
+		in TransformData transformData)
 	{
 		var drawScale = transformData.Scale;
 		var drawLoc = transformData.Position;
 		var minifiedThingRotation = minifiedThing.Rotation;
 		minifiedThingRotation.Rotate(transformData.RotationDirection);
+		
 		var crateFrontGraphic = minifiedThing.CrateFrontGraphic;
-		
 		var extraRotation = transformData.ExtraRotation.AsFloat;
-		
-		var crateFrontMaterial
-			= crateFrontGraphic.MatAt(minifiedThingRotation);
+		var crateFrontMaterial = crateFrontGraphic.MatAt(minifiedThingRotation);
 
 		Graphic.TryGetTextureAtlasReplacementInfo(crateFrontMaterial, TextureAtlasGroup.Item, false, false,
 			out crateFrontMaterial, out var uvs, out _);

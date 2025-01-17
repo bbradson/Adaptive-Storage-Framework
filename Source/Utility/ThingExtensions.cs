@@ -20,16 +20,18 @@ public static class ThingExtensions
 	public static ThingClass? StoringAdaptiveStorage(this Thing thing)
 		=> thing.IsItem()
 			&& thing.TryGetMap() is { } map
-			&& thing is not ISlotGroupParent
-				? map.haulDestinationManager.SlotGroupParentAt(thing.Position) as ThingClass
-				: null;
+				? thing is not ISlotGroupParent
+					? map.haulDestinationManager.SlotGroupParentAt(thing.Position) as ThingClass
+					: null
+				: thing.holdingOwner?.Owner as ThingClass;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsInAnyStorageBuilding(this Thing thing)
 		=> thing.IsItem()
 			&& thing.TryGetMap() is { } map
-			&& thing is not ISlotGroupParent
-			&& map.haulDestinationManager.SlotGroupParentAt(thing.Position) is Building_Storage;
+				? thing is not ISlotGroupParent
+				&& map.haulDestinationManager.SlotGroupParentAt(thing.Position) is Building_Storage
+				: thing.holdingOwner?.Owner is Building_Storage;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool InMapBounds(this Thing thing)
@@ -100,4 +102,15 @@ public static class ThingExtensions
 				return;
 		}
 	}
+
+	public static bool OverridesPostDraw(this ThingComp thingComp)
+		=> _thingCompsWithPostDraw.Contains(thingComp.GetType());
+
+	public static bool OverridesPostPrint(this ThingComp thingComp)
+		=> _thingCompsWithPostPrint.Contains(thingComp.GetType());
+
+	private static readonly HashSet<Type>
+		_thingCompsWithPostDraw = [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostDraw))],
+		_thingCompsWithPostPrint
+			= [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostPrintOnto))];
 }

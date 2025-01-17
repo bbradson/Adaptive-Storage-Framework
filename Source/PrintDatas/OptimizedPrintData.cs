@@ -4,6 +4,7 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Diagnostics;
+using System.Linq;
 using UnityEngine.Rendering;
 
 namespace AdaptiveStorage.PrintDatas;
@@ -73,7 +74,7 @@ public class OptimizedPrintData : PrintData
 			if (value == _flipUv)
 				return;
 
-			if (Graphic.data is { } graphicData)
+			if (Graphic!.data is { } graphicData)
 				GraphicRotation += value ? graphicData.flipExtraRotation : -graphicData.flipExtraRotation;
 
 			_flipUv = value;
@@ -93,6 +94,10 @@ public class OptimizedPrintData : PrintData
 		}
 	}
 
+	public override bool ShouldPrint => true;
+
+	public override bool ShouldDraw => false;
+
 	public override void PrintAt(SectionLayer layer, in TransformData transformData)
 	{
 		var drawPos = transformData.Position + CombinedDrawOffset;
@@ -104,15 +109,9 @@ public class OptimizedPrintData : PrintData
 
 		var rotation = CombinedRotation + transformData.CombinedRotation;
 		var scale = RotatedDrawScale * transformData.Scale;
-
-		if (Thing is MinifiedThing minifiedThing)
-		{
-			minifiedThing.PrintAt(layer, new(drawPos, scale, rotation));
-			return;
-		}
-
 		var flipUv = FlipUv;
 		var scaledDrawSize = scale * RotatedDrawSize;
+		
 		if (scaledDrawSize.IsFlipped())
 		{
 			flipUv = !flipUv;
@@ -173,7 +172,7 @@ public class OptimizedPrintData : PrintData
 	{
 		base.NotifyMaterialPossiblyChanged();
 
-		Material = Graphic.MatAt(ThingRotation, Thing);
+		Material = Graphic!.MatAt(ThingRotation, Thing);
 	}
 
 	protected override void UpdateMatrix()
@@ -185,7 +184,7 @@ public class OptimizedPrintData : PrintData
 		var previousFlipUv = FlipUv;
 		var flip = _flipUv = ShouldFlip;
 
-		_mesh = Graphic.MeshAt(thingRotation);
+		_mesh = Graphic!.MeshAt(thingRotation);
 		_graphicDrawOffset = Graphic.DrawOffset(thingRotation);
 		
 		var newGraphicRotation = Graphic.AngleFromRot(thingRotation);
@@ -201,7 +200,7 @@ public class OptimizedPrintData : PrintData
 
 	private bool TryUpdateMaterial(Rot4 thingRotation)
 	{
-		var newMaterial = Graphic.MatAt(thingRotation, Thing);
+		var newMaterial = Graphic!.MatAt(thingRotation, Thing);
 		if (_material == newMaterial)
 			return false;
 
@@ -217,8 +216,9 @@ public class OptimizedPrintData : PrintData
 		Array.Fill(_colors ??= new Color32[4], vertexColor);
 	}
 
-	public static bool IsCompatibleGraphic(Graphic graphic)
-		=> CompatibleGraphicTypes is var compatibleTypes
+	public static bool IsCompatibleGraphic(Graphic? graphic)
+		=> graphic != null
+			&& CompatibleGraphicTypes is var compatibleTypes
 #if !V1_4
 			&& (graphic is not Graphic_Collection collection
 				|| (compatibleTypes.Contains(collection.SingleGraphicType) // 1.4 always loads Graphic_Single and Multi
@@ -226,26 +226,35 @@ public class OptimizedPrintData : PrintData
 #endif
 			&& compatibleTypes.Contains(graphic.GetType());
 
-	public static bool IsCompatibleThing(Thing thing) => CompatibleThingTypes.Contains(thing.GetType());
+	public static bool IsCompatibleThing(Thing thing) => CompatibleThingTypes.Contains(thing.GetType()); // TODO: handle comps
 
-	// use MethodBodyReader to find Graphic.Print/Draw call and return false when encountering Printer_Plane or Graphics.DrawMesh
-	public static HashSet<Type> CompatibleGraphicTypes { get; } = // TODO: discover by Draw/Print override
-	[
-		typeof(Graphic_Single), typeof(Graphic_Multi), typeof(Graphic_RandomRotated), typeof(Graphic_StackCount),
-		typeof(Graphic_MealVariants)
-	];
+	// TODO: discover valid Print/Draw overrides with MethodBodyReader by looking for Printer_Plane or Graphics.DrawMesh calls
+	public static HashSet<Type> CompatibleGraphicTypes { get; }
+		= ((Type[])
+		[
+			typeof(Graphic), typeof(Graphic_RandomRotated),
 
-	public static HashSet<Type> CompatibleThingTypes { get; } = // TODO: discover by Draw/Print override
+		#region CollectionSubclasses // these simply override DrawWorker with SubGraphicFor().DrawWorker()
+			typeof(Graphic_StackCount), typeof(Graphic_Random), typeof(Graphic_Appearances),
+#if !V1_4
+			typeof(Graphic_Indexed),
+#endif
+		#endregion
+		])
+		.SelectMany(static graphic => graphic.WithGraphicSubclassesNotOverridingPrintOrDraw())
+		.ToHashSet();
+
+	public static HashSet<Type> CompatibleThingTypes { get; } =
 	[
-		typeof(Thing), typeof(ThingWithComps), typeof(Building), typeof(Apparel), typeof(MinifiedThing),
-		typeof(MinifiedTree), typeof(Minified)
+		..typeof(Thing).WithThingSubclassesNotOverridingPrintOrDraw(),
+		..typeof(ThingWithComps).WithThingSubclassesNotOverridingPrintOrDraw()
 	];
 	
 	public new class Factory : PrintData.Factory
 	{
-		public override bool IsCompatibleWith(Thing thing, Graphic graphic) // TODO: handle comps and sub graphics
+		public override bool IsCompatibleWith(Thing thing, Graphic? graphic)
 			=> IsCompatibleThing(thing) && IsCompatibleGraphic(graphic);
 
-		public override PrintData CreateFor(Thing thing, Graphic graphic) => new OptimizedPrintData();
+		public override PrintData CreateFor(Thing thing, Graphic? graphic) => new OptimizedPrintData();
 	}
 }

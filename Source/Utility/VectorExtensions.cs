@@ -23,6 +23,14 @@ public static class VectorExtensions
 
 	public static float Min(this Vector3 vector) => Math.Min(Math.Min(vector.x, vector.y), vector.z);
 
+	public static int Average(this IntVec2 vector) => Convert.ToInt32((vector.x + vector.z) / 2d);
+
+	public static int Average(this IntVec3 vector) => Convert.ToInt32((vector.x + vector.y + vector.z) / 3d);
+
+	public static float Average(this Vector2 vector) => (vector.x + vector.y) / 2f;
+
+	public static float Average(this Vector3 vector) => (vector.x + vector.y + vector.z) / 3f;
+
 	public static StorageCell ToStorageCell(this IntVec2 storageCell, ThingClass building)
 		=> new(building, storageCell);
 

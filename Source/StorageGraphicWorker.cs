@@ -9,6 +9,9 @@ namespace AdaptiveStorage;
 #pragma warning disable CS9113
 public class StorageGraphicWorker(StorageGraphic graphic, GraphicsDef def) : ITransformable<StorageRenderer>
 {
+	public virtual Graphic GetGraphicFor(StorageGraphicData graphicData, StorageRenderer renderer)
+		=> graphicData.GraphicColoredFor(renderer);
+	
 	public virtual void PrintAt(SectionLayer layer, StorageRenderer renderer, in TransformData transformData)
 	{
 		var currentTransform = transformData;
@@ -24,7 +27,7 @@ public class StorageGraphicWorker(StorageGraphic graphic, GraphicsDef def) : ITr
 			
 			yPosition = Mathf.Max(graphicData.AltitudeFor(parentAltitude) + yOffset, 0f);
 			
-			graphicData.GraphicColoredFor(renderer).PrintAt(layer, parent, currentTransform);
+			GetGraphicFor(graphicData, renderer).PrintAt(layer, parent, currentTransform);
 		}
 	}
 	
@@ -46,7 +49,7 @@ public class StorageGraphicWorker(StorageGraphic graphic, GraphicsDef def) : ITr
 
 			yPosition = Mathf.Max(graphicData.AltitudeFor(parentAltitude) + yOffset, 0f);
 			
-			var buildingGraphic = graphicData.GraphicColoredFor(renderer);
+			var buildingGraphic = GetGraphicFor(graphicData, renderer);
 			using (buildingGraphic.Scaled(drawScale))
 				buildingGraphic.Draw(drawLoc, rotation, parent, extraRotation);
 		}

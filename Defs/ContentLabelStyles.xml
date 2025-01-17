@@ -39,7 +39,14 @@
 		<defName>NamesOrTotalCount</defName>
 		<label>Item names or total count</label>
 		<description>Display up to 3 names of stored items, one entry per line, or the total count when having more items</description>
-		<workerClass>AdaptiveStorage.ContentLabelWorker+Names</workerClass>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+NamesOrTotalCount</workerClass>
+	</AdaptiveStorage.ContentLabelStyleDef>
+
+	<AdaptiveStorage.ContentLabelStyleDef>
+		<defName>NamesOrNameCount</defName>
+		<label>Item names or name count</label>
+		<description>Display up to 3 names of stored items, one entry per line, or the count of different names when having more items</description>
+		<workerClass>AdaptiveStorage.ContentLabelWorker+NamesOrNameCount</workerClass>
 	</AdaptiveStorage.ContentLabelStyleDef>
 
 	<AdaptiveStorage.ContentLabelStyleDef>
