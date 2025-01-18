@@ -438,6 +438,8 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable, IT
 	{
 		if ((deSpawnMode & SpawnMode.PackContents) != 0)
 			PackStoredThings();
+		else
+			_cachedTotalThingCount = -1;
 
 		DeSpawning?.Invoke(destroyMode, deSpawnMode);
 		base.DeSpawn(destroyMode);
@@ -535,7 +537,12 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable, IT
 	public new void Notify_SettingsChanged()
 	{
 		base.Notify_SettingsChanged();
-		Renderer?.SetAllPrintDatasDirty();
+		if (Renderer is { } renderer)
+		{
+			renderer.SetAllPrintDatasDirty();
+			renderer.TryUpdateCurrentGraphic();
+		}
+
 		StorageSettingsChanged?.Invoke();
 	}
 

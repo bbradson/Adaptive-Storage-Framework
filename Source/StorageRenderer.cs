@@ -9,6 +9,7 @@ using System.Diagnostics.CodeAnalysis;
 using AdaptiveStorage.Fishery;
 using AdaptiveStorage.Fishery.Collections;
 using AdaptiveStorage.Fishery.Pools;
+using AdaptiveStorage.Fishery.Utility.Diagnostics;
 using AdaptiveStorage.PrintDatas;
 
 namespace AdaptiveStorage;
@@ -85,9 +86,15 @@ public class StorageRenderer : ITransformable
 			ref var dirtyFlag = ref colors[0].r;
 
 			if (value)
+			{
 				dirtyFlag = float.NaN;
+				BuildingGraphicsDirty = true;
+			}
 			else if (float.IsNaN(dirtyFlag))
+			{
 				UpdateContentColors();
+				UpdateBuildingGraphics();
+			}
 		}
 	}
 
@@ -108,6 +115,8 @@ public class StorageRenderer : ITransformable
 		_lastMapMeshDirtyFrame = -1;
 
 	public bool AnyPrintDatasDirty { get; private set; } = true;
+
+	public bool BuildingGraphicsDirty { get; private set; } = true;
 
 	public StorageRenderer(ThingClass parent, ThingCollection thingCollection)
 	{
@@ -152,6 +161,7 @@ public class StorageRenderer : ITransformable
 	private void InitializeParentComps()
 	{
 		PostDraw = null;
+		PostPrint = null;
 		
 		var comps = Parent.AllComps;
 		foreach (var comp in comps)
@@ -164,9 +174,14 @@ public class StorageRenderer : ITransformable
 		}
 	}
 
-#if !V1_4
-	public virtual void Notify_DefsHotReloaded() => InitializeAllGraphics();
+	public virtual void Notify_DefsHotReloaded()
+	{
+		InitializeAllGraphics();
+		InitializeStoredThingGraphics();
+		CurrentGraphicChanged?.Invoke();
+	}
 
+#if !V1_4
 	public virtual void DynamicDrawPhaseAt(DrawPhase phase, in TransformData transform)
 	{
 		if (CurrentGraphic is null)
@@ -219,20 +234,10 @@ public class StorageRenderer : ITransformable
 
 	private void DrawBuilding(in TransformData transform)
 	{
-		var parent = Parent;
-		var rotation = parent.Rotation.Rotated(transform.RotationDirection);
-		
-		if (TryGetStyleGraphic() is not { } styleGraphic)
-		{
-			if (VisibleBaseGraphic)
-				parent.Graphic.Draw(transform.Position, rotation, parent);
-			
-			CurrentGraphic!.Worker.DrawAt(this, transform);
-		}
-		else
-		{
-			styleGraphic.Draw(transform.Position, rotation, parent);
-		}
+		var storageGraphicWorker = CurrentGraphic!.Worker;
+		_buildingGraphics.UnwrapReadOnlyArray(out var array, out var count);
+		for (var i = 0; i < count; i++)
+			storageGraphicWorker.DrawAt(array[i], transform);
 	}
 
 	private void DrawItems(List<PrintData> printDatas, in TransformData transformData)
@@ -298,18 +303,10 @@ public class StorageRenderer : ITransformable
 
 	private void PrintBuilding(SectionLayer layer, in TransformData transform)
 	{
-		var parent = Parent;
-		if (TryGetStyleGraphic() is not { } styleGraphic)
-		{
-			if (VisibleBaseGraphic)
-				parent.Graphic.PrintAt(layer, parent, transform);
-			
-			CurrentGraphic!.Worker.PrintAt(layer, this, transform);
-		}
-		else
-		{
-			styleGraphic.PrintAt(layer, parent, transform);
-		}
+		var storageGraphicWorker = CurrentGraphic!.Worker;
+		_buildingGraphics.UnwrapReadOnlyArray(out var array, out var count);
+		for (var i = 0; i < count; i++)
+			storageGraphicWorker.PrintAt(layer, array[i], transform);
 	}
 
 	private Graphic? TryGetStyleGraphic()
@@ -323,8 +320,82 @@ public class StorageRenderer : ITransformable
 		if (ContentColorsDirty)
 			UpdateContentColors();
 		
+		if (BuildingGraphicsDirty)
+			UpdateBuildingGraphics();
+
 		if (AnyPrintDatasDirty)
 			UpdateDirtyPrintDatas();
+	}
+
+	private void UpdateBuildingGraphics()
+	{
+		var graphicIndex = 0;
+
+		if (TryGetStyleGraphic() is not { } styleGraphic)
+		{
+			if (VisibleBaseGraphic)
+				UpdateBuildingGraphicAtIndex(graphicIndex++, Parent.Graphic, null);
+
+			var storageGraphicWorker = CurrentGraphic!.Worker;
+			var storageGraphicDatas = CurrentGraphic!.graphicDatas;
+			for (var i = 0; i < storageGraphicDatas.Count; i++)
+			{
+				var storageGraphicData = storageGraphicDatas[i];
+				if (storageGraphicWorker.GetGraphicFor(storageGraphicData, this) is { } graphic)
+					UpdateBuildingGraphicAtIndex(graphicIndex++, graphic, storageGraphicData);
+			}
+		}
+		else
+		{
+			UpdateBuildingGraphicAtIndex(graphicIndex++, styleGraphic, null);
+		}
+
+		var buildingGraphics = _buildingGraphics;
+		if (buildingGraphics.Count != graphicIndex)
+			buildingGraphics.RemoveRange(graphicIndex, buildingGraphics.Count - graphicIndex);
+
+		BuildingGraphicsDirty = false;
+	}
+
+	private void UpdateBuildingGraphicAtIndex(int graphicIndex, Graphic graphic, StorageGraphicData? storageGraphicData)
+	{
+		var buildingGraphics = _buildingGraphics;
+		EnsureDataAtIndexMatches(buildingGraphics, graphicIndex, graphic, Parent);
+		ApplyStorageGraphicWorker(CurrentGraphic!.Worker, buildingGraphics[graphicIndex], storageGraphicData);
+	}
+
+	private void EnsureDataAtIndexMatches(List<PrintData> printDatas, int index, Graphic graphic, Thing thing)
+	{
+		Guard.IsGreaterThanOrEqualTo(printDatas.Count, index);
+
+		if (printDatas.Count == index)
+		{
+			printDatas.Add(PrintData.Create(thing, graphic, true));
+		}
+		else if (printDatas[index] is not { } printData
+			|| printData.Graphic != graphic
+			|| printData.Thing != thing)
+		{
+			printDatas[index] = PrintData.Create(thing, graphic, true);
+		}
+		else
+		{
+			printDatas[index].NotifyMaterialPossiblyChanged();
+		}
+	}
+
+	private void ApplyStorageGraphicWorker(StorageGraphicWorker storageGraphicWorker, PrintData printData,
+		StorageGraphicData? storageGraphicData)
+	{
+		try
+		{
+			storageGraphicWorker.UpdatePrintData(printData, storageGraphicData);
+		}
+		catch (Exception ex)
+		{
+			Log.Error($"Exception updating {printData} with {storageGraphicWorker} for {Parent} at {
+				Parent.PositionHeld.ToString()}\n{ex}");
+		}
 	}
 
 	public void InitializeStoredThingGraphics()
@@ -340,18 +411,25 @@ public class StorageRenderer : ITransformable
 		UpdateCurrentGraphic();
 	}
 
-	internal void NotifyCurrentGraphicChanged() => CurrentGraphicChanged?.Invoke();
-
 	private void OnCurrentGraphicChanged()
 	{
 		if (AllGraphics is null)
 			return;
 
 		CurrentGraphicVariation = AllGraphics[CurrentVariationIndex];
-		CurrentGraphic
-			= CurrentVariationGraphics[Mathf.Clamp(CurrentGraphicIndex, 0, CurrentVariationGraphics.Count - 1)];
-		ShowContainedItems = CurrentGraphic.showContainedItems ?? CurrentGraphicVariation.showContainedItems;
 		
+		var currentVariationGraphics = CurrentVariationGraphics;
+		var currentVariationGraphicCount = currentVariationGraphics.Count;
+		
+		CurrentGraphic
+			= currentVariationGraphicCount > 0
+				? currentVariationGraphics[Mathf.Clamp(CurrentGraphicIndex, 0, currentVariationGraphicCount - 1)]
+				: null;
+		
+		ShowContainedItems = CurrentGraphic?.showContainedItems ?? CurrentGraphicVariation.showContainedItems;
+
+		ContentColorsDirty = true;
+		BuildingGraphicsDirty = true;
 		SetAllPrintDatasDirty();
 		TryDirtyParentMapMesh();
 	}
@@ -493,8 +571,17 @@ public class StorageRenderer : ITransformable
 					RemovePrintData(printable);
 					printable = AddPrintData(thing, itemWorkerGraphic);
 				}
-				
-				itemWorker.UpdatePrintData(printable, Parent);
+
+				try
+				{
+					itemWorker.UpdatePrintData(printable, Parent);
+				}
+				catch (Exception ex)
+				{
+					Log.Error($"Exception updating {printable} with {itemWorker} for {Parent} at {
+						Parent.PositionHeld.ToString()}\n{ex}");
+				}
+				printable.NotifyMaterialPossiblyChanged();
 				printable.Dirty = false;
 			}
 		}
@@ -519,18 +606,17 @@ public class StorageRenderer : ITransformable
 		else
 		{
 			if (TryGetPrintDataOf(thing) is not { } printData)
-				printData = AddPrintData(thing, itemGraphic.Worker);
-			
+			{
+				printData = AddPrintData(thing,
+					UnityData.IsInMainThread ? itemGraphic.Worker.GetGraphicFor(thing, this) : null);
+			}
+
 			printData.Dirty = true;
 			AnyPrintDatasDirty = true;
 		}
 
-		ContentColorsDirty = true;
 		TryDirtyParentMapMesh();
 	}
-
-	private PrintData AddPrintData(Thing thing, ItemGraphicWorker itemWorker)
-		=> AddPrintData(thing, UnityData.IsInMainThread ? itemWorker.GetGraphicFor(thing, this) : null);
 
 	private PrintData AddPrintData(Thing thing, Graphic? graphic)
 	{

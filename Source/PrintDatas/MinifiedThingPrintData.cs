@@ -51,8 +51,8 @@ public class MinifiedThingPrintData(MinifiedThing thing) : PrintData
 
 	public new class Factory : PrintData.Factory
 	{
-		public override bool IsCompatibleWith(Thing thing, Graphic? graphic)
-			=> thing is MinifiedThing && IsCompatibleThing(thing);
+		public override bool IsCompatibleWith(Thing thing, Graphic? graphic, bool ignoreThingType)
+			=> !ignoreThingType && thing is MinifiedThing && IsCompatibleThing(thing);
 
 		public override PrintData CreateFor(Thing thing, Graphic? graphic)
 			=> new MinifiedThingPrintData((MinifiedThing)thing);

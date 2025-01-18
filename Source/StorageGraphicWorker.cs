@@ -3,56 +3,29 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using AdaptiveStorage.PrintDatas;
+
 namespace AdaptiveStorage;
 
 [PublicAPI]
 #pragma warning disable CS9113
-public class StorageGraphicWorker(StorageGraphic graphic, GraphicsDef def) : ITransformable<StorageRenderer>
+public class StorageGraphicWorker(StorageGraphic graphic, GraphicsDef def) : ITransformable<PrintData>
 {
 	public virtual Graphic GetGraphicFor(StorageGraphicData graphicData, StorageRenderer renderer)
 		=> graphicData.GraphicColoredFor(renderer);
-	
-	public virtual void PrintAt(SectionLayer layer, StorageRenderer renderer, in TransformData transformData)
-	{
-		var currentTransform = transformData;
-		var parent = renderer.Parent;
-		var parentAltitude = parent.def.Altitude;
-		ref var yPosition = ref currentTransform.Position.y;
-		var yOffset = yPosition - parentAltitude;
-		var graphicDatas = graphic.graphicDatas;
 
-		for (var i = 0; i < graphicDatas.Count; i++)
-		{
-			var graphicData = graphicDatas[i];
-			
-			yPosition = Mathf.Max(graphicData.AltitudeFor(parentAltitude) + yOffset, 0f);
-			
-			GetGraphicFor(graphicData, renderer).PrintAt(layer, parent, currentTransform);
-		}
-	}
-	
-	public virtual void DrawAt(StorageRenderer renderer, in TransformData transformData)
+	public virtual void UpdatePrintData(PrintData printData, StorageGraphicData? graphicData)
 	{
-		var drawLoc = transformData.Position;
-		var drawScale = transformData.Scale;
-		var extraRotation = transformData.ExtraRotation.AsFloat;
-		var parent = renderer.Parent;
-		var rotation = parent.Rotation.Rotated(transformData.RotationDirection);
-		var parentAltitude = parent.def.Altitude;
-		ref var yPosition = ref drawLoc.y;
-		var yOffset = yPosition - parentAltitude;
-		var graphicDatas = graphic.graphicDatas;
+		var parent = printData.Thing;
+		printData.ThingRotation = parent.Rotation;
 		
-		for (var i = 0; i < graphicDatas.Count; i++)
-		{
-			var graphicData = graphicDatas[i];
-
-			yPosition = Mathf.Max(graphicData.AltitudeFor(parentAltitude) + yOffset, 0f);
-			
-			var buildingGraphic = GetGraphicFor(graphicData, renderer);
-			using (buildingGraphic.Scaled(drawScale))
-				buildingGraphic.Draw(drawLoc, rotation, parent, extraRotation);
-		}
+		if (graphicData != null && graphicData.TryGetAltitude(out var altitude))
+			printData.DrawOffset = new(0f, altitude - parent.def.Altitude, 0f);
 	}
+
+	public virtual void PrintAt(SectionLayer layer, PrintData printData, in TransformData transformData)
+		=> printData.PrintAt(layer, transformData);
+
+	public virtual void DrawAt(PrintData printData, in TransformData transformData) => printData.DrawAt(transformData);
 }
 #pragma warning restore CS9113

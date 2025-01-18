@@ -76,7 +76,7 @@ public class UnsupportedThingPrintData : PrintData
 
 	public new class Factory : PrintData.Factory
 	{
-		public override bool IsCompatibleWith(Thing thing, Graphic? graphic) => true;
+		public override bool IsCompatibleWith(Thing thing, Graphic? graphic, bool ignoreThingType) => !ignoreThingType;
 
 		public override PrintData CreateFor(Thing thing, Graphic? graphic) => new UnsupportedThingPrintData();
 	}

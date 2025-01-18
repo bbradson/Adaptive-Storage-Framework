@@ -291,8 +291,12 @@ public static class CollectionExtensions
 
 	public static int Max(this int[] array)
 	{
+		var count = array.Length;
+		if (count == 0)
+			return 0;
+		
 		var result = int.MinValue;
-		for (var i = array.Length; --i >= 0;)
+		for (var i = count; --i >= 0;)
 			result = Math.Max(result, array.UnsafeLoad(i));
 
 		return result;
@@ -300,8 +304,11 @@ public static class CollectionExtensions
 
 	public static int Max(this List<int> list)
 	{
-		var result = int.MinValue;
 		list.UnwrapReadOnlyArray(out var array, out var count);
+		if (count == 0)
+			return 0;
+		
+		var result = int.MinValue;
 		for (var i = count; --i >= 0;)
 			result = Math.Max(result, array.UnsafeLoad(i));
 
@@ -312,9 +319,13 @@ public static class CollectionExtensions
 	{
 		Guard.IsNotNull(array);
 		Guard.IsNotNull(selector);
+
+		var count = array.Length;
+		if (count == 0)
+			return 0;
 		
 		var result = int.MinValue;
-		for (var i = array.Length; --i >= 0;)
+		for (var i = count; --i >= 0;)
 			result = Math.Max(result, selector(array.UnsafeLoad(i)));
 
 		return result;
@@ -325,10 +336,70 @@ public static class CollectionExtensions
 		Guard.IsNotNull(list);
 		Guard.IsNotNull(selector);
 
-		var result = int.MinValue;
 		list.UnwrapReadOnlyArray(out var array, out var count);
+		if (count == 0)
+			return 0;
+
+		var result = int.MinValue;
 		for (var i = count; --i >= 0;)
 			result = Math.Max(result, selector(array.UnsafeLoad(i)));
+
+		return result;
+	}
+
+	public static int Min(this int[] array)
+	{
+		var count = array.Length;
+		if (count == 0)
+			return 0;
+
+		var result = int.MaxValue;
+		for (var i = count; --i >= 0;)
+			result = Math.Min(result, array.UnsafeLoad(i));
+
+		return result;
+	}
+
+	public static int Min(this List<int> list)
+	{
+		list.UnwrapReadOnlyArray(out var array, out var count);
+		if (count == 0)
+			return 0;
+
+		var result = int.MaxValue;
+		for (var i = count; --i >= 0;)
+			result = Math.Min(result, array.UnsafeLoad(i));
+
+		return result;
+	}
+
+	public static int Min<T>(this T[] array, Func<T, int> selector)
+	{
+		Guard.IsNotNull(array);
+		Guard.IsNotNull(selector);
+
+		var count = array.Length;
+		if (count == 0)
+			return 0;
+
+		var result = int.MaxValue;
+		for (var i = count; --i >= 0;)
+			result = Math.Min(result, selector(array.UnsafeLoad(i)));
+
+		return result;
+	}
+
+	public static int Min<T>(this List<T> list, Func<T, int> selector)
+	{
+		Guard.IsNotNull(list);
+		Guard.IsNotNull(selector);
+		list.UnwrapReadOnlyArray(out var array, out var count);
+		if (count == 0)
+			return 0;
+
+		var result = int.MaxValue;
+		for (var i = count; --i >= 0;)
+			result = Math.Min(result, selector(array.UnsafeLoad(i)));
 
 		return result;
 	}

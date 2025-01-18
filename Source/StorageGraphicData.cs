@@ -24,10 +24,17 @@ public class StorageGraphicData : GraphicData
 	public virtual Graphic GraphicColoredFor(StorageRenderer storageRenderer)
 		=> this.GraphicColoredFor(ColorOneFor(storageRenderer), ColorTwoFor(storageRenderer));
 
-	public float AltitudeFor(ThingDef thingDef) => AltitudeFor(thingDef.Altitude);
+	public bool TryGetAltitude(out float altitude)
+	{
+		if (altitudeLayer != (AltitudeLayer)byte.MaxValue)
+		{
+			altitude = altitudeLayer.AltitudeFor();
+			return true;
+		}
 
-	public float AltitudeFor(float thingDefAltitude)
-		=> altitudeLayer != (AltitudeLayer)byte.MaxValue ? altitudeLayer.AltitudeFor() : thingDefAltitude;
+		altitude = default;
+		return false;
+	}
 
 	public Color ColorOneFor(StorageRenderer storageRenderer)
 		=> storageRenderer.GetColorFromSource(colorOneSource) * color;

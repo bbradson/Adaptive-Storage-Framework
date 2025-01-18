@@ -16,10 +16,8 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 	{
 		var thing = printData.Thing;
 
-		var thingRotation = printData.ThingRotation = graphic.textureOrientation ?? thing.Rotation;
-		printData.NotifyMaterialPossiblyChanged();
-
-		printData.DrawOffset = DrawOffsetForItem(building, thing, thingRotation, out var stackRotation);
+		printData.DrawOffset = DrawOffsetForItem(building, thing,
+			printData.ThingRotation = graphic.textureOrientation ?? thing.Rotation, out var stackRotation);
 
 		printData.SetDrawScale(DrawScaleForItem(thing, building), graphic.maxDrawSize);
 		

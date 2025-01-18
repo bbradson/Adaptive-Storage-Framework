@@ -10,7 +10,7 @@ public class GraphicsDefSelector(GraphicsDef Def)
 {
 	public virtual bool AllowedFor(ThingClass building)
 		=> (Def.allowedRotations is not [_, ..] rotations || rotations.Contains(building.Rotation))
-			&& Allows(building.StoredThings.AsCellWise); // cellWise for count
+			&& Allows(building.StoredThings.AsCellWise); // cellWise for count, TODO: this should not count things disallowed by the parent filter
 	
 	public virtual bool Allows(int thingCount)
 		=> Def is var def

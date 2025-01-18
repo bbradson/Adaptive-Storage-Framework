@@ -201,16 +201,21 @@ public abstract class PrintData : ITransformable
 	{
 	}
 
+	public override string ToString() => $"{base.ToString()} (Thing: '{Thing}', Graphic: '{Graphic}')";
+
 	private static readonly ShadowData _defaultShadowData = new();
 	
-	public static PrintData Create(Thing thing, Graphic? graphic)
+	public static PrintData Create(Thing thing, Graphic? graphic, bool ignoreThingType = false)
 	{
 		Guard.IsNotNull(thing);
-		
+
 		var result = Factories
-				.Find((thing, graphic), static (c, factory) => factory.IsCompatibleWith(c.thing, c.graphic))
+				.Find((thing, graphic),
+					ignoreThingType
+						? static (c, factory) => factory.IsCompatibleWith(c.thing, c.graphic, true)
+						: static (c, factory) => factory.IsCompatibleWith(c.thing, c.graphic, false))
 				?.CreateFor(thing, graphic)
-			?? new UnsupportedThingPrintData();
+			?? (ignoreThingType ? new UnsupportedGraphicPrintData() : new UnsupportedThingPrintData());
 
 		result.Thing = thing;
 		result.Graphic = graphic;
@@ -240,7 +245,7 @@ public abstract class PrintData : ITransformable
 
 	public abstract class Factory
 	{
-		public abstract bool IsCompatibleWith(Thing thing, Graphic? graphic);
+		public abstract bool IsCompatibleWith(Thing thing, Graphic? graphic, bool ignoreThingType);
 		
 		public abstract PrintData CreateFor(Thing thing, Graphic? graphic);
 	}

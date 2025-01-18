@@ -495,28 +495,27 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 		Guard.IsLessThan(index, count);
 
 		var lastIndex = count-- - 1;
-		Copy(lastIndex, index);
-		ClearAt(lastIndex);
+		Move(lastIndex, index);
 	}
 
-	private void Copy(int from, int to)
+	private void Move(int from, int to)
 	{
-		if (from == to)
-			return;
-
 		var things = _things;
-		var thing = things[to] = things[from];
+		_indices.Remove(things[to].thingIDNumber);
+		
+		if (from != to)
+			_indices[(things[to] = things[from]).thingIDNumber] = to;
+		
+		things[from] = null!;
 
 		var defs = _defs;
 		defs[to] = defs[from];
+		defs[from] = null!;
 
 		var positions = _positions;
 		positions[to] = positions[from];
-
-		_indices[thing.thingIDNumber] = to;
+		positions[from] = default;
 	}
-
-	private void ClearAt(int index) => SetInternal(index, null, null, default);
 
 	internal new void Clear()
 	{
@@ -525,7 +524,7 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 		using var thingsAndCells = new PooledList<(Thing thing, StorageCell cell)>();
 		var things = _things;
 		var positions = _positions;
-		for (var i = 0; i < things.Length; i++)
+		for (var i = 0; i < count; i++)
 			thingsAndCells.Add((things[i], new(_parentSizeX, positions[i])));
 		
 		Array.Clear(things, 0, count);

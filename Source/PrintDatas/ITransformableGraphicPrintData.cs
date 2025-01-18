@@ -29,9 +29,9 @@ public class ITransformableGraphicPrintData(ITransformable<Thing> graphic) : Pri
 
 	public new class Factory : PrintData.Factory
 	{
-		public override bool IsCompatibleWith(Thing thing, Graphic? graphic)
+		public override bool IsCompatibleWith(Thing thing, Graphic? graphic, bool ignoreThingType)
 			=> graphic is ITransformable<Thing>
-				&& OptimizedPrintData.IsCompatibleThing(thing);
+				&& (ignoreThingType || OptimizedPrintData.IsCompatibleThing(thing));
 
 		public override PrintData CreateFor(Thing thing, Graphic? graphic)
 			=> new ITransformableGraphicPrintData((ITransformable<Thing>)graphic!);

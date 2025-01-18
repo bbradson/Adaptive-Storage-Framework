@@ -118,7 +118,8 @@ public class CorpsePrintData(Corpse corpse) : UnsupportedThingPrintData
 	
 	public new class Factory : PrintData.Factory
 	{
-		public override bool IsCompatibleWith(Thing thing, Graphic? graphic) => thing is Corpse;
+		public override bool IsCompatibleWith(Thing thing, Graphic? graphic, bool ignoreThingType)
+			=> !ignoreThingType && thing is Corpse;
 
 		public override PrintData CreateFor(Thing thing, Graphic? graphic) => new CorpsePrintData((Corpse)thing);
 	}

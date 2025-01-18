@@ -43,9 +43,8 @@ public class GodModeGizmos(ThingClass parent)
 			}
 
 			parent.def.graphicData.Init();
-
-			renderer.InitializeStoredThingGraphics();
-			renderer.NotifyCurrentGraphicChanged();
+			renderer.Notify_DefsHotReloaded();
+			
 			LongEventHandler.ExecuteWhenFinished(() => parent.DirtyMapMesh(parent.Map));
 		}
 	};
