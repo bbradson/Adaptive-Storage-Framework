@@ -25,9 +25,9 @@ public static class OnStartup
 		
 		// TODO: move parts of patching elsewhere. StaticConstructorOnStartup blocks the UI thread
 		
-		AdaptiveStorageFrameworkMod.Harmony.PatchAll();
+		AdaptiveStorageFrameworkMod.Harmony.PatchAll(typeof(AdaptiveStorageFrameworkMod).Assembly);
 		
 		// sw.Stop();
-		// Log.Message($"Initializing ASF took: {sw.ElapsedMilliseconds} ms");
+		// Log.Message($"Initializing ASF took: {sw.ElapsedMilliseconds} ms"); // less than 100 ms though
 	}
 }

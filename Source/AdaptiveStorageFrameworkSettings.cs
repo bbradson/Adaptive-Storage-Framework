@@ -4,7 +4,6 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Linq;
-using HarmonyLib;
 // ReSharper disable SpecifyACultureInStringConversionExplicitly
 
 namespace AdaptiveStorage;
@@ -28,7 +27,7 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 	private static Type InitializeContentsTabType()
 		=> _contentsTabType = _contentsTabTypeName == typeof(ContentsITab).FullName
 			? typeof(ContentsITab)
-			: AccessTools.TypeByName(_contentsTabTypeName) ?? typeof(ContentsITab);
+			: GenTypes.GetTypeInAnyAssembly(_contentsTabTypeName) ?? typeof(ContentsITab);
 
 	public static bool ShowContentsTab => typeof(InspectTabBase).IsAssignableFrom(ContentsTabType);
 

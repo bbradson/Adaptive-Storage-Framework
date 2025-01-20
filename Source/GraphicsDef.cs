@@ -162,6 +162,8 @@ public class GraphicsDef : Def
 		
 		if (disallowedThingDefs is [_,..])
 			forbiddenFilter.SetAllowAll(disallowedThingDefs, true);
+		
+		forbiddenFilter.StripHiddenSpecialThingFilters();
 
 		_forbidsNothing = forbiddenFilter.AllowedDefCount == 0;
 	}
@@ -187,6 +189,8 @@ public class GraphicsDef : Def
 			allowedRequirement = AllowedRequirement.Always;
 
 		allowedFilter.SetAllowAll(forbiddenFilter.AllowedThingDefs, false);
+
+		allowedFilter.StripHiddenSpecialThingFilters();
 	}
 
 	private void ResolveWorker()
@@ -251,6 +255,12 @@ public class GraphicsDef : Def
 
 		if (!Database.TryGetValue(def, out var list))
 			Database[def] = list = [];
+
+		if (def.building is { } buildingProperties)
+		{
+			buildingProperties.fixedStorageSettings?.filter?.StripHiddenSpecialThingFilters();
+			buildingProperties.defaultStorageSettings?.filter?.StripHiddenSpecialThingFilters();
+		}
 
 		list.AddDistinct(this);
 	}

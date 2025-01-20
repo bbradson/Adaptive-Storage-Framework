@@ -11,7 +11,7 @@ public static class LWM
 {
 	public static bool Active => CompPropertiesType != null;
 	
-	public static readonly Type? CompPropertiesType = AccessTools.TypeByName("LWM.DeepStorage.Properties");
+	public static readonly Type? CompPropertiesType = GenTypes.GetTypeInAnyAssembly("LWM.DeepStorage.Properties");
 	
 	public static readonly AccessTools.FieldRef<CompProperties, int>?
 		MaxNumberStacks = TryGetField("maxNumberStacks"),

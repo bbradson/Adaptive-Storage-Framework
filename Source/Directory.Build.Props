@@ -32,6 +32,7 @@
 		<Publicize Include="Assembly-CSharp:RimWorld.FilthMonitor" />
 		<Publicize Include="Assembly-CSharp:RimWorld.InspectPaneUtility.IsOpen" />
 		<Publicize Include="Assembly-CSharp:RimWorld.ITab_ContentsBase.thingsToSelect" />
+		<Publicize Include="Assembly-CSharp:RimWorld.ITab_Storage.HiddenSpecialThingFilters" />
 		<Publicize Include="Assembly-CSharp:RimWorld.ListerHaulables.Check" />
 		<Publicize Include="Assembly-CSharp:RimWorld.ListerMergeables.Check" />
 		<Publicize Include="Assembly-CSharp:RimWorld.MinifiedThing.get_CrateFrontGraphic" />

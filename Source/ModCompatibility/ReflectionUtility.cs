@@ -23,7 +23,7 @@ public static class ReflectionUtility
 		=> AccessTools.DeclaredField(type, name) ?? throw new MissingFieldException($"{type.FullName}:{name}");
 
 	public static Type TypeByName(string name)
-		=> AccessTools.TypeByName(name) ?? throw new MissingMemberException(name);
+		=> GenTypes.GetTypeInAnyAssembly(name) ?? throw new MissingMemberException(name);
 
 	public static EventInfo DeclaredEvent(Type type, string name)
 		=> type.GetEvent(name, AccessTools.allDeclared) ?? throw new MissingMemberException($"{type.FullName}:{name}");
