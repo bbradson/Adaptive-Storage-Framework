@@ -5,9 +5,9 @@
 
 namespace AdaptiveStorage.PrintDatas;
 
-public class ITransformableThingPrintData(ITransformable thing) : PrintData
+public class ITransformableThingPrintData(ITransformable.ITransformable thing) : PrintData
 {
-	public ITransformable Transformable { get; } = thing;
+	public ITransformable.ITransformable Transformable { get; } = thing;
 
 	public override void DrawAt(in TransformData transformData)
 	{
@@ -30,9 +30,9 @@ public class ITransformableThingPrintData(ITransformable thing) : PrintData
 	public new class Factory : PrintData.Factory
 	{
 		public override bool IsCompatibleWith(Thing thing, Graphic? graphic, bool ignoreThingType)
-			=> !ignoreThingType && thing is ITransformable;
+			=> !ignoreThingType && thing is ITransformable.ITransformable;
 
 		public override PrintData CreateFor(Thing thing, Graphic? graphic)
-			=> new ITransformableThingPrintData((ITransformable)thing);
+			=> new ITransformableThingPrintData((ITransformable.ITransformable)thing);
 	}
 }

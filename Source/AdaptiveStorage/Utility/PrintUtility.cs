@@ -9,7 +9,7 @@ public static class PrintUtility
 {
 	public static void PrintAt(this MinifiedThing minifiedThing, SectionLayer layer, in TransformData transformData)
 	{
-		if (minifiedThing is ITransformable minifiedTransformable)
+		if (minifiedThing is ITransformable.ITransformable minifiedTransformable)
 		{
 			minifiedTransformable.PrintAt(layer, transformData);
 			return;
@@ -51,7 +51,7 @@ public static class PrintUtility
 					: Rot4.South;
 
 		var innerThingDrawSize = drawScale * innerThingGraphic.drawSize;
-		if (innerThing is ITransformable transformable)
+		if (innerThing is ITransformable.ITransformable transformable)
 		{
 			var innerThingTransform = transformData;
 #if !V1_4

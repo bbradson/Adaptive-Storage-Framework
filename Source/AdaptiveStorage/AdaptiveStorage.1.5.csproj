@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutDir>..\1.5\Assemblies\</OutDir>
+		<OutDir>..\..\1.5\Assemblies\</OutDir>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DefineConstants>DEBUG;V1_5</DefineConstants>
@@ -12,5 +12,9 @@
 	<ItemGroup>
 		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.5.*" />
 		<PackageReference Include="Lib.Harmony" Version="2.3.*" ExcludeAssets="runtime" />
+		<Reference Include="1ITransformable">
+			<HintPath>..\..\1.5\Assemblies\1ITransformable.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
 	</ItemGroup>
 </Project>

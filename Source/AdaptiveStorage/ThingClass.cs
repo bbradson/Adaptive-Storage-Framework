@@ -11,7 +11,7 @@ using AdaptiveStorage.ModCompatibility;
 namespace AdaptiveStorage;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable, IThingHolder
+public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITransformable, IThingHolder
 {
 	public List<GraphicsDef>? AllGraphics => Renderer?.AllGraphics;
 

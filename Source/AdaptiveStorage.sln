@@ -3,9 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33209.295
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "1.5", "1.5.csproj", "{C0F52CB9-6857-4033-BAD6-62B410ADF253}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdaptiveStorage/AdaptiveStorage.1.5", "AdaptiveStorage/AdaptiveStorage.1.5.csproj", "{C0F52CB9-6857-4033-BAD6-62B410ADF253}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "1.4", "1.4.csproj", "{A038654F-7155-4AE5-84B2-2A226C519B59}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdaptiveStorage/AdaptiveStorage.1.4", "AdaptiveStorage/AdaptiveStorage.1.4.csproj", "{A038654F-7155-4AE5-84B2-2A226C519B59}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITransformable/ITransformable.1.4", "ITransformable/ITransformable.1.4.csproj", "{083ADAB8-90B0-45BF-9AC5-A8E800B24FC6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITransformable/ITransformable.1.5", "ITransformable/ITransformable.1.5.csproj", "{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +25,14 @@ Global
 		{A038654F-7155-4AE5-84B2-2A226C519B59}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A038654F-7155-4AE5-84B2-2A226C519B59}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A038654F-7155-4AE5-84B2-2A226C519B59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{083ADAB8-90B0-45BF-9AC5-A8E800B24FC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{083ADAB8-90B0-45BF-9AC5-A8E800B24FC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{083ADAB8-90B0-45BF-9AC5-A8E800B24FC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{083ADAB8-90B0-45BF-9AC5-A8E800B24FC6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
 	<PropertyGroup>
-		<AssemblyName>AdaptiveStorageFramework</AssemblyName>
-		<RootNamespace>AdaptiveStorage</RootNamespace>
-		<Authors>Bradson</Authors>
-		<Copyright>Copyright (c) 2023 Bradson</Copyright>
-		<Version>1.2.0</Version>
 		<TargetFramework>net48</TargetFramework>
 		<LangVersion>preview</LangVersion>
 		<Nullable>enable</Nullable>
@@ -20,13 +15,9 @@
 		<NoWarn>
 			CA1000;CA1051;CA1305;CA1310;CA1707;CA1708;CA1710;CA1711;CA1716;CA1725;CA1852;CA2201;CS0809;CS8500
 		</NoWarn>
-		<DefaultItemExcludes>$(DefaultItemExcludes);obj/**/*.*</DefaultItemExcludes>
-		<BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\$(Configuration)\</BaseIntermediateOutputPath>
-		<MSBuildProjectExtensionsPath>obj\$(MSBuildProjectName)\$(Configuration)\</MSBuildProjectExtensionsPath>
 		<PublicizerClearCacheOnClean>true</PublicizerClearCacheOnClean>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="PolySharp" Version="1.*" />
 		<PackageReference Include="Krafs.Publicizer" Version="2.*" />
 		<Publicize Include="Assembly-CSharp:RimWorld.Building_Storage.cachedOccupiedCells" />
 		<Publicize Include="Assembly-CSharp:RimWorld.FilthMonitor" />

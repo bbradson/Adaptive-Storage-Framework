@@ -1,12 +1,13 @@
-﻿// Copyright (c) 2024 bradson
+﻿// Copyright (c) 2025 bradson
 // This Source Code Form is subject to the terms of the MIT license.
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
-using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
-namespace AdaptiveStorage;
+namespace ITransformable;
 
+[PublicAPI]
 public record struct RotationAngle
 {
 	private uint _value;
@@ -23,7 +24,7 @@ public record struct RotationAngle
 		MaxValue = 360u * Precision;
 
 	public static readonly RotationAngle
-		Zero = default,
+		Zero,
 		Min = FromDirectValue(1u),
 		One = FromDirectValue(Precision),
 		North = FromDirectValue(NorthInt),
@@ -44,7 +45,7 @@ public record struct RotationAngle
 
 	public decimal AsDecimal
 	{
-		get => _value * (1m / Precision); // all implicit casts differ here
+		get => _value * (1m / Precision);
 		set => _value = Convert.ToUInt32(((value * 10_000_000m % MaxValue) + MaxValue) % MaxValue);
 	}
 
@@ -107,7 +108,6 @@ public record struct RotationAngle
 	}
 
 	public bool IsCardinal => _value % EastInt == NorthInt;
-		// => (_value == NorthInt) | (_value == EastInt) | (_value == SouthInt) | (_value == WestInt);
 
 	public RotationAngle(double value) => AsDouble = value;
 
@@ -224,7 +224,6 @@ public record struct RotationAngle
 	// ReSharper disable once SpecifyACultureInStringConversionExplicitly
 	public override string ToString() => AsDecimal.ToString();
 
-	[DoesNotReturn]
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private static void ThrowArgumentOutOfRangeExceptionForIsLessThan<T>(T value, T maximum, string name)
 		=> throw new ArgumentOutOfRangeException(name, value,

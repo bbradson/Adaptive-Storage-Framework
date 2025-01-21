@@ -8,7 +8,7 @@ using AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 namespace AdaptiveStorage.PrintDatas;
 
-public abstract class PrintData : ITransformable
+public abstract class PrintData : ITransformable.ITransformable
 {
 	private Vector3 _drawOffset;
 	private Rot4 _thingRotation = Rot4.Invalid;

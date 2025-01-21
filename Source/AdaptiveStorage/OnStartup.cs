@@ -7,6 +7,7 @@ global using System;
 global using System.Collections.Generic;
 global using System.Runtime.CompilerServices;
 global using AdaptiveStorage.Utility;
+global using ITransformable;
 global using JetBrains.Annotations;
 global using RimWorld;
 global using UnityEngine;

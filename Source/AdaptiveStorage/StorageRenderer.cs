@@ -15,7 +15,7 @@ using AdaptiveStorage.PrintDatas;
 namespace AdaptiveStorage;
 
 [PublicAPI]
-public class StorageRenderer : ITransformable
+public class StorageRenderer : ITransformable.ITransformable
 {
 	public ThingClass Parent { get; }
 

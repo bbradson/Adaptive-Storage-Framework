@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutDir>..\1.4\Assemblies\</OutDir>
+		<OutDir>..\..\1.4\Assemblies\</OutDir>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DefineConstants>DEBUG;V1_4</DefineConstants>
@@ -11,6 +11,5 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.4.*" />
-		<PackageReference Include="Lib.Harmony" Version="2.2.*" ExcludeAssets="runtime" />
 	</ItemGroup>
 </Project>

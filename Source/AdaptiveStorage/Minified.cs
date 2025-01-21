@@ -6,7 +6,7 @@
 namespace AdaptiveStorage;
 
 [PublicAPI]
-public class Minified : MinifiedThing, ITransformable
+public class Minified : MinifiedThing, ITransformable.ITransformable
 {
 	public Vector2 VisualSize { get; private set; }
 	
@@ -86,7 +86,7 @@ public class Minified : MinifiedThing, ITransformable
 		innerThing.Rotation = innerThingRotation;
 		innerThing.Position = Position;
 
-		if (innerThing is ITransformable scalable)
+		if (innerThing is ITransformable.ITransformable scalable)
 		{
 			DrawScalableInnerThing(innerThing, transformData, scalable, innerThingRotation);
 		}
@@ -98,7 +98,7 @@ public class Minified : MinifiedThing, ITransformable
 	}
 
 	private void DrawScalableInnerThing(Thing innerThing, TransformData transformData,
-		ITransformable transformable, Rot4 innerThingRotation)
+		ITransformable.ITransformable transformable, Rot4 innerThingRotation)
 	{
 #if !V1_4
 		transformData.Position += GetMinifiedThingDrawOffset(innerThing, innerThing.Graphic, innerThingRotation);
@@ -169,7 +169,7 @@ public class Minified : MinifiedThing, ITransformable
 		var innerThingSize = innerThing.GetVisualSize();
 		transformData.Scale *= innerThingSize.Bounded(VisualSize) / innerThingSize;
 
-		if (innerThing is ITransformable scalable)
+		if (innerThing is ITransformable.ITransformable scalable)
 		{
 			scalable.PrintAt(layer, transformData);
 		}

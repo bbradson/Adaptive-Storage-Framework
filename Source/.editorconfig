@@ -52,7 +52,7 @@ dotnet_style_namespace_match_folder = true:suggestion
 
 # Naming rules
 
-dotnet_naming_rule.constant_should_be_all_upper.severity = suggestion
+dotnet_naming_rule.constant_should_be_all_upper.severity = silent
 dotnet_naming_rule.constant_should_be_all_upper.symbols = constant
 dotnet_naming_rule.constant_should_be_all_upper.style = all_upper
 
