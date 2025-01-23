@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+	<Operation Class="PostInheritanceOperation.Patch">
+		<operation Class="PatchOperationAdd">
+			<success>Always</success>
+			<xpath>Defs/ThingDef
+				[not(rotateInShelves)]
+				[not(apparel)]
+				[verbs/li]
+				[equipmentType="Primary"]
+				[contains(translate(label,"bow","BOW"), "BOW")]
+				[not(contains(translate(label,"cros","CROS"), "CROSS"))]</xpath>
+			<value>
+				<rotateInShelves>false</rotateInShelves>
+			</value>
+		</operation>
+	</Operation>
+</Patch>

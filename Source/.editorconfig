@@ -1,6 +1,6 @@
 ﻿[*.cs]
 
-file_header_template = Copyright (c) 2023 bradson\nThis Source Code Form is subject to the terms of the MIT license.\nIf a copy of the license was not distributed with this file,\nYou can obtain one at https://opensource.org/licenses/MIT/.
+file_header_template = Copyright (c) 2024 bradson\nThis Source Code Form is subject to the terms of the MIT license.\nIf a copy of the license was not distributed with this file,\nYou can obtain one at https://opensource.org/licenses/MIT/.
 
 # CA2211: Non-constant fields should not be visible
 dotnet_diagnostic.CA2211.severity = none
@@ -52,7 +52,7 @@ dotnet_style_namespace_match_folder = true:suggestion
 
 # Naming rules
 
-dotnet_naming_rule.constant_should_be_all_upper.severity = suggestion
+dotnet_naming_rule.constant_should_be_all_upper.severity = silent
 dotnet_naming_rule.constant_should_be_all_upper.symbols = constant
 dotnet_naming_rule.constant_should_be_all_upper.style = all_upper
 

@@ -55,6 +55,8 @@
 							<stackOffsetNorth>(0.0,0.0,0.0)</stackOffsetNorth>
 							<stackOffsetSouth>(0.0,0.0,0.0)</stackOffsetSouth>
 
+							<stackOffsetFactor>1.0</stackOffsetFactor><!-- A factor to apply on the stackOffset. Works with stack behaviours other than Stack too, acting as radius for Circle -->
+
 							<drawOffset>(0.0,0.0,0.0)</drawOffset><!-- used for any orientation not specified through one of the following fields -->
 
 							<!-- optionally with different values depending on rotation -->
@@ -95,7 +97,7 @@
 	<!-- weight for randomly selecting this GraphicsDef, including all its contents, when building a structure -->
 	<!-- works in 6 passes, first trying to pick a random valid def for positive weights, then negative weights with reversed sign -->
 	<!-- if the previous pass fails, then 0, and if that still doesn't find a valid graphicsDef it does this again in reverse -->
-	<!-- for all the other, invalid, graphics, starting at 0 -->
+	<!-- for all the other, invalid, graphics, starting at a weight of 0 -->
 	<randomSelectionWeight>1</randomSelectionWeight>
 
 	<!-- the minimum amount of stacks a storage has to contain for this GraphicsDef -->
@@ -143,6 +145,14 @@
 	<allowedThingCategories>
 		<li>etc</li>
 	</allowedThingCategories>
+
+	<!-- the allowed building rotations for this GraphicsDef. Leaving this out defaults to all -->
+	<allowedRotations>
+		<li>North</li>
+		<li>South</li>
+		<li>West</li>
+		<li>East</li>
+	</allowedRotations>
 
 </AdaptiveStorage.GraphicsDef>
 
@@ -192,6 +202,13 @@
 			<itemStatOffsetsByQuality>
 				<!-- same format as itemStatFactorsByQuality -->
 			</itemStatOffsetsByQuality>
+
+			<temperature> <!-- having an optional power comp automatically causes these to require power -->
+				<coolingOffset>0.0</coolingOffset> <!-- offset to cool contained items by -->
+				<heatingOffset>0.0</heatingOffset> <!-- offset to heat contained items by -->
+				<coolingMin>NegativeInfinity</coolingMin> <!-- min temperature to cool down to -->
+				<heatingMax>PositiveInfinity</heatingMax> <!-- max temperature to heat up to -->
+			</temperature>
 		</li>
 	</modExtensions>
 </ThingDef>

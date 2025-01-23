@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+	<PropertyGroup>
+		<AssemblyName>1ITransformable</AssemblyName>
+		<RootNamespace>ITransformable</RootNamespace>
+		<Authors>Bradson</Authors>
+		<Copyright>Copyright (c) 2025 Bradson</Copyright>
+		<Version>1.0.0</Version>
+		<DefaultItemExcludes>$(DefaultItemExcludes);obj/**/*.*</DefaultItemExcludes>
+		<BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\$(Configuration)\</BaseIntermediateOutputPath>
+		<MSBuildProjectExtensionsPath>obj\$(MSBuildProjectName)\$(Configuration)\</MSBuildProjectExtensionsPath>
+	</PropertyGroup>
+</Project>

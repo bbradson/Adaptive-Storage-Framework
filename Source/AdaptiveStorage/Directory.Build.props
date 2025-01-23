@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+	<PropertyGroup>
+		<AssemblyName>AdaptiveStorageFramework</AssemblyName>
+		<RootNamespace>AdaptiveStorage</RootNamespace>
+		<Authors>Bradson</Authors>
+		<Copyright>Copyright (c) 2023 Bradson</Copyright>
+		<Version>1.2.0</Version>
+		<DefaultItemExcludes>$(DefaultItemExcludes);obj/**/*.*</DefaultItemExcludes>
+		<BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\$(Configuration)\</BaseIntermediateOutputPath>
+		<MSBuildProjectExtensionsPath>obj\$(MSBuildProjectName)\$(Configuration)\</MSBuildProjectExtensionsPath>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="PolySharp" Version="1.*" />
+	</ItemGroup>
+</Project>

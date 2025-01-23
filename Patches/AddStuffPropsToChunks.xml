@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Patch>
+	<Operation Class="PatchOperationConditional">
+		<xpath>Defs/ThingDef/stuffCategories[li="ASFStoneChunks"]</xpath>
+		<match Class="PatchOperationSequence">
+			<operations>
+				<li Class="PatchOperationAdd">
+					<xpath>Defs</xpath>
+					<value>
+						<StuffCategoryDef>
+							<defName>ASFStoneChunks</defName>
+							<label>stone chunks</label>
+							<noun>stone chunks</noun>
+							<destroySoundSmall>BuildingDestroyed_Stone_Small</destroySoundSmall>
+							<destroySoundMedium>BuildingDestroyed_Stone_Small</destroySoundMedium>
+							<destroySoundLarge>BuildingDestroyed_Stone_Small</destroySoundLarge>
+						</StuffCategoryDef>
+					</value>
+				</li>
+				<li Class="CopyOperation.Set">
+					<destination>Defs/StuffCategoryDef
+						[defName="ASFStoneChunks"]/label/text()
+						|Defs/StuffCategoryDef
+						[defName="ASFStoneChunks"]/noun/text()</destination>
+					<value>Defs/ThingCategoryDef
+						[defName="StoneChunks"]/label/text()</value>
+				</li>
+				<li Class="PostInheritanceOperation.Patch">
+					<operation Class="PatchOperationSequence">
+						<operations>
+							<li Class="CopyOperation.Add">
+								<xpath>Defs/ThingDef
+									[thingCategories/li="StoneChunks"]
+									[butcherProducts/*
+										[name()=/Defs/ThingDef
+											[stuffProps/categories/li="Stony"]
+											[stuffProps/*
+												[not(name()="categories")]
+											]/defName
+										]
+									]
+									[not(stuffProps/categories/li="ASFStoneChunks")]</xpath>
+								<value>name(butcherProducts/*
+									[name()=/Defs/ThingDef
+										[stuffProps/categories/li="Stony"]
+										[stuffProps/*
+											[not(name()="categories")]
+										]/defName
+									])</value>
+								<destination>@ASFStoneChunkButcherProduct</destination>
+							</li>
+							<li Class="GeneratorOperationV2.PatchGenerator">
+								<xpath>Defs/ThingDef[@ASFStoneChunkButcherProduct]</xpath>
+								<value><![CDATA[
+									<Patch>
+										<Operation Class="CopyOperation.TryAdd">
+											<value>Defs/ThingDef
+												[defName="{string(@ASFStoneChunkButcherProduct)}"]/stuffProps/*
+												[not(name()="categories")]</value>
+											<destination>Defs/ThingDef[defName="{defName/text()}"]/stuffProps</destination>
+										</Operation>
+										<Operation Class="PatchOperationSet.Operation">
+											<xpath>Defs/ThingDef[defName="{defName/text()}"]/stuffProps/stuffAdjective</xpath>
+											<value>{label/text()}</value>
+										</Operation>
+									</Patch>
+								]]></value>
+							</li>
+							<li Class="PatchOperationTryAdd.Operation">
+								<xpath>Defs/ThingDef
+									[@ASFStoneChunkButcherProduct]/stuffProps/categories</xpath>
+							</li>
+							<li Class="PatchOperationAdd">
+								<xpath>Defs/ThingDef
+									[@ASFStoneChunkButcherProduct]/stuffProps/categories
+									[not(li="ASFStoneChunks")]</xpath>
+								<value>
+									<li>ASFStoneChunks</li>
+								</value>
+							</li>
+							<!-- li Class="PatchOperationSet.Operation">
+								<xpath>Defs/ThingDef
+									[@ASFStoneChunkButcherProduct]/smeltable</xpath>
+								<value>false</value>
+							</li -->
+							<li Class="PatchOperationSet.Operation">
+								<xpath>Defs/ThingDef
+									[@ASFStoneChunkButcherProduct]/resourceReadoutPriority</xpath>
+								<value>Last</value>
+							</li>
+							<li Class="CopyOperation.Set">
+								<xpath>Defs/ThingDef
+									[@ASFStoneChunkButcherProduct]
+									[graphicData/color]</xpath>
+								<value>graphicData/color</value>
+								<destination>stuffProps/color</destination>
+							</li>
+							<!-- li Class="PatchOperationRemove">
+								<xpath>Defs/ThingDef/@ASFStoneChunkButcherProduct</xpath>
+							</li -->
+						</operations>
+					</operation>
+				</li>
+			</operations>
+		</match>
+	</Operation>
+</Patch>
