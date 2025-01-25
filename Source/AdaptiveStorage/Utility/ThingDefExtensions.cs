@@ -18,16 +18,51 @@ public static class ThingDefExtensions
 
 	public static int MaxItemsInAnyCell(this ThingDef def)
 	{
-		var baseMaxItemsInCell = def.building?.maxItemsInCell ?? 0;
+		var baseMaxItemsInCell = def.DefaultMaxItemsInCell();
 
-		if (LWM.Active && LWM.GetCompProperties(def) is { } lwmProps)
-			baseMaxItemsInCell = Math.Max(LWM.GetMaxStacksPerCell(lwmProps), baseMaxItemsInCell);
-
-		return def.GetModExtension<Extension>()?.maxItemsByCell is { } maxItemsByCell
+		return TryGetMaxItemsByCell(def) is { } maxItemsByCell
 			? maxItemsByCell.Max(value => value.Max() ?? baseMaxItemsInCell)
 			: baseMaxItemsInCell;
 	}
-	
+
+	public static int MaxItemsInAnyCell(this ThingDef def, QualityCategory quality)
+		=> def.TryGetMaxItemsForQuality(quality, out var maxItemsPerCellForQuality)
+			? maxItemsPerCellForQuality
+			: def.MaxItemsInAnyCell();
+
+	public static int DefaultMaxItemsInCell(this ThingDef def)
+	{
+		var baseMaxItemsInCell = def.building?.maxItemsInCell ?? 0;
+
+		return LWM.Active && LWM.GetCompProperties(def) is { } lwmProps
+			? Math.Max(LWM.GetMaxStacksPerCell(lwmProps), baseMaxItemsInCell)
+			: baseMaxItemsInCell;
+	}
+
+	public static int DefaultMaxItemsInCell(this ThingDef def, QualityCategory quality)
+		=> def.TryGetMaxItemsForQuality(quality, out var maxItemsPerCellForQuality)
+			? maxItemsPerCellForQuality
+			: def.DefaultMaxItemsInCell();
+
+	private static bool TryGetMaxItemsForQuality(this ThingDef def, QualityCategory quality, out int itemsByCell)
+	{
+		if (def.TryGetMaxItemsPerCellByQuality() is { } maxItemsPerCellByQuality
+			&& maxItemsPerCellByQuality.GetFor(quality) is { } maxItemsPerCellForQuality)
+		{
+			itemsByCell = maxItemsPerCellForQuality;
+			return true;
+		}
+
+		itemsByCell = 0;
+		return false;
+	}
+
+	public static CellTable<ValuesByQuality>? TryGetMaxItemsByCell(this ThingDef def)
+		=> def.GetModExtension<Extension>()?.maxItemsByCell;
+
+	public static ValuesByQuality? TryGetMaxItemsPerCellByQuality(this ThingDef def)
+		=> def.GetModExtension<Extension>()?.maxItemsPerCellByQuality;
+
 	public static bool HasGUIOverlay(this ThingDef def) => ThingRequestGroup.HasGUIOverlay.Includes(def);
 
 	public static bool ShouldRealTimeDraw(this ThingDef def)

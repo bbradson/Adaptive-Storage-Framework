@@ -1,6 +1,6 @@
 ﻿[*.cs]
 
-file_header_template = Copyright (c) 2024 bradson\nThis Source Code Form is subject to the terms of the MIT license.\nIf a copy of the license was not distributed with this file,\nYou can obtain one at https://opensource.org/licenses/MIT/.
+file_header_template = Copyright (c) 2025 bradson\nThis Source Code Form is subject to the terms of the MIT license.\nIf a copy of the license was not distributed with this file,\nYou can obtain one at https://opensource.org/licenses/MIT/.
 
 # CA2211: Non-constant fields should not be visible
 dotnet_diagnostic.CA2211.severity = none
@@ -31,7 +31,7 @@ csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 4
 indent_size = 4
-end_of_line = crlf
+end_of_line = lf
 dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion

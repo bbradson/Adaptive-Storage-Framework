@@ -200,6 +200,22 @@ public class CellTable<T> where T : IHasPosition, new()
 		return max;
 	}
 
+	public int Sum(Func<T, int> selector)
+	{
+		var sum = 0;
+		var sizeX = Width;
+		var sizeZ = Height;
+
+		for (var x = sizeX; --x >= 0;)
+		{
+			var rows = columns[x].rows;
+			for (var z = sizeZ; --z >= 0;)
+				sum += selector(rows[z]);
+		}
+
+		return sum;
+	}
+
 	public override string ToString() => string.Concat(base.ToString(), "\n", GetContentString());
 
 	public string GetContentString(Func<T, string>? contentSelector = null)
