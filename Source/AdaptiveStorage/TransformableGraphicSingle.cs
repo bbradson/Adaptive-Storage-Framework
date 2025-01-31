@@ -93,4 +93,7 @@ public class TransformableGraphicSingle : Graphic_Single, ITransformable<Thing>
 
 		ShadowGraphic?.Print(layer, thing, 0.0f);
 	}
+
+	public override Graphic GetColoredVersion(Shader newShader, Color newColor, Color newColorTwo)
+		=> GraphicDatabase.Get<TransformableGraphicSingle>(path, newShader, drawSize, newColor, newColorTwo, data);
 }

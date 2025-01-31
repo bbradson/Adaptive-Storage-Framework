@@ -8,7 +8,9 @@ using AdaptiveStorage.Fishery.Pools;
 namespace AdaptiveStorage;
 
 [PublicAPI]
-public abstract class ContentLabelWorker
+#pragma warning disable CS9113
+public abstract class ContentLabelWorker(ContentLabelStyleDef def)
+#pragma warning restore CS9113
 {
 	public abstract string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef);
 
@@ -46,7 +48,7 @@ public abstract class ContentLabelWorker
 		return vector2;
 	}
 
-	public class Automatic : ContentLabelWorker
+	public class Automatic(ContentLabelStyleDef def) : ContentLabelWorker(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 		{
@@ -56,7 +58,7 @@ public abstract class ContentLabelWorker
 		}
 	}
 
-	public class NamesWithCount : Names
+	public class NamesWithCount(ContentLabelStyleDef def) : Names(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0
@@ -64,7 +66,7 @@ public abstract class ContentLabelWorker
 				: null;
 	}
 	
-	public class NamesWithCountOrTotalCount : NamesOrTotalCount
+	public class NamesWithCountOrTotalCount(ContentLabelStyleDef def) : NamesOrTotalCount(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0
@@ -76,15 +78,15 @@ public abstract class ContentLabelWorker
 				: null;
 	}
 	
-	public class TotalCount : ContentLabelWorker
+	public class TotalCount(ContentLabelStyleDef def) : ContentLabelWorker(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0 ? [string.Concat("[ ", totalThingCount.ToStringCached(), " ]")] : null;
 
-		public static readonly TotalCount Instance = new();
+		public static readonly TotalCount Instance = new(null!);
 	}
 	
-	public class Names : ContentLabelWorker
+	public class Names(ContentLabelStyleDef def) : ContentLabelWorker(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0
@@ -94,7 +96,7 @@ public abstract class ContentLabelWorker
 		protected virtual int GetMaxLabelLines(ThingClass building) => building.RotatedSize.z > 1 ? 4 : 3;
 	}
 	
-	public class NamesOrTotalCount : Names
+	public class NamesOrTotalCount(ContentLabelStyleDef def) : Names(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0
@@ -108,7 +110,7 @@ public abstract class ContentLabelWorker
 		protected override int GetMaxLabelLines(ThingClass building) => 3;
 	}
 
-	public class NamesOrNameCount : NamesOrTotalCount
+	public class NamesOrNameCount(ContentLabelStyleDef def) : NamesOrTotalCount(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> totalThingCount > 0
@@ -121,13 +123,13 @@ public abstract class ContentLabelWorker
 		protected override int GetMaxLabelLines(ThingClass building) => 3;
 	}
 	
-	public class None : ContentLabelWorker
+	public class None(ContentLabelStyleDef def) : ContentLabelWorker(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 			=> null;
 	}
 
-	public class Vanilla : ContentLabelWorker
+	public class Vanilla(ContentLabelStyleDef def) : ContentLabelWorker(def)
 	{
 		public override string?[]? UpdateLabels(ThingClass building, int totalThingCount, GraphicsDef? graphicsDef)
 		{

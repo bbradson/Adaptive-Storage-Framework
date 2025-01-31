@@ -21,11 +21,6 @@
 			<storageGroupTag>Shelf</storageGroupTag>
 			<ignoreStoredThingsBeauty>true</ignoreStoredThingsBeauty>
 			<preventDeteriorationOnTop>true</preventDeteriorationOnTop>
-			<fixedStorageSettings>
-				<filter>
-					<disallowNotEverStorable>true</disallowNotEverStorable>
-				</filter>
-			</fixedStorageSettings>
 			<defaultStorageSettings>
 				<priority>Important</priority>
 				<filter />

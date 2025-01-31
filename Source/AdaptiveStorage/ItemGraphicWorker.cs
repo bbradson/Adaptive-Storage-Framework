@@ -116,7 +116,7 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 		{
 			StackBehaviour.Weapons => ComputeStackOffsetForWeapons(itemPosition, itemCount, precedingItemCountFloat,
 				precedingItemCount),
-			StackBehaviour.Stack => ComputeStackOffsetForStack(ref stackOffset, precedingItemCountFloat),
+			StackBehaviour.Stack => ComputeStackOffsetForStack(stackOffset, precedingItemCountFloat),
 			// ReSharper disable once PatternIsRedundant
 			StackBehaviour.Circle or _ => ComputeStackOffsetForCircle(itemPosition, itemCount, precedingItemCount)
 		};
@@ -222,7 +222,7 @@ public class ItemGraphicWorker(ItemGraphic graphic, GraphicsDef? def)
 		=> new(-0.5f + ((1f / itemCount) * (precedingItemCountFloat + 0.5f)),
 			((((itemCount & 1) == 0 ? 0 : position.x) + precedingItemCount) & 1) == 0 ? -0.02f : 0.2f);
 
-	protected static Vector2 ComputeStackOffsetForStack(ref Vector3 stackOffset, float precedingItemCountFloat)
+	protected static Vector2 ComputeStackOffsetForStack(in Vector3 stackOffset, float precedingItemCountFloat)
 		=> new((precedingItemCountFloat * stackOffset.x) - (stackOffset.x / 1.375f), // default - 0.08f
 			(precedingItemCountFloat * stackOffset.z) - (stackOffset.z / 4.8f));     // default - 0.05f
 

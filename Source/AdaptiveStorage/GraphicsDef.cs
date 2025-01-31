@@ -29,7 +29,10 @@ public class GraphicsDef : Def
 		showBaseGraphic,
 		onlyAllowRequiredThingDefs;
 
-	public ContentColorSource useDominantContentColor = ContentColorSource.Default;
+	public ContentColorSource
+		useDominantContentColor = ContentColorSource.Default,
+		colorOneSource = ContentColorSource.Null,
+		colorTwoSource = ContentColorSource.Null;
 
 	public StackBehaviour stackBehaviour;
 

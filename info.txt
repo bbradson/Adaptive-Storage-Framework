@@ -158,7 +158,7 @@
 
 <ThingDef>
 	<modExtensions>
-		<li Class="AdaptiveStorage.Extension> <!-- optional mod extension for thing defs -->
+		<li Class="AdaptiveStorage.Extension"> <!-- optional mod extension for thing defs -->
 			<lockStorageSettingsToStuff>true</lockStorageSettingsToStuff> <!-- essentially replaces fixed storage settings with the def used as stuff when building the storage -->
 			<graphics>
 				<li>GraphicsDefName</li> <!-- alternative way of specifying targetDefs for graphics -->

@@ -86,28 +86,12 @@ public class StorageGraphicData : GraphicData
 		}
 
 		if (colorOneSource == ContentColorSource.Null)
-		{
-			colorOneSource
-				= colorOneSource.FirstDeclaredColor(storageGraphic, graphicsDef) switch
-				{
-					ContentColorSource.ColorOne or ContentColorSource.First => ContentColorSource.First,
-					ContentColorSource.Null or ContentColorSource.False => ContentColorSource.ColorOne,
-					var colorSource => colorSource
-				};
-		}
+			colorOneSource = storageGraphic.FirstDeclaredColorOne(graphicsDef);
 
 		SetWhiteIfNullOrFalse(ref colorOneSource);
 		
 		if (colorTwoSource == ContentColorSource.Null)
-		{
-			colorTwoSource
-				= colorTwoSource.FirstDeclaredColor(storageGraphic, graphicsDef) switch
-				{
-					ContentColorSource.ColorTwo or ContentColorSource.Second => ContentColorSource.First,
-					ContentColorSource.Null or ContentColorSource.False => ContentColorSource.ColorTwo,
-					var colorSource => colorSource
-				};
-		}
+			colorTwoSource = storageGraphic.FirstDeclaredColorTwo(graphicsDef);
 
 		SetWhiteIfNullOrFalse(ref colorTwoSource);
 	}

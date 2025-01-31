@@ -22,7 +22,10 @@ public class StorageGraphic
 		showContainedItems,
 		showBaseGraphic;
 
-	public ContentColorSource useDominantContentColor;
+	public ContentColorSource
+		useDominantContentColor = ContentColorSource.Null,
+		colorOneSource = ContentColorSource.Null,
+		colorTwoSource = ContentColorSource.Null;
 
 	public int minimumStackCount;
 

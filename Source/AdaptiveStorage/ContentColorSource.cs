@@ -6,6 +6,7 @@
 // ReSharper disable InconsistentNaming
 namespace AdaptiveStorage;
 
+[PublicAPI]
 public enum ContentColorSource
 {
 	Default = 0,
