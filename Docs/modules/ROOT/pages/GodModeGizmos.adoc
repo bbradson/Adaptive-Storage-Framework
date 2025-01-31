@@ -1,0 +1,10 @@
+= GodModeGizmos
+
+These are buttons that show up on selected storage buildings when having god mode enabled.
+
+The Add stack button adds a stack of the first allowed item from the storage filter. Right clicking it opens a float
+menu with the full list of available options for the building.
+
+Edit graphics opens a window to edit the current GraphicsDef with. It's meant for tweaking of offsets and similar.
+
+Update graphics applies the changes made with Edit graphics. Most don't apply automatically.

@@ -1,0 +1,6 @@
+= GraphicsDefSelector
+
+This is the C# implementation set for the `+<workerClass>+` field of a `GraphicsDef`. The framework currently only
+includes one implementation,
+https://github.com/bbradson/Adaptive-Storage-Framework/blob/main/Source/AdaptiveStorage/GraphicsDefSelector.cs[AdaptiveStorage.GraphicsDefSelector].
+This is the default value.

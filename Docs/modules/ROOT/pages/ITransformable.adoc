@@ -1,0 +1,6 @@
+= ITransformable
+
+Things can implement `ITransformable.ITransformable` from the `1ITransformable.dll` assembly to supply adaptive storage
+compatible custom rendering with support for scaling, rotation and offsets, taking in a TransformData struct.
+
+Graphics can implement `ITransformable.ITransformable<Thing>` with the same purpose.

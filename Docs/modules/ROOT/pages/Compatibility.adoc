@@ -1,0 +1,8 @@
+= Compatibility
+
+Yes, everything including CE and LWM's Deep Storage is compatible. Offsets for certain graphics can sometimes look
+wrong. Such offsets can be solved on custom Graphic subclasses by implementing `+ITransformable<Thing>+` there. Custom
+offsets, labels, icons and similar for overlays like those from Recycle This aren't supported yet. Those just get
+displayed the vanilla way.
+
+If something isn't compatible at all, contact me on discord and we'll work it out.

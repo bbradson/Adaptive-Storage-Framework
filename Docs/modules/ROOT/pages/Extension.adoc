@@ -1,0 +1,213 @@
+= Extension
+
+This is the framework's `DefModExtension` to attach to a `ThingDef`. All of its fields and the extension itself are
+entirely optional.
+
+[source,xml]
+----
+<ThingDef>
+	<modExtensions>
+		<li Class="AdaptiveStorage.Extension">
+----
+
+Replacing fixedStorageSettings with the def used as stuff when building the storage:
+[source,xml]
+----
+			<lockStorageSettingsToStuff>true</lockStorageSettingsToStuff>
+----
+
+An alternative way of specifying `targetDefs` for ``GraphicDef``s:
+[source,xml]
+----
+			<graphics>
+				<li>GraphicsDefName</li>
+			</graphics>
+----
+
+Alternative formats for label display in the bottom left corner. Supported are `StuffAsNoun` to display e.g. `Wood pile`
+instead of `Wooden pile` and `NoStuff` to hide stuff and simply show `pile` instead. Currently doesn't affect the
+architect tab and blueprints.
+[source,xml]
+----
+			<labelFormat>Default</labelFormat>
+----
+
+Overriding the regular maxItemsInCell to scale with building quality:
+[source,xml]
+----
+			<maxItemsPerCellByQuality>
+				<awful>1</awful>
+				<poor>2</poor>
+				<normal>3</normal>
+				<good>4</good>
+				<excellent>5</excellent>
+				<masterwork>6</masterwork>
+				<legendary>7</legendary>
+			</maxItemsPerCellByQuality>
+----
+
+Applying stat factors to items in the building. Note that these require the targeted `StatDef` to contain
+`AdaptiveStorage.StatPart` in its `statParts`. An xpath patch operation may be necessary to add the part.
+[source,xml]
+----
+			<itemStatFactors>
+				<DefName>1</DefName>
+			</itemStatFactors>
+----
+
+Applying stat offsets to items in the building. `itemStatFactors` limitations apply here too.
+[source,xml]
+----
+			<itemStatOffsets>
+				<DefName>0</DefName>
+			</itemStatOffsets>
+----
+
+`itemStatFactors`, but scaling with building quality.
+[source,xml]
+----
+			<itemStatFactorsByQuality>
+				<li>
+					<stat>DefName</stat>
+					<awful>0.5</awful>
+					<poor>0.75</poor>
+					<normal>1</normal>
+					<good>2</good>
+					<excellent>3</excellent>
+					<masterwork>4</masterwork>
+					<legendary>5</legendary>
+				</li>
+			</itemStatFactorsByQuality>
+----
+
+`itemStatOffsets`, but scaling with building quality.
+[source,xml]
+----
+			<itemStatOffsetsByQuality>
+				<li>
+					<stat>DefName</stat>
+					<awful>-2</awful>
+					<poor>-1</poor>
+					<normal>0</normal>
+					<good>1</good>
+					<excellent>2</excellent>
+					<masterwork>3</masterwork>
+					<legendary>4</legendary>
+				</li>
+			</itemStatOffsetsByQuality>
+----
+
+Changing temperature of stored items, to prevent rotting, and other deterioration effects. Use-cases include cooling
+down items in a fridge and heating up eggs in an incubator. Having an optional power comp automatically causes these to
+require power. They work without power too. Expected are positive numbers for offsets, but it is technically possible to
+reverse their behaviour through negative values too.
+[source,xml]
+----
+			<temperature>
+				<coolingOffset>0.0</coolingOffset>
+				<heatingOffset>0.0</heatingOffset>
+				<coolingMin>NegativeInfinity</coolingMin>
+				<heatingMax>PositiveInfinity</heatingMax>
+			</temperature>
+----
+The formula these are applied with goes:
+[source,csharp]
+----
+if (temperature < heatingMax)
+	temperature = min(temperature + heatingOffset, heatingMax);
+
+if (temperature > coolingMin)
+	temperature = max(temperature - coolingOffset, coolingMin);
+----
+
+[source,xml]
+----
+		</li>
+	</modExtensions>
+</ThingDef>
+----
+
+.Click to see the full mod extension described here, with comments. Do not copy everything.
+[%collapsible]
+====
+[source,xml]
+----
+<ThingDef>
+	<modExtensions>
+		<li Class="AdaptiveStorage.Extension"><!-- optional mod extension for thing defs -->
+			<lockStorageSettingsToStuff>true</lockStorageSettingsToStuff> <!-- essentially
+				replaces fixed storage settings with the def used as stuff when building
+				the storage -->
+			<graphics>
+				<li>GraphicsDefName</li><!-- alternative way of specifying targetDefs
+					for graphics -->
+			</graphics>
+			<labelFormat>Default</labelFormat><!-- alternative formats for label display in
+				the bottom left corner. Supported are StuffAsNoun to display eg Wood pile
+				instead of Wooden pile and NoStuff to hide stuff and simply show pile
+				instead. Currently doesn't affect the architect tab and blueprints -->
+			
+			<!-- overrides the normal maxItemsInCell -->
+			<maxItemsPerCellByQuality>
+				<awful>1</awful>
+				<poor>2</poor>
+				<normal>3</normal>
+				<good>4</good>
+				<excellent>5</excellent>
+				<masterwork>6</masterwork>
+				<legendary>7</legendary>
+			</maxItemsPerCellByQuality>
+
+			<!-- statFactors and offsets all require AdaptiveStorage.StatPart to be set on
+				the relevant StatDef -->
+			<!-- then apply the relevant effect on stored items -->
+			<itemStatFactors>
+				<DefName>1</DefName>
+			</itemStatFactors>
+
+			<itemStatOffsets>
+				<DefName>0</DefName>
+			</itemStatOffsets>
+
+			<itemStatFactorsByQuality>
+				<li>
+					<stat>DefName</stat>
+					<awful>0.5</awful>
+					<poor>0.75</poor>
+					<normal>1</normal>
+					<good>2</good>
+					<excellent>3</excellent>
+					<masterwork>4</masterwork>
+					<legendary>5</legendary>
+				</li>
+			</itemStatFactorsByQuality>
+
+			<itemStatOffsetsByQuality>
+				<li>
+					<stat>DefName</stat>
+					<awful>-2</awful>
+					<poor>-1</poor>
+					<normal>0</normal>
+					<good>1</good>
+					<excellent>2</excellent>
+					<masterwork>3</masterwork>
+					<legendary>4</legendary>
+				</li>
+			</itemStatOffsetsByQuality>
+
+			<temperature><!-- having an optional power comp automatically causes these to
+				require power -->
+				<coolingOffset>0.0</coolingOffset><!-- offset to cool contained items by
+					-->
+				<heatingOffset>0.0</heatingOffset><!-- offset to heat contained items by
+					-->
+				<coolingMin>NegativeInfinity</coolingMin><!-- min temperature to cool
+					down to -->
+				<heatingMax>PositiveInfinity</heatingMax><!-- max temperature to heat up
+					to -->
+			</temperature>
+		</li>
+	</modExtensions>
+</ThingDef>
+----
+====

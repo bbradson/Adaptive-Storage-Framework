@@ -1,0 +1,6 @@
+= PrintData
+
+All items and storage graphics have their data cached using `PrintData` objects. Various subclasses exist to handle
+different types of ``Thing``s and ``Graphic``s. The default used for vanilla and vanilla-like items is
+https://github.com/bbradson/Adaptive-Storage-Framework/blob/main/Source/AdaptiveStorage/PrintDatas/OptimizedPrintData.cs[AdaptiveStorage.PrintDatas.OptimizedPrintData]. `+PrintData.Factory+` objects define what `Thing` and `Graphic` to
+initialize a `PrintData` type for. They have to be inserted into `+AdaptiveStorage.PrintDatas.PrintData.Factories+`.

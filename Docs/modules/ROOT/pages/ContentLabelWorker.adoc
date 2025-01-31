@@ -1,0 +1,12 @@
+= ContentLabelWorker
+
+The C# class providing the implementation for a `ContentLabelStyleDef`. Default implementations supplied by the
+framework can be viewed at
+https://github.com/bbradson/Adaptive-Storage-Framework/blob/main/Source/AdaptiveStorage/ContentLabelWorker.cs.
+
+`+UpdateLabels+` runs whenever thing counts change and should return the labels to display or null in case of no labels.
+
+`+DrawGUIOverlayLabels+` runs every frame and draws the previously prepared labels.
+
+`+ResolveReferences+` can be used to initialize `ContentLabelStyleDef` specific data. Each `ContentLabelStyleDef` gets
+its own worker instance initialized.

@@ -1,0 +1,69 @@
+= Performance
+
+Buildings implemented using the framework should, normally, be pretty much guaranteed to perform better than buildings
+implemented without framework, including vanilla shelves.
+
+To start, vanilla RimWorld renders each label separately and entirely independently, one per item. Each label
+recalculates its own position by recounting all the cell contents every frame. Each time there's communication to
+Unity's camera to transform that into a screen position. Adaptive Storage Framework keeps combined label data per
+building, caching all offsets when items get interacted with in a storage cell, resulting in that part of the data
+simply not needing recalculation per frame. The screen position is fetched once per building instead of per item, and as
+such always fewer times than in a vanilla building with even 2 items inside.
+****
+Using Dub's Performance Analyzer, this can be profiled by patching `+Verse.Thing:DrawGUIOverlay+` and overrides or
+`+Verse.ThingOverlays:ThingOverlaysOnGUI+` from the dev menu. Note that things inside of buildings have to be considered
+too when comparing.
+****
+
+Texture rendering is similar to label rendering, but not that inefficient in vanilla RimWorld. It is cached there, but
+has the cache regenerated every time any item in a 17x17 area with the item or building gets interacted with. ASF keeps
+its caches during such updates and only recalculates data when exactly the item's cell gets accessed, or when the
+building happens to have a full texture swap.
+****
+For profiling, analyzer has a `+SectionLayer Things+` category. `+Verse.Thing:Print+` can be alternatively patched with
+overrides from the dev menu. Just like with labels, ASF buildings handle combined rendering for themselves and the
+things inside, whereas vanilla and Deep Storage shelves render separately.
+****
+
+The contents tab is quite optimized, for RimWorld standards. It culls list entries that are out of view and fetches data
+from the building's maintained list of stored items. Common vanilla tabs and windows, like the health tab or the trade
+window, calculate everything for all things in their list every frame, both in and out of view, and usually multiple
+times too. Vanilla buildings without ASF don't even have such a tab. They get `Select Item` gizmos displayed on the
+bottom row, one per stack, each contributing not much less than the whole tab. Mod settings do have an option to switch
+between the display modes for anyone who does prefer the vanilla display.
+****
+`+Verse.GizmoGridDrawer:DrawGizmoGrid+` displays vanilla gizmos, though all of them, not just `Select item` entries. The
+ASF tab's main method is `+AdaptiveStorage.ContentsTab:FillTab+`.
+****
+
+Storage lookups for haul jobs, like those from Pick Up And Haul or the simple vanilla haul work giver, are faster with
+Adaptive Storage buildings too. It caches data about available capacity, letting it return false early for full
+buildings. Vanilla on the other hand performs the worst when full, as it continues counting every item in every cell on
+every lookup. The entire remainder, especially stack sizes and the AI side of things, is not in any way touched by the
+framework. If you encounter bugs there, not my fault.
+****
+For profiling, `+RimWorld.StoreUtility:TryFindBestBetterStoreCellForWorker+`.
+****
+
+LWM's Deep Storage has a comp that gets accessed separately from the vanilla maxItemsInCell check and, when using mass
+limits, also requests the mass stat for haul lookups. That one is slower than vanilla, to my knowledge. It also doesn't
+replace item or label rendering functions, but patches them using Harmony to do even more work.
+****
+All the same methods to profile using analyzer apply to Deep Storage too.
+****
+
+All that said, Adaptive Storage Framework is not meant to have performance enhancement as its primary feature. The
+majority of its features exist for scrumptious looks and enjoyable tweaks around storage mechanics. A small 10 pawn
+colony with a small number of stored things is unlikely to see any performance difference between storage
+implementations. It takes extreme cases with enormous hoards of items for storage solutions based on ASF to make the
+difference between 180 and 900 tps, when having nothing else contribute, which wouldn't apply to probably practically
+every colony. It is also not at all likely for ASF to make any difference in a colony running at abnormally low numbers
+like 30 tps. Those are usually caused by entirely unrelated errors or exceptionally bad implementations of specific
+features in certain mods.
+
+For performance improvements that not fully storage focused colonies benefit from too, I recommend
+https://steamcommunity.com/sharedfiles/filedetails/?id=2479389928[RocketMan],
+https://steamcommunity.com/sharedfiles/filedetails/?id=2664723367[Performance Optimizer],
+https://github.com/bbradson/Performance-Fish[Performance Fish] and
+https://steamcommunity.com/sharedfiles/filedetails/?id=3343465955[Red's Performance Fixes]. They cover far more areas
+than just storage, and Fish specifically even makes additional in-depth optimizations to hauling.

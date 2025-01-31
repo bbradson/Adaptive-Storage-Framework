@@ -1,0 +1,220 @@
+= GraphicsDef
+
+Pretty much everything visual about storage buildings using the Adaptive Storage Framework is controlled through
+``GraphicsDef``s. Buildings can have one `GraphicsDef` in order to simply get to use the various controls the framework
+has to offer in a mostly static way, or multiple in order to switch between ``GraphicsDef``s depending on storage
+contents by using their various filtering fields starting with `allowed` and `forbidden`.
+
+[source,xml]
+----
+<AdaptiveStorage.GraphicsDef>
+
+	<defName>NAME_OF_THIS_DEF</defName><!-- this is not the name of the building this gets assigned to,
+		and is only used internally. RimWorld requires every def of a type to have a unique defName
+		-->
+
+	<targetDef>DEFNAME</targetDef><!-- the name of the storage to use this graphicsDef on -->
+	<!-- OR -->
+	<targetDefs><!-- multiple buildings -->
+		<li>DEFNAME1</li>
+		<li>DEFNAME2</li>
+		<li>ETC</li>
+	</targetDefs>
+	<!-- Multiple GraphicsDefs can target one building, and one GraphicsDef can be reused to target
+		multiple buildings too -->
+
+	<!-- storage graphics, see the StorageGraphic section. Leaving this empty results in the vanilla
+		graphic being displayed -->
+	<graphics>
+		<li>
+			<graphicData>
+				<!-- texPath etc goes here -->
+			</graphicData>
+			<!-- OR -->
+			<graphicDatas>
+				<li>
+					<texPath>etc</texPath>
+				</li>
+			</graphicDatas>
+
+			<!-- optional. In case of multiple layers defining the same field, the most specific
+				layer takes precedence, i.e. item over graphic over graphicsDef -->
+			<showContainedItems>true</showContainedItems>
+			<useDominantContentColor>false</useDominantContentColor> <!-- replace the color of
+				the texture with the most common color of storage contents. Note that this
+				only works for items that themselves declare colors, it does not (yet) try
+				counting pixels of textures -->
+
+			<colorOneSource>Default</colorOneSource><!-- See StorageGraphicData for use and
+				values -->
+			<colorTwoSource>Default</colorTwoSource>
+
+			<!-- The number of stored stacks required to switch to this texture. ASF always
+				picks the texture with the highest currently valid minimumStackCount -->
+			<minimumStackCount>0</minimumStackCount>
+		</li>
+	</graphics>
+
+	<!-- individual item offsets, scaling, etc, optional. See the ItemGraphic section -->
+	<itemGraphics>
+		<columns><!-- 0,0 is on the bottom left -->
+			<c0><!-- must have a format of a single letter followed by the index to apply these
+				settings on -->
+				<rows>
+					<r0>
+						<!-- everything optional. Scaling and rotation only work for
+							simple things. Dynamically rendered objects like
+							corpses don't respect those fields -->
+						<visible>true</visible>
+						<drawShadow>false</drawShadow><!-- requires a shadow graphic
+							too. Items often don't have that, buildings do,
+							refer to those for xml examples -->
+						<drawScale>1.0</drawScale>
+						<rotation>0.0</rotation><!-- shared rotation for all items
+							on this cell -->
+						<stackRotation>0.0</stackRotation><!-- added cumulative
+							rotation for each stacked item -->
+						<textureOrientation>South</textureOrientation><!-- for items
+							with south/west/east/north textures, like corpses.
+							Independent from the building. Currently only works
+							for items other than corpses, ironically. -->
+						<maxDrawSize>(1.0,1.0)</maxDrawSize><!-- scale down any
+							item texture that is larger than this -->
+						<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour>
+							<!-- default stacks items of matching defs
+							diagonally, items of varying defs in a circle and
+							places weapons horizontally next to each other in
+							alternating heights -->
+						<stackOffset>(0.0,0.0,0.0)</stackOffset><!-- offset in
+							between each stacked item when using Stack as
+							stackBehaviour. Defaults are
+							(0.11,0.004054054,0.24). The middle value can be set
+							to 0 to specify the default too -->
+
+						<!-- optionally with different values depending on rotation
+							-->
+						<stackOffsetEast>(0.0,0.0,0.0)</stackOffsetEast>
+						<stackOffsetWest>(0.0,0.0,0.0)</stackOffsetWest>
+						<stackOffsetNorth>(0.0,0.0,0.0)</stackOffsetNorth>
+						<stackOffsetSouth>(0.0,0.0,0.0)</stackOffsetSouth>
+
+						<stackOffsetFactor>1.0</stackOffsetFactor><!-- A factor to
+							apply on the stackOffset. Works with stack
+							behaviours other than Stack too, acting as radius
+							for Circle -->
+
+						<drawOffset>(0.0,0.0,0.0)</drawOffset><!-- used for any
+							orientation not specified through one of the
+							following fields -->
+
+						<!-- optionally with different values depending on rotation
+							-->
+						<drawOffsetEast>(0.0,0.0,0.0)</drawOffsetEast>
+						<drawOffsetWest>(0.0,0.0,0.0)</drawOffsetWest>
+						<drawOffsetNorth>(0.0,0.0,0.0)</drawOffsetNorth>
+						<drawOffsetSouth>(0.0,0.0,0.0)</drawOffsetSouth>
+					</r0>
+					<r1>
+						<drawOffset>(0.0,0.0,0.0)</drawOffset>
+						<!-- etc -->
+					</r1>
+					<!-- etc -->
+				</rows>
+			</c0>
+			<c1>
+				<rows>
+					<r0>
+						<!-- could hide items from individual slots for example -->
+						<visible>false</visible>
+					</r0>
+					<r1>
+						<!-- only draw shadows for items in the top right slot -->
+						<drawShadow>true</drawShadow>
+					</r1>
+				</rows>
+			</c1>
+			<!-- etc -->
+		</columns>
+	</itemGraphics>
+
+	<!-- optional -->
+	<showContainedItems>true</showContainedItems>
+
+	<!-- for use with masks, picks up stuff color when empty and item color when storing things -->
+	<useDominantContentColor>false</useDominantContentColor>
+
+	<!-- Alternatively per color channel, supporting masks with red and green -->
+	<!-- See StorageGraphicData for more details -->
+	<colorOneSource>Default</colorOneSource>
+	<colorTwoSource>Default</colorTwoSource>
+
+	<!-- weight for randomly selecting this GraphicsDef, including all its contents, when building a
+		structure -->
+	<!-- works in 6 passes, first trying to pick a random valid def for positive weights, then negative
+		weights with reversed sign -->
+	<!-- if the previous pass fails, then 0, and if that still doesn't find a valid graphicsDef it does
+		this again in reverse -->
+	<!-- for all the other, invalid, graphics, starting at a weight of 0 -->
+	<randomSelectionWeight>1</randomSelectionWeight>
+
+	<!-- the minimum amount of stacks a storage has to contain for this GraphicsDef -->
+	<minimumThingCount>0</minimumThingCount>
+
+	<!-- the minimum amount of stacks passing the allowedFilter a storage has to contain for this
+		GraphicsDef -->
+	<minimumAllowedThingCount>0</minimumAllowedThingCount>
+
+	<!-- the maximum amount of stacks a storage is allowed to contain for this GraphicsDef -->
+	<maximumThingCount>2147483647</maximumThingCount>
+
+	<!-- a filter, just like those on storage settings and recipes, deciding when a GraphicsDef becomes
+		viable for choosing -->
+	<allowedFilter>
+		<thingDefs>etc</thingDefs>
+		<categories>etc</categories>
+		<disallowedCategories>etc</disallowedCategories>
+		etc
+	</allowedFilter>
+
+	<!-- Accepts Any, All, Majority, Minority, MajorityOrEqual, MinorityOrEqual, Equal, None, AnyNot,
+		Always, Never, deciding how many of the stored things have to pass the allowedFilter for
+		this GraphicsDef to be considered viable -->
+	<allowedRequirement>Any</allowedRequirement>
+
+	<!-- allowedFilter in reverse. Any stored thing accepted by this filter causes the GraphicsDef to
+		not be chosen -->
+	<forbiddenFilter>
+		<thingDefs>etc</thingDefs>
+		<categories>etc</categories>
+		<disallowedCategories>etc</disallowedCategories>
+		<!-- etc -->
+	</forbiddenFilter>
+
+	<!-- allowedRequirement, but for the forbiddenFilter -->
+	<forbiddenRequirement>Any</forbiddenRequirement>
+
+	<!-- defs to directly add to the allowedFilter. Mostly there for backwards compatibility -->
+	<requiredThingDefs>
+		<li>DEFNAME</li>
+		<!-- etc -->
+	</requiredThingDefs>
+	<allowedThingCategories>
+		<li>etc</li>
+	</allowedThingCategories>
+
+	<!-- defs to directly add to the forbiddenFilter. Mostly there for backwards compatibility -->
+	<disallowedThingDefs>
+		<li>DEFNAME</li>
+		<!-- etc -->
+	</disallowedThingDefs>
+
+	<!-- the allowed building rotations for this GraphicsDef. Leaving this out defaults to all -->
+	<allowedRotations>
+		<li>North</li>
+		<li>South</li>
+		<li>West</li>
+		<li>East</li>
+	</allowedRotations>
+
+</AdaptiveStorage.GraphicsDef>
+----

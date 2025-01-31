@@ -1,0 +1,22 @@
+= ContentLabelStyleDef
+
+These define how labels get displayed on storage buildings. Included in the framework are:
+
+* Automatic
+** Automatically choose between item names getting displayed with their count when hidden and count only when having visible contents, either directly or through the building only accepting one kind
+* TotalCount
+** Display the total count of all items in storage in a format [ COUNT ]
+* NamesWithCount
+** Display item names and their count in a format of Item xY, one entry per line
+* NamesWithCountOrTotalCount
+** Display up to 3 item names and their count in a format of Item xY, one entry per line, or the total count when having more items
+* Names
+** Display names of stored items, one entry per line
+* NamesOrTotalCount
+** Display up to 3 names of stored items, one entry per line, or the total count when having more items
+* NamesOrNameCount
+** Display up to 3 names of stored items, one entry per line, or the count of different names when having more items
+* None
+** Do not display any labels
+* Vanilla
+** Display item counts individually on each item

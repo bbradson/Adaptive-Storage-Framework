@@ -1,0 +1,4 @@
+= ItemGraphicWorker
+
+The C# class that applies all the `ItemGraphic` values. Adaptive Storage Framework currently only contains one,
+https://github.com/bbradson/Adaptive-Storage-Framework/blob/main/Source/AdaptiveStorage/ItemGraphicWorker.cs[AdaptiveStorage.ItemGraphicWorker].

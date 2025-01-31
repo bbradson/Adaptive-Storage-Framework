@@ -1,0 +1,45 @@
+= StorageGraphicData
+
+`+<graphicData>+` and the `+<li>+` nodes within `+<graphicDatas>+` default to a slightly extended GraphicData subclass
+for storage buildings. The additional members it has are:
+
+Graphics can be colored, and `colorOneSource` sets the source to use for the color RimWorld considers `colorOne`. The
+default when null is the Stuff color, `useDominantContentColor` changes that to the most common content color. Any value
+other than `Default` or `Null` here overrides whatever the default would be.
+[source,xml]
+----
+<colorOneSource>Default</colorOneSource>
+----
+
+Similarly to `colorOneSource`, `colorTwoSource` is used to set the source color for `colorTwo`. Generally, this is meant
+to be used with the `CutOutComplex` `shaderType` and a mask that defines where to apply `colorTwo` through green areas.
+[source,xml]
+----
+<colorTwoSource>Default</colorTwoSource>
+----
+
+Available options for ``colorSource``s currently are:
+
+* Default
+** Use the color returned outside of the StorageGraphicData, equal to not declaring a colorSource value
+* ColorOne
+** Use the building's vanilla colorOne, normally stuff
+* ColorTwo
+** Use the building's vanilla colorTwo, normally that's just white
+* None
+** Return white, essentially leading to no coloring.
+* First
+** The most common item color, matching useDominantContentColor
+* Second
+** The second most common item color
+* Third
+* And so on, up to Twelfth
+
+The plan is to replace these colorSource values with Defs in a future update.
+
+Vanilla ``ThingDef``s have an `+<altitudeLayer>+` field directly on the top level of the def. This field is designed as
+override for that value, set individually by `GraphicData`.
+[source,xml]
+----
+<altitudeLayer>Building</altitudeLayer>
+----
