@@ -4,103 +4,117 @@ A section of a `GraphicsDef`, set for each storage cell to control how items wit
 the node itself are optional. Scaling and rotation only work for simple things. Dynamically rendered objects like
 corpses don't respect those fields.
 
-Whether to display the item in the cell at all:
+* Whether to display the item in the cell at all:
++
 [source,xml]
 ----
-	<visible>true</visible>
+<visible>true</visible>
 ----
 
-Display the item's shadow. This only does something on items that have a shadow graphic set within their graphicData.
+* Display the item's shadow. This only does something on items that have a shadow graphic set within their graphicData.
 Most items don't, unlike buildings.
++
 [source,xml]
 ----
-	<drawShadow>false</drawShadow>
+<drawShadow>false</drawShadow>
 ----
 
-The scale to multiply the item's `drawSize` with
+* The scale to multiply the item's `drawSize` with
++
 [source,xml]
 ----
-	<drawScale>1.0</drawScale>
+<drawScale>1.0</drawScale>
 ----
 
-Shared rotation for all items on this cell
+* Shared rotation for all items on this cell
++
 [source,xml]
 ----
-	<rotation>0.0</rotation>
+<rotation>0.0</rotation>
 ----
 
-Added cumulative rotation for each stacked item. The first item always starts at `0`. The second rotates by
+* Added cumulative rotation for each stacked item. The first item always starts at `0`. The second rotates by
 `1 * stackRotation`. The third rotates by `2 * stackRotation`.
++
 [source,xml]
 ----
-	<stackRotation>0.0</stackRotation>
+<stackRotation>0.0</stackRotation>
 ----
 
-A forced rotation value for stored items that implement `Graphic_Multi` with directional textures, independent from the
-building. Does not work on corpses, unfortunately.
+* A forced rotation value for stored items that implement `Graphic_Multi` with directional textures, independent from
+the building. Does not work on corpses, unfortunately.
++
 [source,xml]
 ----
-	<textureOrientation>South</textureOrientation>
+<textureOrientation>South</textureOrientation>
 ----
 
-The maximum `drawSize` for stored item graphics. Any `drawSize` below this value gets scaled down to match the value.
+* The maximum `drawSize` for stored item graphics. Any `drawSize` below this value gets scaled down to match the value.
++
 [source,xml]
 ----
-	<maxDrawSize>(1.0,1.0)</maxDrawSize>
+<maxDrawSize>(1.0,1.0)</maxDrawSize>
 ----
 
-The method to use when deciding item offsets. `Default` stacks items of matching defs diagonally, items of varying defs
-in a circle and places weapons horizontally next to each other in alternating heights.
+* The method to use when deciding item offsets. `Default` stacks items of matching defs diagonally, items of varying
+defs in a circle and places weapons horizontally next to each other in alternating heights.
++
 [source,xml]
 ----
-	<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour>
+<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour>
 ----
 
-The offset to apply in between each stacked item when using `Stack` as `stackBehaviour`. Defaults are
+* The offset to apply in between each stacked item when using `Stack` as `stackBehaviour`. Defaults are
 `(0.11,0.004054054,0.24)`. The middle value can be set to `0` to specify the default too. This is added after
 `drawOffset` as `precedingItemCount * stackOffset`, so the first item receives a `stackOffset` of 0 and displays at the
 building's position + `drawOffset`.
++
 [source,xml]
 ----
-	<stackOffset>(0.0,0.0,0.0)</stackOffset>
+<stackOffset>(0.0,0.0,0.0)</stackOffset>
 ----
 
-Optionally with different values depending on rotation
+* Optionally with different values depending on rotation
++
 [source,xml]
 ----
-	<stackOffsetEast>(0.0,0.0,0.0)</stackOffsetEast>
-	<stackOffsetWest>(0.0,0.0,0.0)</stackOffsetWest>
-	<stackOffsetNorth>(0.0,0.0,0.0)</stackOffsetNorth>
-	<stackOffsetSouth>(0.0,0.0,0.0)</stackOffsetSouth>
+<stackOffsetEast>(0.0,0.0,0.0)</stackOffsetEast>
+<stackOffsetWest>(0.0,0.0,0.0)</stackOffsetWest>
+<stackOffsetNorth>(0.0,0.0,0.0)</stackOffsetNorth>
+<stackOffsetSouth>(0.0,0.0,0.0)</stackOffsetSouth>
 ----
 
-A factor to apply on the `stackOffset`. Works with stack behaviours other than Stack too, acting as radius for Circle.
+* A factor to apply on the `stackOffset`. Works with stack behaviours other than Stack too, acting as radius for Circle.
++
 [source,xml]
 ----
-	<stackOffsetFactor>1.0</stackOffsetFactor>
+<stackOffsetFactor>1.0</stackOffsetFactor>
 ----
 
-The `drawOffset` to add to all items in the cell. Used for any orientation not specified through one of the following
+* The `drawOffset` to add to all items in the cell. Used for any orientation not specified through one of the following
 fields.
++
 [source,xml]
 ----
-	<drawOffset>(0.0,0.0,0.0)</drawOffset>
+<drawOffset>(0.0,0.0,0.0)</drawOffset>
 ----
 
-Optionally with different values depending on rotation
+* Optionally with different values depending on rotation
++
 [source,xml]
 ----
-	<drawOffsetEast>(0.0,0.0,0.0)</drawOffsetEast>
-	<drawOffsetWest>(0.0,0.0,0.0)</drawOffsetWest>
-	<drawOffsetNorth>(0.0,0.0,0.0)</drawOffsetNorth>
-	<drawOffsetSouth>(0.0,0.0,0.0)</drawOffsetSouth>
+<drawOffsetEast>(0.0,0.0,0.0)</drawOffsetEast>
+<drawOffsetWest>(0.0,0.0,0.0)</drawOffsetWest>
+<drawOffsetNorth>(0.0,0.0,0.0)</drawOffsetNorth>
+<drawOffsetSouth>(0.0,0.0,0.0)</drawOffsetSouth>
 ----
 
-The C# class that applies all of the values here. Adaptive Storage Framework currently only contains one. This field
+* The C# class that applies all of the values here. Adaptive Storage Framework currently only contains one. This field
 should be left out to use that one default implementation.
++
 [source,xml]
 ----
-	<workerClass>AdaptiveStorage.ItemGraphicWorker</workerClass>
+<workerClass>AdaptiveStorage.ItemGraphicWorker</workerClass>
 ----
 
 .Click to see the full node described here, with comments. Do not copy everything.

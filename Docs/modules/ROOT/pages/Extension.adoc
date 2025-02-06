@@ -10,13 +10,15 @@ entirely optional.
 		<li Class="AdaptiveStorage.Extension">
 ----
 
-Replacing fixedStorageSettings with the def used as stuff when building the storage:
+* Replacing fixedStorageSettings with the def used as stuff when building the storage:
++
 [source,xml]
 ----
 			<lockStorageSettingsToStuff>true</lockStorageSettingsToStuff>
 ----
 
-An alternative way of specifying `targetDefs` for ``GraphicDef``s:
+* An alternative way of specifying `targetDefs` for ``GraphicDef``s:
++
 [source,xml]
 ----
 			<graphics>
@@ -24,15 +26,17 @@ An alternative way of specifying `targetDefs` for ``GraphicDef``s:
 			</graphics>
 ----
 
-Alternative formats for label display in the bottom left corner. Supported are `StuffAsNoun` to display e.g. `Wood pile`
-instead of `Wooden pile` and `NoStuff` to hide stuff and simply show `pile` instead. Currently doesn't affect the
-architect tab and blueprints.
+* Alternative formats for label display in the bottom left corner. Supported are `StuffAsNoun` to display e.g.
+`Wood pile` instead of `Wooden pile` and `NoStuff` to hide stuff and simply show `pile` instead. Currently doesn't
+affect the architect tab and blueprints.
++
 [source,xml]
 ----
 			<labelFormat>Default</labelFormat>
 ----
 
-Overriding the regular maxItemsInCell to scale with building quality:
+* Overriding the regular maxItemsInCell to scale with building quality:
++
 [source,xml]
 ----
 			<maxItemsPerCellByQuality>
@@ -46,8 +50,9 @@ Overriding the regular maxItemsInCell to scale with building quality:
 			</maxItemsPerCellByQuality>
 ----
 
-Applying stat factors to items in the building. Note that these require the targeted `StatDef` to contain
+* Applying stat factors to items in the building. Note that these require the targeted `StatDef` to contain
 `AdaptiveStorage.StatPart` in its `statParts`. An xpath patch operation may be necessary to add the part.
++
 [source,xml]
 ----
 			<itemStatFactors>
@@ -55,7 +60,8 @@ Applying stat factors to items in the building. Note that these require the targ
 			</itemStatFactors>
 ----
 
-Applying stat offsets to items in the building. `itemStatFactors` limitations apply here too.
+* Applying stat offsets to items in the building. `itemStatFactors` limitations apply here too.
++
 [source,xml]
 ----
 			<itemStatOffsets>
@@ -63,7 +69,8 @@ Applying stat offsets to items in the building. `itemStatFactors` limitations ap
 			</itemStatOffsets>
 ----
 
-`itemStatFactors`, but scaling with building quality.
+* `itemStatFactors`, but scaling with building quality.
++
 [source,xml]
 ----
 			<itemStatFactorsByQuality>
@@ -80,7 +87,8 @@ Applying stat offsets to items in the building. `itemStatFactors` limitations ap
 			</itemStatFactorsByQuality>
 ----
 
-`itemStatOffsets`, but scaling with building quality.
+* `itemStatOffsets`, but scaling with building quality.
++
 [source,xml]
 ----
 			<itemStatOffsetsByQuality>
@@ -97,10 +105,11 @@ Applying stat offsets to items in the building. `itemStatFactors` limitations ap
 			</itemStatOffsetsByQuality>
 ----
 
-Changing temperature of stored items, to prevent rotting, and other deterioration effects. Use-cases include cooling
+* Changing temperature of stored items, to prevent rotting, and other deterioration effects. Use-cases include cooling
 down items in a fridge and heating up eggs in an incubator. Having an optional power comp automatically causes these to
 require power. They work without power too. Expected are positive numbers for offsets, but it is technically possible to
 reverse their behaviour through negative values too.
++
 [source,xml]
 ----
 			<temperature>
@@ -110,7 +119,9 @@ reverse their behaviour through negative values too.
 				<heatingMax>PositiveInfinity</heatingMax>
 			</temperature>
 ----
++
 The formula these are applied with goes:
++
 [source,csharp]
 ----
 if (temperature < heatingMax)
