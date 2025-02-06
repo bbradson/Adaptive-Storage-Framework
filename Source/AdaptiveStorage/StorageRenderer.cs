@@ -71,7 +71,9 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public event Action<SectionLayer>? PostPrint;
 
-	private bool ShouldRealTimeDraw => Parent.def.drawerType == DrawerType.RealtimeOnly || !Parent.Spawned;
+	private bool ShouldRealTimeDraw
+		=> Parent.SpawnedParentOrMe is not { } spawnedParent
+			|| spawnedParent.def.drawerType == DrawerType.RealtimeOnly;
 	
 	public Color[]? ContentColors { get; private set; }
 

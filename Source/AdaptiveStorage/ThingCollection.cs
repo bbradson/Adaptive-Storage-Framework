@@ -143,7 +143,6 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 		if (parent != null)
 		{
 			parent.StorageSettingsChanged += UpdateAllValidStoredItems;
-			parent.SlotLimitChangedAtCell += UpdateValidStoredItemsAt;
 			parent.ItemStackChanged += UpdateValidStoredItemsAtItemPosition;
 			parent.DeSpawning += RemoveAllIfNotPacking;
 		}
@@ -292,6 +291,9 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 
 	public void UpdateAllValidStoredItems()
 	{
+		if (CellWiseCount == 0)
+			return;
+		
 		var area = StorageCells.Area;
 		var storageCell = new StorageCell(_parent, 0);
 		for (var i = 0; i < area; i++)
@@ -303,6 +305,9 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 
 	private void UpdateValidStoredItemsAtItemPosition(Thing item)
 	{
+		if (CellWiseCount == 0)
+			return;
+		
 		var itemPosition = StoragePositionOf(item);
 		var itemDef = item.def;
 		if (itemDef.SingleCell())
@@ -318,6 +323,9 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 
 	private void UpdateValidStoredItemsAt(StorageCell storageCell)
 	{
+		if (CellWiseCount == 0)
+			return;
+		
 		var thingsInCell = ItemsAtStorageCell(storageCell);
 		var maxItemsInCell = _parent.GetMaxItemsForStorageCell(storageCell);
 		var validItemsInCell = 0;

@@ -53,9 +53,13 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		get => Math.Min(_currentSlotLimit, TotalSlots);
 		set
 		{
+			if (value == _currentSlotLimit)
+				return;
+			
 			_currentSlotLimitPerCell = ((value - 1) / CellCount) + 1;
 			_currentSlotLimit = value;
 			UpdateMaxItemsInCell();
+			Notify_SettingsChanged();
 			SlotLimitChanged?.Invoke();
 		}
 	}
@@ -227,6 +231,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			CompPowerTrader = GetComp<CompPowerTrader>();
 			InitializeMaxItemsByCell();
 			TotalSlots = _maxItemsByCell.Sum();
+			CurrentSlotLimit = _currentSlotLimit;
 
 			var storedThings = _storedThings = new(this);
 			storedThings.Added += NotifyReceivedThing;
@@ -341,6 +346,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 
 	public new bool Accepts(Thing t) => HasCapacityForThing(t) && base.Accepts(t);
 
+	// directly access filter to bypass other mods' patches on AllowedToAccept
 	public bool SettingsAllow(Thing t) => GetStoreSettings().filter.Allows(t) && FixedFilterAllows(t);
 
 	public bool FixedFilterAllows(Thing t) => GetParentStoreSettings().filter.Allows(t);
@@ -354,22 +360,26 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		=> AnyFreeSlots
 			|| (t.Spawned && OccupiedRect.Contains(t.Position)
 				? ContainsAndAllows(t)
-				: AcceptsForStacking(t));
+				: PerformanceFish.Active || AcceptsForStacking(t));
 
 	public bool AcceptsForStacking(Thing t)
 	{
 		var storedThings = StoredThings;
 		var thingDef = t.def;
 
-		for (var i = storedThings.Count; i-- > 0;)
+		for (var i = storedThings.Count; --i >= 0;)
 		{
 			var storedThingDef = storedThings.DefAt(i);
 			if (storedThingDef != thingDef)
 				continue;
 
 			var storedThing = storedThings[i];
-			if (storedThing.stackCount < storedThingDef.stackLimit && storedThing.CanStackWith(t))
+			if (storedThing.stackCount < storedThingDef.stackLimit
+				&& storedThing.CanStackWith(t)
+				&& storedThings.ContainsAndAllows(storedThing))
+			{
 				return true;
+			}
 		}
 
 		return false;
@@ -404,7 +414,6 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		if ((spawnMode & SpawnMode.PackContents) != 0)
 			UnpackStoredItems(map);
 
-		CurrentSlotLimit = _currentSlotLimit;
 		InitializeStoredThings();
 		PostSpawned?.Invoke(map, spawnMode);
 	}
@@ -528,7 +537,10 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		Scribe_Values.Look(ref _contentsPacked, nameof(ContentsPacked));
 
 		if (Scribe.mode == LoadSaveMode.LoadingVars)
+		{
 			PostInitialize();
+			settings ??= new(this); // in case of xml change
+		}
 
 		if (ContentsPacked)
 			Exposable.Scribe(_storedThings, nameof(StoredThings));

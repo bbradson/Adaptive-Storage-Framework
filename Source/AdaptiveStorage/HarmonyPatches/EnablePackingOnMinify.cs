@@ -26,38 +26,47 @@ public static class EnablePackingOnMinify
 	public static CodeInstructions Transpiler(CodeInstructions instructions, ILGenerator generator,
 		MethodBase targetMethod)
 	{
-		var codes = instructions.ToList();
+		try
+		{
+			var codes = instructions.ToList();
 
-		var deSpawnOrDeselectMethod
-			= AccessTools.DeclaredMethod(typeof(Thing), nameof(Thing.DeSpawnOrDeselect));
+			var deSpawnOrDeselectMethod
+				= AccessTools.DeclaredMethod(typeof(Thing), nameof(Thing.DeSpawnOrDeselect));
 
-		if (!Assert(deSpawnOrDeselectMethod != null, "Failed to find Thing.DeSpawnOrDeselect method"))
-			return instructions;
+			if (!Assert(deSpawnOrDeselectMethod != null, "Failed to find Thing.DeSpawnOrDeselect method"))
+				return instructions;
 
-		var deSpawnOrDeselectIndex = codes.FindIndex(code => code.Calls(deSpawnOrDeselectMethod));
+			var deSpawnOrDeselectIndex = codes.FindIndex(code => code.Calls(deSpawnOrDeselectMethod));
 
-		if (!Assert(deSpawnOrDeselectIndex >= 0, "Failed to find call to Thing.DeSpawnOrDeselect"))
-			return instructions;
+			if (!Assert(deSpawnOrDeselectIndex >= 0, "Failed to find call to Thing.DeSpawnOrDeselect"))
+				return instructions;
 
-		var minifyOrDeselectLabel = generator.DefineLabel();
-		var nextInstructionLabel = generator.DefineLabel();
+			var minifyOrDeselectLabel = generator.DefineLabel();
+			var nextInstructionLabel = generator.DefineLabel();
 
-		// if (thing is not ThingClass adaptive)
-		codes.Insert(deSpawnOrDeselectIndex++, FishTranspiler.FirstArgument(targetMethod, typeof(Thing)));
-		codes.Insert(deSpawnOrDeselectIndex++, FishTranspiler.IsInstance<ThingClass>());
-		codes.Insert(deSpawnOrDeselectIndex++, FishTranspiler.IfTrue_Short(minifyOrDeselectLabel));
+			// if (thing is not ThingClass adaptive)
+			codes.Insert(deSpawnOrDeselectIndex++, FishTranspiler.FirstArgument(targetMethod, typeof(Thing)));
+			codes.Insert(deSpawnOrDeselectIndex++, FishTranspiler.IsInstance<ThingClass>());
+			codes.Insert(deSpawnOrDeselectIndex++, FishTranspiler.IfTrue_Short(minifyOrDeselectLabel));
 
-		// thing.DeSpawnOrDeselect(mode);
+			// thing.DeSpawnOrDeselect(mode);
 
-		var newInstructionIndex = deSpawnOrDeselectIndex + 1;
+			var newInstructionIndex = deSpawnOrDeselectIndex + 1;
 
-		// else { MinifyOrDeselect(adaptive, mode) }
-		codes.Insert(newInstructionIndex++, FishTranspiler.GoTo_Short(nextInstructionLabel));
-		codes.Insert(newInstructionIndex++, FishTranspiler.Call(MinifyOrDeselect).WithLabels(minifyOrDeselectLabel));
+			// else { MinifyOrDeselect(adaptive, mode) }
+			codes.Insert(newInstructionIndex++, FishTranspiler.GoTo_Short(nextInstructionLabel));
+			codes.Insert(newInstructionIndex++,
+				FishTranspiler.Call(MinifyOrDeselect).WithLabels(minifyOrDeselectLabel));
 		
-		codes[newInstructionIndex].labels.Add(nextInstructionLabel);
+			codes[newInstructionIndex].labels.Add(nextInstructionLabel);
 
-		return codes;
+			return codes;
+		}
+		catch (Exception ex)
+		{
+			Log.Error($"{ex}");
+			return instructions;
+		}
 	}
 
 	private static bool Assert(bool predicate, string errorText)
