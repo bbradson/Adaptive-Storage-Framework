@@ -27,7 +27,9 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 	private readonly List<Thing> _cellWiseThings = [];
 	private readonly List<Thing>[] _validThingsPerCell, _thingsPerCell;
 	private readonly List<StorageCell> _freeSlots;
-	private readonly IntFishSet _validStoredThings = [];
+	private readonly IntFishSet
+		_validStoredThings = [],
+		_defsAcceptedForStacking = [];
 	private int _count;
 
 	public ThingClass Parent => _parent;
@@ -219,6 +221,8 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 
 		ExpandIfNeeded();
 		SetInternal(_count++, thing, thing.def, storageCell);
+		
+		RecountDefsAcceptedForStacking();
 
 		thing.DisableItemRendering();
 		Added?.Invoke(thing, storageCell);
@@ -301,6 +305,8 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 			storageCell.Index = i;
 			UpdateValidStoredItemsAt(storageCell);
 		}
+		
+		RecountDefsAcceptedForStacking();
 	}
 
 	private void UpdateValidStoredItemsAtItemPosition(Thing item)
@@ -319,6 +325,8 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 			foreach (var cell in OccupiedStorageCells(item, itemPosition))
 				UpdateValidStoredItemsAt(cell.ToStorageCell(_parent));
 		}
+		
+		RecountDefsAcceptedForStacking();
 	}
 
 	private void UpdateValidStoredItemsAt(StorageCell storageCell)
@@ -401,6 +409,23 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 
 	public IntVec3 GetMapCell(in StorageCell storageCell) => _parent.GetMapCell(storageCell);
 
+	public void RecountDefsAcceptedForStacking()
+	{
+		_defsAcceptedForStacking.Clear();
+		
+		for (var i = Count; --i >= 0;)
+		{
+			var storedThingDef = DefAt(i);
+			var storedThing = this[i];
+			
+			if (storedThing.stackCount < storedThingDef.stackLimit
+				&& ContainsAndAllows(storedThing))
+			{
+				_defsAcceptedForStacking.Add(storedThingDef.shortHash);
+			}
+		}
+	}
+
 	void ICollection<ThingDef>.CopyTo(ThingDef[] array, int arrayIndex)
 		=> Array.Copy(_defs, 0, array, arrayIndex, _count);
 
@@ -423,6 +448,33 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 	public bool ContainsAndAllows(Thing item) => _validStoredThings.Contains(item.thingIDNumber);
 
 	public bool CellWiseContains(Thing item) => _cellWiseThingIDNumbers.AsReadOnlySpan().Contains(item.thingIDNumber);
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public bool AcceptsForStacking(Thing item)
+		=> _defsAcceptedForStacking.Count > 0
+			&& (item.OverridesCanStackWith() ? AcceptsForStackingCustom(item) : AcceptsForStacking(item.def));
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public bool AcceptsForStacking(ThingDef thingDef) => _defsAcceptedForStacking.Contains(thingDef.shortHash);
+
+	[MethodImpl(MethodImplOptions.NoInlining)]
+	private bool AcceptsForStackingCustom(Thing item)
+	{
+		for (var i = Count; --i >= 0;)
+		{
+			var storedThingDef = DefAt(i);
+			var storedThing = this[i];
+			
+			if (storedThing.stackCount < storedThingDef.stackLimit
+				&& storedThing.CanStackWith(item)
+				&& ContainsAndAllows(storedThing))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	public int CellWiseCountOf(Thing item) => _cellWiseThingIDNumbers.AsReadOnlySpan().Count(item.thingIDNumber);
 
@@ -462,6 +514,9 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 			return true;
 		
 		RemoveAtInternal(index);
+		
+		RecountDefsAcceptedForStacking();
+		
 		thing.RestoreItemRendering();
 		if (thing.holdingOwner == this)
 			thing.holdingOwner = null;
@@ -560,6 +615,8 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 			foreach (var tac in thingsAndCells)
 				removed(tac.thing, tac.cell);
 		}
+		
+		RecountDefsAcceptedForStacking();
 	}
 
 	IEnumerator<ThingDef> IEnumerable<ThingDef>.GetEnumerator()

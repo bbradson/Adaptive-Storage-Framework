@@ -3,6 +3,9 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Linq;
+using AdaptiveStorage.Fishery.Collections;
+
 namespace AdaptiveStorage.Utility;
 
 public static class ThingExtensions
@@ -109,8 +112,27 @@ public static class ThingExtensions
 	public static bool OverridesPostPrint(this ThingComp thingComp)
 		=> _thingCompsWithPostPrint.Contains(thingComp.GetType());
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool OverridesCanStackWith(this Thing thing) => thing.def.OverridesCanStackWith();
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static bool OverridesCanStackWith(this ThingDef thingDef)
+		=> _defsOfThingsOverridingCanStackWith.Contains(thingDef.shortHash);
+
 	private static readonly HashSet<Type>
 		_thingCompsWithPostDraw = [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostDraw))],
 		_thingCompsWithPostPrint
-			= [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostPrintOnto))];
+			= [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostPrintOnto))],
+		_thingClassesOverridingCanStackWith
+			= [..typeof(Thing).GetSubclassesWithMethodOverride(nameof(Thing.CanStackWith))];
+
+	private static readonly IntFishSet _defsOfThingsOverridingCanStackWith =
+	[
+		..DefDatabase<ThingDef>.AllDefsListForReading is var defsList && defsList.Count > 0
+			? defsList
+				.Where(static def => _thingClassesOverridingCanStackWith.Contains(def.thingClass))
+				.Select(static def => def.shortHash)
+			: throw new("Tried initializing defs of things overriding CanStackWith before the DefDatabase "
+				+ "loaded. This is too early.")
+	];
 }

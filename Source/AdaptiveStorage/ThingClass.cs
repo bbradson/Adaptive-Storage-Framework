@@ -356,34 +356,11 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	/// </summary>
 	public virtual bool AllowItemForbiddingAccess => true;
 
-	public bool HasCapacityForThing(Thing t)
+	public bool HasCapacityForThing(Thing item)
 		=> AnyFreeSlots
-			|| (t.Spawned && OccupiedRect.Contains(t.Position)
-				? ContainsAndAllows(t)
-				: PerformanceFish.Active || AcceptsForStacking(t));
-
-	public bool AcceptsForStacking(Thing t)
-	{
-		var storedThings = StoredThings;
-		var thingDef = t.def;
-
-		for (var i = storedThings.Count; --i >= 0;)
-		{
-			var storedThingDef = storedThings.DefAt(i);
-			if (storedThingDef != thingDef)
-				continue;
-
-			var storedThing = storedThings[i];
-			if (storedThing.stackCount < storedThingDef.stackLimit
-				&& storedThing.CanStackWith(t)
-				&& storedThings.ContainsAndAllows(storedThing))
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
+			|| (item.Spawned && OccupiedRect.Contains(item.Position)
+				? ContainsAndAllows(item)
+				: PerformanceFish.Active || StoredThings.AcceptsForStacking(item));
 
 	public override void PostMake()
 	{
