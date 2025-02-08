@@ -123,8 +123,11 @@ public static class ThingExtensions
 		_thingCompsWithPostDraw = [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostDraw))],
 		_thingCompsWithPostPrint
 			= [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostPrintOnto))],
-		_thingClassesOverridingCanStackWith
-			= [..typeof(Thing).GetSubclassesWithMethodOverride(nameof(Thing.CanStackWith))];
+		_thingClassesOverridingCanStackWith =
+		[
+			..typeof(Thing).GetSubclassesWithMethodOverride(nameof(Thing.CanStackWith))
+				.Where(static type => type != typeof(ThingWithComps))
+		];
 
 	private static readonly IntFishSet _defsOfThingsOverridingCanStackWith =
 	[
