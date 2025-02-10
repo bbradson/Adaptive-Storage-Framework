@@ -4,6 +4,7 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Linq;
+using Multiplayer.API;
 
 namespace AdaptiveStorage;
 
@@ -12,10 +13,20 @@ public class GodModeGizmos(ThingClass parent)
 	public readonly Command_AddStack AddStack = new(parent)
 	{
 		defaultLabel = "Add stack",
-		action = () => GenSpawn.Spawn(ThingMakerUtility.Make(parent.GetStoreSettings().filter.AnyAllowedDef
-				?? parent.GetParentStoreSettings().filter.AnyAllowedDef).TryMakeMinified(),
-			parent.FreeMapCells.First(), parent.Map)
+		action = () => AddStackFor(parent)
 	};
+
+	[SyncMethod(debugOnly = true)]
+	private static void AddStackFor(ThingClass parent)
+	{
+		var freeMapCells = parent.FreeMapCells.ToList();
+		if (!freeMapCells.Any()) // for simultaneous button clicks with multiplayer
+			return;
+			
+		GenSpawn.Spawn(ThingMakerUtility.Make(parent.GetStoreSettings().filter.AnyAllowedDef
+				?? parent.GetParentStoreSettings().filter.AnyAllowedDef).TryMakeMinified(),
+			freeMapCells.First(), parent.Map);
+	}
 
 	public readonly CommandWithFloatMenu EditGraphics = new()
 	{

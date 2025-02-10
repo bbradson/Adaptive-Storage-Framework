@@ -19,9 +19,14 @@
 		<li>1.5</li>
 	</supportedVersions>
 
+	<loadBefore>
+		<li>OskarPotocki.VanillaFactionsExpanded.Core</li>
+	</loadBefore>
+
 	<loadAfter>
 		<li>brrainz.harmony</li>
 		<li>Ludeon.RimWorld</li>
+		<li>rwmt.Multiplayer</li>
 	</loadAfter>
 
 	<modDependencies>
