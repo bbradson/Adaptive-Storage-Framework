@@ -4,6 +4,7 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using AdaptiveStorage.Fishery.Pools;
+using Multiplayer.API;
 using RimWorld.Planet;
 
 namespace AdaptiveStorage;
@@ -262,8 +263,15 @@ public class ContentsITab : ITab_ContentsBase
 		outRect.yMin += ThingRowHeight;
 	}
 
+	[SyncMethod(SyncContext.MapSelected, cancelIfAnyArgNull = true, cancelIfNoSelectedMapObjects = true)]
 	protected override void OnDropThing(Thing t, int count)
 	{
+		if (t.stackCount < count) // for simultaneous button clicks with multiplayer
+			count = t.stackCount;
+
+		if (count < 1)
+			return;
+		
 		switch (t.StoringThing())
 		{
 			case ThingClass adaptive:
