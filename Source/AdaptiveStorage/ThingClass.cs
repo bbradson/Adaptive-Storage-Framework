@@ -47,7 +47,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	public ReadOnlyCollection<StorageCell> FreeStorageSlots => _storedThings.FreeStorageSlots;
 
 	public IEnumerable<IntVec3> FreeMapCells => _storedThings.FreeMapCells;
-	
+
 	public int CurrentSlotLimit
 	{
 		get => Math.Min(_currentSlotLimit, TotalSlots);
@@ -55,7 +55,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		{
 			if (value == _currentSlotLimit)
 				return;
-			
+
 			_currentSlotLimitPerCell = ((value - 1) / CellCount) + 1;
 			_currentSlotLimit = value;
 			UpdateMaxItemsInCell();
@@ -80,16 +80,16 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	public override int MaxItemsInCell => _maxItemsInCell;
 
 	public virtual SectionLayer? CurrentSectionLayer
-		=> SpawnedOrAnyParentSpawned && MapHeld.mapDrawer is { sections: not null} drawer
+		=> SpawnedParentOrMe?.Map.mapDrawer is { sections: not null } drawer
 			? drawer.SectionAt(PositionHeld).GetLayer(typeof(SectionLayer_ThingsGeneral))
 			: null;
-	
+
 	public CellRect OccupiedRect { get; private set; }
 
 	public IntVec3 BottomLeftCell { get; private set; }
-	
+
 	public IntVec2 Size { get; private set; }
-	
+
 	public bool HasMouseOver
 	{
 		get
@@ -134,8 +134,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	public virtual int GetMaxItemsForStorageCell(StorageCell storageCell) => MaxItemsForBuildingCell(storageCell);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private ref int MaxItemsForBuildingCell(StorageCell storageCell)
-		=> ref _maxItemsByCell[storageCell.Index];
+	private ref int MaxItemsForBuildingCell(StorageCell storageCell) => ref _maxItemsByCell[storageCell.Index];
 
 	private void UpdateMaxItemsInCell()
 	{
@@ -145,7 +144,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 
 		Span<int> previousMaxItemsByCell = stackalloc int[maxItemsByCell.Length];
 		maxItemsByCell.CopyTo(previousMaxItemsByCell);
-		
+
 		ResetMaxItemsByCell(Extension?.maxItemsByCell is null ? _currentSlotLimitPerCell : slotLimit);
 
 		var cellCount = maxItemsByCell.Length;
@@ -191,11 +190,11 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	public StorageRenderer? Renderer { get; private set; }
 
 	private ThingCollection _storedThings = null!;
-	
+
 	public Extension? Extension { get; private set; }
-	
+
 	public CompQuality? CompQuality { get; private set; }
-	
+
 	public CompPowerTrader? CompPowerTrader { get; private set; }
 
 	public QualityCategory QualityCategory => CompQuality?.Quality ?? QualityCategory.Normal;
@@ -220,7 +219,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	private ContentLabelWorker? _currentLabelStyle;
 
 	private StorageSettings? _fixedStorageSettings;
-	
+
 	protected virtual void PostInitialize() // why does this not exist on Thing?
 	{
 		try
@@ -236,10 +235,10 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			var storedThings = _storedThings = new(this);
 			storedThings.Added += NotifyReceivedThing;
 			storedThings.Removed += NotifyLostThing;
-			
+
 			Renderer = new(this, storedThings);
 			Renderer.CurrentGraphicChanged += SetGUIOverlayLabelsDirty;
-			
+
 			_godModeGizmos = new(this);
 			_currentGodModeGizmos = GetGodModeGizmos();
 			_statDrawEntries = new(this);
@@ -264,7 +263,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	private void ResetMaxItemsByCell(int maxValue = int.MaxValue)
 	{
 		var defaultMaxItemsInCell = Math.Min(DefaultMaxItemsInCell(), maxValue);
-		
+
 		if (Extension?.maxItemsByCell is { } maxItemsByCell)
 		{
 			var maxValueCopy = maxValue;
@@ -308,11 +307,12 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			? base.LabelNoCount
 			: (Extension?.labelFormat ?? LabelFormat.Default) switch
 			{
-				LabelFormat.NoStuff => def.label + GenLabel.LabelExtras(this,
+				LabelFormat.NoStuff => def.label
+					+ GenLabel.LabelExtras(this,
 #if V1_4
 					1,
 #endif
-					true, true),
+						true, true),
 				LabelFormat.StuffAsNoun => (string)Strings.Translated.ThingMadeOfStuffLabel.Formatted(Stuff.label,
 						def.label)
 					+ GenLabel.LabelExtras(this,
@@ -324,7 +324,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 				var labelFormat => throw new($"Invalid LabelFormat: {labelFormat}")
 			};
 	}
-	
+
 	/// <summary>
 	/// IStoreSettingsParent, this returns the fixed baseline settings
 	/// </summary>
@@ -384,7 +384,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 #else
 			.Min; // wtf? why was this renamed?
 #endif
-		
+
 		Spawning?.Invoke(map, spawnMode);
 		base.SpawnSetup(map, (spawnMode & SpawnMode.RespawningAfterLoad) != 0);
 
@@ -499,7 +499,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			for (var j = thingListAtCell.Count; --j >= 0;)
 			{
 				var thing = thingListAtCell[j];
-				
+
 				if (thing.IsItem())
 					storedThings.Add(thing, storageCell, thing.Position == mapCell);
 			}
@@ -509,7 +509,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	public override void ExposeData()
 	{
 		base.ExposeData();
-		
+
 		Scribe_Values.Look(ref _currentSlotLimit, nameof(CurrentSlotLimit), int.MaxValue);
 		Scribe_Values.Look(ref _contentsPacked, nameof(ContentsPacked));
 
@@ -535,7 +535,8 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		StorageSettingsChanged?.Invoke();
 	}
 
-	[Obsolete("Replaced with Notify_ItemRegisteredAtCell as a workaround for bugs caused by mods not calling this method")]
+	[Obsolete("Replaced with Notify_ItemRegisteredAtCell as a workaround for bugs caused by mods not calling this "
+		+ "method")]
 	public sealed override void Notify_ReceivedThing(Thing newItem)
 	{
 		base.Notify_ReceivedThing(newItem);
@@ -543,7 +544,8 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			newItem.DisableItemDrawing(map); // 2nd time because of call order in Thing.SpawnSetup
 	}
 
-	[Obsolete("Replaced with Notify_ItemDeregisteredAtCell as a workaround for bugs caused by mods not calling this method")]
+	[Obsolete("Replaced with Notify_ItemDeregisteredAtCell as a workaround for bugs caused by mods not calling this "
+		+ "method")]
 	public sealed override void Notify_LostThing(Thing newItem)
 	{
 		if (!_packingNow)
@@ -554,7 +556,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	{
 		_cachedTotalThingCount = -1;
 		StoredThings.Add(item, cell);
-		
+
 		ItemRegisteredAtCell?.Invoke(item, in cell);
 	}
 
@@ -562,7 +564,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	{
 		if (_packingNow)
 			return;
-		
+
 		_cachedTotalThingCount = -1;
 
 		if (!StoredThings.Remove(item, cell))
@@ -608,7 +610,12 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	public sealed override void Print(SectionLayer layer) => PrintAt(layer, new(DrawPos));
 
 	public virtual void PrintAt(SectionLayer layer, in TransformData transformData)
-		=> Renderer?.PrintAt(layer, transformData);
+	{
+		if (Renderer is { } renderer)
+			renderer.PrintAt(layer, transformData);
+		else
+			base.Print(layer);
+	}
 
 #if V1_4
 	public
@@ -616,7 +623,12 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	protected
 #endif
 		override void DrawAt(Vector3 drawLoc, bool flip = false)
-		=> Renderer?.DrawAt(new(drawLoc, flip ? Vector2.one.Flip() : Vector2.one, Rotation));
+	{
+		if (Renderer is { } renderer)
+			renderer.DrawAt(new(drawLoc, flip ? Vector2.one.Flip() : Vector2.one, Rotation));
+		else
+			base.DrawAt(drawLoc, flip);
+	}
 
 	public virtual void DrawAt(in TransformData transformData) => Renderer?.DrawAt(transformData);
 

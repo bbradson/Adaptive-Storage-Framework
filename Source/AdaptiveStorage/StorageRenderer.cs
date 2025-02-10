@@ -102,7 +102,7 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public bool VisibleBaseGraphic
 		=> CurrentGraphic is not { } currentGraphic
-			|| (currentGraphic.showBaseGraphic ?? CurrentGraphicVariation.showBaseGraphic);
+			|| (currentGraphic.showBaseGraphic ?? CurrentGraphicVariation.showBaseGraphic ?? false);
 
 	private readonly List<PrintData>
 		_printables = [],
@@ -132,6 +132,13 @@ public class StorageRenderer : ITransformable.ITransformable
 
 		storedThings.Added += AssignThingGraphic;
 		storedThings.Removed += FreeThingGraphic;
+		parent.PostSpawned += UpdateGraphicAfterSpawning;
+	}
+
+	private void UpdateGraphicAfterSpawning(Map map, SpawnMode spawnMode)
+	{
+		if (StoredThings.Count < 1)
+			TryUpdateCurrentGraphic();
 	}
 
 	private void InitializeAllGraphics()
@@ -143,17 +150,7 @@ public class StorageRenderer : ITransformable.ITransformable
 		
 		InitializeParentComps();
 
-		var maxColorSourceIndex = graphics.Max(static def
-			=> def.graphics.Max(static graphic
-				=> graphic.graphicDatas.Max(static graphicData
-					=> graphicData is null
-						? 0
-						: Math.Max((int)graphicData.colorOneSource, (int)graphicData.colorTwoSource))));
-
-		if (maxColorSourceIndex >= 1 || graphics.Exists(static graphicsDef
-			=> (int)graphicsDef.useDominantContentColor > 0
-			|| graphicsDef.graphics.Exists(static graphic
-				=> graphic.useDominantContentColor > 0)))
+		if (graphics.Max(static def => def.MaxColorSourceIndex()) is >= 1 and var maxColorSourceIndex)
 		{
 			ContentColors = new Color[Math.Max(maxColorSourceIndex + 1, 1)];
 			ContentColorsDirty = true;
@@ -410,7 +407,7 @@ public class StorageRenderer : ITransformable.ITransformable
 		for (var i = storedThings.Count; --i >= 0;)
 			AssignThingGraphic(storedThings[i], storedThings.StoragePositionAt(i), false);
 
-		UpdateCurrentGraphic();
+		TryUpdateCurrentGraphic();
 	}
 
 	private void OnCurrentGraphicChanged()
@@ -650,12 +647,6 @@ public class StorageRenderer : ITransformable.ITransformable
 			: null;
 
 	public PrintData? TryGetPrintDataOf(Thing item) => _printDatasByThing.TryGetValue(item.thingIDNumber);
-
-	public void UpdateCurrentGraphic()
-	{
-		TryUpdateCurrentGraphic();
-		TryDirtyParentMapMesh();
-	}
 
 	public bool TryUpdateCurrentGraphic() // true sets all printDatas and the map mesh to dirty
 	{

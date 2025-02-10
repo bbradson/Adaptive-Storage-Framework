@@ -347,6 +347,23 @@ public static class CollectionExtensions
 		return result;
 	}
 
+	public static int Max<TElement, TContext>(this List<TElement> list, TContext context,
+		Func<TContext, TElement, int> selector)
+	{
+		Guard.IsNotNull(list);
+		Guard.IsNotNull(selector);
+
+		list.UnwrapReadOnlyArray(out var array, out var count);
+		if (count == 0)
+			return 0;
+
+		var result = int.MinValue;
+		for (var i = count; --i >= 0;)
+			result = Math.Max(result, selector(context, array.UnsafeLoad(i)));
+
+		return result;
+	}
+
 	public static int Min(this int[] array)
 	{
 		var count = array.Length;
@@ -393,6 +410,7 @@ public static class CollectionExtensions
 	{
 		Guard.IsNotNull(list);
 		Guard.IsNotNull(selector);
+		
 		list.UnwrapReadOnlyArray(out var array, out var count);
 		if (count == 0)
 			return 0;
@@ -400,6 +418,23 @@ public static class CollectionExtensions
 		var result = int.MaxValue;
 		for (var i = count; --i >= 0;)
 			result = Math.Min(result, selector(array.UnsafeLoad(i)));
+
+		return result;
+	}
+
+	public static int Min<TElement, TContext>(this List<TElement> list, TContext context,
+		Func<TContext, TElement, int> selector)
+	{
+		Guard.IsNotNull(list);
+		Guard.IsNotNull(selector);
+
+		list.UnwrapReadOnlyArray(out var array, out var count);
+		if (count == 0)
+			return 0;
+
+		var result = int.MaxValue;
+		for (var i = count; --i >= 0;)
+			result = Math.Min(result, selector(context, array.UnsafeLoad(i)));
 
 		return result;
 	}

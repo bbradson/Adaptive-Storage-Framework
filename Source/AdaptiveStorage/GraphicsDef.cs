@@ -26,8 +26,9 @@ public class GraphicsDef : Def
 
 	public bool
 		showContainedItems = true,
-		showBaseGraphic,
 		onlyAllowRequiredThingDefs;
+
+	public bool? showBaseGraphic;
 
 	public ContentColorSource
 		useDominantContentColor = ContentColorSource.Default,
@@ -205,10 +206,10 @@ public class GraphicsDef : Def
 		foreach (var def in targetDefs)
 			InitializeOnDef(def);
 
-		if (!showBaseGraphic && graphics.Count == 0
+		if (showBaseGraphic is null && graphics.Count == 0
 			&& StorageGraphicData.GetOrMakeFor(targetDefs.FirstOrDefault()?.graphicData) is { } targetDefGraphic)
 		{
-			var storageGraphic = new StorageGraphic();
+			var storageGraphic = new StorageGraphic(); // needed for colorSource support
 			storageGraphic.graphicDatas.Add(targetDefGraphic);
 			graphics.Add(storageGraphic);
 		}
