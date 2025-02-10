@@ -4,6 +4,7 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Linq;
+using AdaptiveStorage.Fishery;
 using AdaptiveStorage.Fishery.Collections;
 
 namespace AdaptiveStorage.Utility;
@@ -125,8 +126,9 @@ public static class ThingExtensions
 			= [..typeof(ThingComp).GetSubclassesWithMethodOverride(nameof(ThingComp.PostPrintOnto))],
 		_thingClassesOverridingCanStackWith =
 		[
-			..typeof(Thing).GetSubclassesWithMethodOverride(nameof(Thing.CanStackWith))
-				.Where(static type => type != typeof(ThingWithComps))
+			..typeof(ThingWithComps).GetSubclassesWithMethodOverride(nameof(ThingWithComps.CanStackWith))
+				.Concat(typeof(Thing).GetSubclassesWithMethodOverride(nameof(Thing.CanStackWith))
+					.Where(static type => !type.IsAssignableTo(typeof(ThingWithComps))))
 		];
 
 	private static readonly IntFishSet _defsOfThingsOverridingCanStackWith =
