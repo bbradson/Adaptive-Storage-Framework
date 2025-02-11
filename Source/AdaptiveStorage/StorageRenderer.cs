@@ -118,7 +118,7 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public bool AnyPrintDatasDirty { get; private set; } = true;
 
-	public bool BuildingGraphicsDirty { get; private set; } = true;
+	public bool BuildingGraphicsDirty { get; set; } = true;
 
 	public StorageRenderer(ThingClass parent, ThingCollection thingCollection)
 	{
@@ -523,10 +523,10 @@ public class StorageRenderer : ITransformable.ITransformable
 		}
 	}
 
-	private void SetPrintDataDirtyAtCell(IntVec3 position, Thing? except = null)
+	public void SetPrintDataDirtyAtCell(IntVec3 position, Thing? except = null)
 		=> SetPrintDataDirtyAtCell(Parent.GetStorageCell(position), except);
 
-	private void SetPrintDataDirtyAtCell(StorageCell cell, Thing? except = null)
+	public void SetPrintDataDirtyAtCell(StorageCell cell, Thing? except = null)
 	{
 		var storedThingsAtCell = Parent.StoredThings.ItemsAtStorageCell(cell);
 		for (var i = storedThingsAtCell.Length; --i >= 0;)
@@ -601,6 +601,8 @@ public class StorageRenderer : ITransformable.ITransformable
 		{
 			if (_printDatasByThing.Remove(thing.thingIDNumber, out var printData))
 				RemovePrintData(printData);
+			else
+				return;
 		}
 		else
 		{
