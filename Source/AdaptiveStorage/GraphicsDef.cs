@@ -26,12 +26,12 @@ public class GraphicsDef : Def
 
 	public bool
 		showContainedItems = true,
+		useDominantContentColor,
 		onlyAllowRequiredThingDefs;
 
 	public bool? showBaseGraphic;
 
 	public ContentColorSource
-		useDominantContentColor = ContentColorSource.Default,
 		colorOneSource = ContentColorSource.Null,
 		colorTwoSource = ContentColorSource.Null;
 
@@ -105,7 +105,9 @@ public class GraphicsDef : Def
 
 	private bool ContentsFullyHidden
 		=> (!showContainedItems || graphics.Exists(static graphic => !graphic.showContainedItems ?? false))
-			&& (int)useDominantContentColor <= 0
+			&& !useDominantContentColor
+			&& colorOneSource < ContentColorSource.First
+			&& colorTwoSource < ContentColorSource.First
 			&& (allowedFilter.AllowedDefCount > 1) | (allowedRequirement == AllowedRequirement.Always)
 			&& targetDefs.Exists(static def => def.building?.fixedStorageSettings?.filter?.AllowedDefCount > 1);
 

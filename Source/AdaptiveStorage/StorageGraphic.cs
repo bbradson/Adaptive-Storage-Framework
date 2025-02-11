@@ -20,10 +20,10 @@ public class StorageGraphic
 
 	public bool?
 		showContainedItems,
+		useDominantContentColor,
 		showBaseGraphic;
 
 	public ContentColorSource
-		useDominantContentColor = ContentColorSource.Null,
 		colorOneSource = ContentColorSource.Null,
 		colorTwoSource = ContentColorSource.Null;
 

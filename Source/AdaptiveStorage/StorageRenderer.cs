@@ -152,7 +152,7 @@ public class StorageRenderer : ITransformable.ITransformable
 
 		if (graphics.Max(static def => def.MaxColorSourceIndex()) is >= 1 and var maxColorSourceIndex)
 		{
-			ContentColors = new Color[Math.Max(maxColorSourceIndex + 1, 1)];
+			ContentColors = new Color[Math.Max(maxColorSourceIndex, 1)];
 			ContentColorsDirty = true;
 		}
 	}
@@ -263,7 +263,7 @@ public class StorageRenderer : ITransformable.ITransformable
 			ContentColorSource.ColorOne => Parent.DrawColor,
 			ContentColorSource.ColorTwo => Parent.DrawColorTwo,
 			ContentColorSource.White => Color.white,
-			_ => ContentColors![(int)colorSource]
+			_ => ContentColors![(int)colorSource - 1]
 		};
 
 	[MethodImpl(MethodImplOptions.NoInlining)]

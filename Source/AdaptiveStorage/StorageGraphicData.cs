@@ -87,19 +87,9 @@ public class StorageGraphicData : GraphicData
 
 		if (colorOneSource == ContentColorSource.Null)
 			colorOneSource = storageGraphic.FirstDeclaredColorOne(graphicsDef);
-
-		SetWhiteIfNullOrFalse(ref colorOneSource);
 		
 		if (colorTwoSource == ContentColorSource.Null)
 			colorTwoSource = storageGraphic.FirstDeclaredColorTwo(graphicsDef);
-
-		SetWhiteIfNullOrFalse(ref colorTwoSource);
-	}
-
-	private static void SetWhiteIfNullOrFalse(ref ContentColorSource colorSource)
-	{
-		if (colorSource is ContentColorSource.Null or ContentColorSource.False)
-			colorSource = ContentColorSource.White;
 	}
 
 	private static bool InColorSourceRange(ContentColorSource colorSource)
