@@ -100,7 +100,7 @@ public class OptimizedPrintData : PrintData
 
 	public override void PrintAt(SectionLayer layer, in TransformData transformData)
 	{
-		var drawPos = transformData.Position + CombinedDrawOffset;
+		var drawPos = transformData.Position + CombinedDrawOffset.ScaledBy(transformData.Scale);
 		if (layer == null!)
 		{
 			LogFailedPrintAttempt(drawPos);
@@ -132,7 +132,7 @@ public class OptimizedPrintData : PrintData
 
 	public override void DrawAt(in TransformData transformData)
 	{
-		var drawLoc = transformData.Position + CombinedDrawOffset;
+		var drawLoc = transformData.Position + CombinedDrawOffset.ScaledBy(transformData.Scale);
 		var scale = transformData.Scale;
 		var extraRotation = transformData.CombinedRotation;
 

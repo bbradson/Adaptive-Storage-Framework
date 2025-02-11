@@ -14,7 +14,7 @@ public class UnsupportedGraphicPrintData : PrintData
 		var thing = Thing;
 		var previousRotation = thing.Rotation;
 
-		transform.Position += DrawOffset;
+		transform.Position += DrawOffset.ScaledBy(transform.Scale);
 		transform.Scale *= RotatedDrawScale;
 
 		if (thing.MultipleItemsPerCellDrawn())
@@ -46,7 +46,7 @@ public class UnsupportedGraphicPrintData : PrintData
 		
 		using (graphic.Scaled(transform.Scale * RotatedDrawScale))
 		{
-			graphic.DrawWorker(transform.Position + DrawOffset, ThingRotation, thing.def, thing,
+			graphic.DrawWorker(transform.Position + DrawOffset.ScaledBy(transformData.Scale), ThingRotation, thing.def, thing,
 				transform.CombinedRotation.AsFloat + ExtraRotation);
 		}
 	}

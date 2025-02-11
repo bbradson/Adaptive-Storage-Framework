@@ -35,7 +35,7 @@ public class CorpsePrintData(Corpse corpse) : UnsupportedThingPrintData
 
 		var pawn = Corpse.InnerPawn;
 		var renderer = pawn.Drawer.renderer;
-		var drawLoc = transform.Position + DrawOffset;
+		var drawLoc = transform.Position + DrawOffset.ScaledBy(transformData.Scale);
 
 		if (phase != DrawPhase.Draw)
 		{
@@ -107,7 +107,7 @@ public class CorpsePrintData(Corpse corpse) : UnsupportedThingPrintData
 		{
 			thing.Rotation = ThingRotation.Rotated(transform.RotationDirection);
 			using (graphic?.Scaled(transform.Scale * RotatedDrawScale))
-				action(thing, phase, transform.Position + DrawOffset, flip);
+				action(thing, phase, transform.Position + DrawOffset.ScaledBy(transformData.Scale), flip);
 		}
 		finally
 		{

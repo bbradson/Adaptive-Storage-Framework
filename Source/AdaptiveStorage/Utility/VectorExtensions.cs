@@ -48,6 +48,13 @@ public static class VectorExtensions
 		return vector;
 	}
 
+	public static Vector3 ScaledBy(this Vector3 vector, Vector2 scale)
+	{
+		vector.x *= scale.x;
+		vector.z *= scale.y;
+		return vector;
+	}
+
 	public static IntVec2 Flip(this IntVec2 vector)
 	{
 		vector.z = -vector.z;

@@ -16,7 +16,7 @@ public class UnsupportedThingPrintData : PrintData
 		var thing = Thing;
 		var previousRotation = thing.Rotation;
 
-		transform.Position += DrawOffset;
+		transform.Position += DrawOffset.ScaledBy(transform.Scale);
 		transform.Scale *= RotatedDrawScale;
 		transform.CombinedRotation += RotationAngle;
 
@@ -66,7 +66,7 @@ public class UnsupportedThingPrintData : PrintData
 		{
 			thing.Rotation = ThingRotation.Rotated(transform.RotationDirection);
 			using (graphic?.Scaled(transform.Scale * RotatedDrawScale))
-				action(thing, phase, transform.Position + DrawOffset, flip);
+				action(thing, phase, transform.Position + DrawOffset.ScaledBy(transformData.Scale), flip);
 		}
 		finally
 		{

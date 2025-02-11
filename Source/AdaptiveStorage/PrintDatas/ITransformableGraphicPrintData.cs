@@ -12,7 +12,7 @@ public class ITransformableGraphicPrintData(ITransformable<Thing> graphic) : Pri
 	public override void DrawAt(in TransformData transformData)
 	{
 		var transform = transformData;
-		transform.Position += DrawOffset;
+		transform.Position += DrawOffset.ScaledBy(transform.Scale);
 		transform.Scale *= RotatedDrawScale;
 		transform.CombinedRotation += RotationAngle;
 		Transformable.DrawAt(Thing, transform);
@@ -21,7 +21,7 @@ public class ITransformableGraphicPrintData(ITransformable<Thing> graphic) : Pri
 	public override void PrintAt(SectionLayer layer, in TransformData transformData)
 	{
 		var transform = transformData;
-		transform.Position += DrawOffset;
+		transform.Position += DrawOffset.ScaledBy(transform.Scale);
 		transform.Scale *= RotatedDrawScale;
 		transform.CombinedRotation += RotationAngle;
 		Transformable.PrintAt(layer, Thing, transform);

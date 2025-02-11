@@ -11,7 +11,7 @@ public class MinifiedThingPrintData(MinifiedThing thing) : PrintData
 
 	public override void DrawAt(in TransformData transformData)
 	{
-		var drawLoc = transformData.Position + DrawOffset;
+		var drawLoc = transformData.Position + DrawOffset.ScaledBy(transformData.Scale);
 		var drawScale = transformData.Scale * RotatedDrawScale;
 		var extraRotation = (transformData.CombinedRotation + ExtraRotation).AsFloat;
 		var thing = MinifiedThing;
@@ -38,7 +38,7 @@ public class MinifiedThingPrintData(MinifiedThing thing) : PrintData
 	public override void PrintAt(SectionLayer layer, in TransformData transformData)
 	{
 		var transform = transformData;
-		transform.Position += DrawOffset;
+		transform.Position += DrawOffset.ScaledBy(transform.Scale);
 		transform.Scale *= RotatedDrawScale;
 		transform.CombinedRotation += RotationAngle;
 		MinifiedThing.PrintAt(layer, transform);
