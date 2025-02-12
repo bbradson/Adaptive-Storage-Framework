@@ -10,30 +10,24 @@ public record struct TransformData
 {
 	public Vector3 Position;
 	public Vector2 Scale;
-	private RotationAngle _rotation;
-
-	public RotationAngle CombinedRotation
-	{
-		get => _rotation;
-		set => _rotation = value;
-	}
+	public RotationAngle CombinedRotation;
 
 	public RotationAngle ExtraRotation
 	{
-		get => _rotation - _rotation.ToCardinal();
-		set => _rotation = _rotation.ToCardinal() + value;
+		get => CombinedRotation - CombinedRotation.ToCardinal();
+		set => CombinedRotation = CombinedRotation.ToCardinal() + value;
 	}
 
 	public Rot4 Rot4
 	{
-		get => _rotation.AsRot4;
-		set => _rotation = RotationAngle.FromRot4(value) + ExtraRotation;
+		get => CombinedRotation.AsRot4;
+		set => CombinedRotation = RotationAngle.FromRot4(value) + ExtraRotation;
 	}
 
 	public RotationDirection RotationDirection
 	{
-		get => _rotation.AsRotationDirection;
-		set => _rotation = RotationAngle.FromRotationDirection(value) + ExtraRotation;
+		get => CombinedRotation.AsRotationDirection;
+		set => CombinedRotation = RotationAngle.FromRotationDirection(value) + ExtraRotation;
 	}
 
 	public bool IsFlipped => Scale.y < 0f;
@@ -44,35 +38,35 @@ public record struct TransformData
 	{
 		Position = default;
 		Scale = Vector2.one;
-		_rotation = default;
+		CombinedRotation = default;
 	}
 
 	public TransformData(in Vector3 position)
 	{
 		Position = position;
 		Scale = Vector2.one;
-		_rotation = default;
+		CombinedRotation = default;
 	}
 
 	public TransformData(RotationAngle rotation)
 	{
 		Position = default;
 		Scale = Vector2.one;
-		_rotation = rotation;
+		CombinedRotation = rotation;
 	}
 
 	public TransformData(in Vector3 position, Vector2 scale, RotationAngle rotation = default)
 	{
 		Position = position;
 		Scale = scale;
-		_rotation = rotation;
+		CombinedRotation = rotation;
 	}
 
 	public TransformData(in Vector3 position, Vector2 scale, float rotation)
 	{
 		Position = position;
 		Scale = scale;
-		_rotation.AsFloat = rotation;
+		CombinedRotation.AsFloat = rotation;
 	}
 
 	public void Flip() => Scale.y = -Scale.y;
