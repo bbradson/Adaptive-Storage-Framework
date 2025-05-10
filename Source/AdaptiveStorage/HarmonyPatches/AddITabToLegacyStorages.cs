@@ -11,7 +11,7 @@ namespace AdaptiveStorage.HarmonyPatches;
 public static class AddITabToLegacyStorages
 {
 	[HarmonyPostfix]
-	public static IEnumerable<InspectTabBase> Postfix(IEnumerable<InspectTabBase> __result, Thing __instance)
+	public static IEnumerable<InspectTabBase>? Postfix(IEnumerable<InspectTabBase>? __result, Thing __instance)
 		=> __instance is ISlotGroupParent and not ThingClass
 			? InspectTabUtility.Modify(__result)
 			: __result;

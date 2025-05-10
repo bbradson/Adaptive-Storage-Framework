@@ -9,24 +9,27 @@ namespace AdaptiveStorage;
 
 public static class InspectTabUtility
 {
-	public static IEnumerable<InspectTabBase> Modify(IEnumerable<InspectTabBase> tabs)
+	public static IEnumerable<InspectTabBase> Modify(IEnumerable<InspectTabBase>? tabs)
 	{
 		var hasUnknownTab = false;
-		
-		foreach (var tab in tabs)
-		{
-			if (tab == null)
-				continue;
 
-			if (tab.labelKey.Translate() == ContentsITab.LabelTranslated)
+		if (tabs != null)
+		{
+			foreach (var tab in tabs)
 			{
-				if (AdaptiveStorageFrameworkSettings.KnownLoadedContentsTabs.Contains(tab))
+				if (tab == null)
 					continue;
-				else
-					hasUnknownTab = true;
+
+				if (tab.labelKey.Translate() == ContentsITab.LabelTranslated)
+				{
+					if (AdaptiveStorageFrameworkSettings.KnownLoadedContentsTabs.Contains(tab))
+						continue;
+					else
+						hasUnknownTab = true;
+				}
+
+				yield return tab;
 			}
-			
-			yield return tab;
 		}
 
 		var settingsContentsTab = AdaptiveStorageFrameworkSettings.ContentsTab;

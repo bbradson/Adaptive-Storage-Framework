@@ -11,7 +11,7 @@ namespace AdaptiveStorage.HarmonyPatches;
 public static class AddITabToStockpileZones
 {
 	[HarmonyPostfix]
-	public static IEnumerable<InspectTabBase> Postfix(IEnumerable<InspectTabBase> __result, Zone_Stockpile __instance)
+	public static IEnumerable<InspectTabBase>? Postfix(IEnumerable<InspectTabBase>? __result, Zone_Stockpile __instance)
 		=> AdaptiveStorageFrameworkSettings.ContentsTab is ContentsITab
 			? InspectTabUtility.Modify(__result)
 			: __result;
