@@ -803,7 +803,7 @@ public class StorageRenderer : ITransformable.ITransformable
 
 		if (Parent.StoredThings.TryGetStoragePositionOf(thing, out var storageCell))
 		{
-			var thingPosition = storageCell.AsIntVec2.RotatedFor(Parent);
+			var thingPosition = storageCell.AsIntVec2;
 
 			if (((uint)thingPosition.x < (uint)itemGraphics.Width)
 				& ((uint)thingPosition.z < (uint)itemGraphics.Height))
@@ -819,12 +819,37 @@ public class StorageRenderer : ITransformable.ITransformable
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private void FailureGettingItemGraphicAtPosition(Thing thing)
 	{
-		Log.Warning($"Failed rendering thing '{thing}' with position {thing.Position} within storage building '{
+		var text = $"Failed rendering thing '{thing}' with position {thing.Position} within storage building '{
 			Parent}', which has a position of {Parent.Position}. This is likely the result of a bug that occured when "
 			+ $"the thing's position changed, perhaps through ragdoll or teleportation effects.\n{
-				new StackTrace(1, true)}");
-		
-		Parent.InitializeStoredThings();
-		InitializeStoredThingGraphics();
+				new StackTrace(1, true)}";
+
+		if (!_recoveringFromGettingItemGraphicAtPositionError)
+		{
+			try
+			{
+				_recoveringFromGettingItemGraphicAtPositionError = true;
+				Log.Warning(text);
+
+				Parent.InitializeStoredThings();
+				InitializeStoredThingGraphics();
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"Exception during error recovery for invalid thing position involving thing '{
+					thing}' with position {thing.Position} within storage building '{
+						Parent}', which has a position of {Parent.Position}:\n{ex}");
+			}
+			finally
+			{
+				_recoveringFromGettingItemGraphicAtPositionError = false;
+			}
+		}
+		else
+		{
+			Log.Error(text);
+		}
 	}
+
+	private bool _recoveringFromGettingItemGraphicAtPositionError;
 }
