@@ -467,18 +467,16 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		storedThings.contentsLookMode = LookMode.Deep;
 	}
 
-	public void Minify() => Minify(def.minifiedDef.GetModExtension<MinifiedExtension>()?.packContents ?? false);
+	public void Minify() => Minify(DestroyMode.Vanish);
 
 	public void Minify(bool packContents)
-		=> Minify(DestroyMode.Vanish, packContents ? SpawnMode.PackContents : SpawnMode.Default);
+		=> Minify(DestroyMode.Vanish, packContents);
 
 	public void Minify(DestroyMode destroyMode)
-	{
-		if (destroyMode == DestroyMode.Vanish)
-			Minify();
-		else
-			Minify(destroyMode, SpawnMode.Default);
-	}
+		=> Minify(destroyMode, def.minifiedDef.GetModExtension<MinifiedExtension>()?.packContents ?? false);
+
+	public void Minify(DestroyMode destroyMode, bool packContents)
+		=> Minify(destroyMode, packContents ? SpawnMode.PackContents : SpawnMode.Default);
 
 	public void Minify(DestroyMode destroyMode, SpawnMode deSpawnMode)
 		=> OnDeSpawn(destroyMode, SpawnMode.Minify | deSpawnMode);

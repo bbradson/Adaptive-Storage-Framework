@@ -116,6 +116,8 @@ public class StorageRenderer : ITransformable.ITransformable
 		_currentGraphicIndex = -1,
 		_lastMapMeshDirtyFrame = -1;
 
+	private Thing? _previousSpawnedParent;
+
 	public bool AnyPrintDatasDirty { get; private set; } = true;
 
 	public bool BuildingGraphicsDirty { get; set; } = true;
@@ -135,10 +137,14 @@ public class StorageRenderer : ITransformable.ITransformable
 		parent.PostSpawned += UpdateGraphicAfterSpawning;
 	}
 
-	private void UpdateGraphicAfterSpawning(Map map, SpawnMode spawnMode)
+	private void UpdateGraphicAfterSpawning(Map map, SpawnMode spawnMode) => UpdateGraphicAfterSpawning();
+
+	public void UpdateGraphicAfterSpawning()
 	{
-		if (StoredThings.Count < 1)
-			TryUpdateCurrentGraphic();
+		if (!TryUpdateCurrentGraphic())
+			SetAllPrintDatasDirty();
+
+		_previousSpawnedParent = Parent.SpawnedParentOrMe;
 	}
 
 	private void InitializeAllGraphics()
@@ -183,14 +189,14 @@ public class StorageRenderer : ITransformable.ITransformable
 #if !V1_4
 	public virtual void DynamicDrawPhaseAt(DrawPhase phase, in TransformData transform)
 	{
+		if (phase != DrawPhase.ParallelPreDraw)
+			UpdateDirtyData();
+
 		if (CurrentGraphic is null)
 		{
 			Parent.BaseDynamicDrawPhaseAt(phase, transform.Position, transform.IsFlipped);
 			return;
 		}
-
-		if (phase != DrawPhase.ParallelPreDraw)
-			UpdateDirtyData();
 
 		if (phase == DrawPhase.Draw && ShouldRealTimeDraw)
 		{
@@ -212,13 +218,13 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public virtual void DrawAt(in TransformData transformData)
 	{
+		UpdateDirtyData();
+
 		if (CurrentGraphic is null)
 		{
 			Parent.BaseDrawAt(transformData.Position, transformData.IsFlipped);
 			return;
 		}
-
-		UpdateDirtyData();
 
 		if (ShouldRealTimeDraw)
 		{
@@ -282,19 +288,29 @@ public class StorageRenderer : ITransformable.ITransformable
 			return;
 		}
 
-		if (CurrentGraphic is null)
+		try
 		{
-			Parent.BasePrint(layer);
-			return;
+			_currentlyPrinting = true;
+			UpdateDirtyData();
+
+			if (CurrentGraphic is null)
+			{
+				Parent.BasePrint(layer);
+				return;
+			}
+
+			PrintBuilding(layer, transformData);
+			PrintItems(_printables, layer, transformData);
 		}
-
-		UpdateDirtyData();
-
-		PrintBuilding(layer, transformData);
-		PrintItems(_printables, layer, transformData);
+		finally
+		{
+			_currentlyPrinting = false;
+		}
 
 		PostPrint?.Invoke(layer);
 	}
+
+	private bool _currentlyPrinting;
 
 	private void PrintItems(List<PrintData> printDatas, SectionLayer layer, in TransformData transformData)
 		=> ForEachAtItemBase(printDatas, layer, transformData,
@@ -316,6 +332,9 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	private void UpdateDirtyData()
 	{
+		if (Parent.SpawnedParentOrMe != _previousSpawnedParent)
+			UpdateGraphicAfterSpawning();
+		
 		if (ContentColorsDirty)
 			UpdateContentColors();
 		
@@ -416,21 +435,20 @@ public class StorageRenderer : ITransformable.ITransformable
 			return;
 
 		CurrentGraphicVariation = AllGraphics[CurrentVariationIndex];
-		
-		var currentVariationGraphics = CurrentVariationGraphics;
-		var currentVariationGraphicCount = currentVariationGraphics.Count;
-		
-		CurrentGraphic
-			= currentVariationGraphicCount > 0
-				? currentVariationGraphics[Mathf.Clamp(CurrentGraphicIndex, 0, currentVariationGraphicCount - 1)]
-				: null;
+		CurrentGraphic = GetStorageGraphicAt(CurrentVariationGraphics, CurrentGraphicIndex);
 		
 		ShowContainedItems = CurrentGraphic?.showContainedItems ?? CurrentGraphicVariation.showContainedItems;
-
-		ContentColorsDirty = true;
-		BuildingGraphicsDirty = true;
+		
 		SetAllPrintDatasDirty();
 		TryDirtyParentMapMesh();
+	}
+
+	private static StorageGraphic? GetStorageGraphicAt(List<StorageGraphic> currentVariationGraphics, int index)
+	{
+		var currentVariationGraphicCount = currentVariationGraphics.Count;
+		return currentVariationGraphicCount > 0
+			? currentVariationGraphics[Mathf.Clamp(index, 0, currentVariationGraphicCount - 1)]
+			: null;
 	}
 
 	private void CalculateGraphicIndex()
@@ -588,6 +606,9 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public void SetAllPrintDatasDirty()
 	{
+		ContentColorsDirty = true;
+		BuildingGraphicsDirty = true;
+		
 		var storedThings = Parent.StoredThings;
 		for (var i = 0; i < storedThings.Count; i++)
 			SetPrintDataDirty(storedThings[i]);
@@ -687,14 +708,19 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public void TryDirtyParentMapMesh()
 	{
-		if (Parent.TryGetMap() is not { } map
+		if (_currentlyPrinting)
+			return;
+		
+		var parent = Parent.SpawnedParentOrMe;
+		if (parent?.TryGetMap() is not { } map
 			|| Time.frameCount == _lastMapMeshDirtyFrame
-			|| map.mapDrawer is not { sections: not null})
+			|| map.mapDrawer is not { sections: not null} drawer
+			|| drawer.SectionAt(parent.Position) is null)
 		{
 			return;
 		}
 
-		Parent.DirtyMapMesh(map);
+		parent.DirtyMapMesh(map);
 		_lastMapMeshDirtyFrame = Time.frameCount;
 	}
 

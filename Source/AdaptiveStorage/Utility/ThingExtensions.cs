@@ -12,13 +12,7 @@ namespace AdaptiveStorage.Utility;
 public static class ThingExtensions
 {
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Map? TryGetMap(this Thing thing)
-	{
-		var maps = Current.Game.Maps;
-		var mapIndex = (uint)thing.mapIndexOrState;
-		
-		return mapIndex < (uint)maps.Count ? maps[(int)mapIndex] : null;
-	}
+	public static Map? TryGetMap(this Thing thing) => Current.Game.Maps.TryGetItem(thing.mapIndexOrState);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ThingClass? StoringAdaptiveStorage(this Thing thing)

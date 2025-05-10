@@ -59,7 +59,6 @@ public static class PrintUtility
 #endif
 			innerThingTransform.Scale = innerThingDrawSize / innerThing.Graphic.drawSize;
 			
-			rot.AsInt -= innerThing.Rotation.AsInt;
 			innerThingTransform.Rot4 = rot;
 			
 			transformable.PrintAt(layer, innerThingTransform);
