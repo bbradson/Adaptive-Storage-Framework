@@ -20,6 +20,10 @@ public class GraphicsDef : Def
 		allowedFilter = null!,
 		forbiddenFilter = new();
 
+	public ThingFilter?
+		buildingFilter,
+		stuffFilter;
+
 	public AllowedRequirement
 		allowedRequirement = AllowedRequirement.Any,
 		forbiddenRequirement = AllowedRequirement.Any;
@@ -132,6 +136,8 @@ public class GraphicsDef : Def
 		
 		ResolveForbiddenFilter();
 		ResolveAllowedFilter();
+		buildingFilter?.ResolveReferences();
+		stuffFilter?.ResolveReferences();
 		Worker.ResolveReferences();
 	}
 

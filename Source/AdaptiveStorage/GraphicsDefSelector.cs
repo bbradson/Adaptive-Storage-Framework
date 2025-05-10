@@ -9,7 +9,10 @@ namespace AdaptiveStorage;
 public class GraphicsDefSelector(GraphicsDef Def)
 {
 	public virtual bool AllowedFor(ThingClass building)
-		=> (Def.allowedRotations is not [_, ..] rotations || rotations.Contains(building.Rotation))
+		=> Def is var def
+			&& (def.allowedRotations is not [_, ..] rotations || rotations.Contains(building.Rotation))
+			&& (def.buildingFilter?.Allows(building) ?? true)
+			&& (building.Stuff is not { } stuff || (def.stuffFilter?.Allows(stuff) ?? true))
 			&& Allows(building.StoredThings.AsCellWise); // cellWise for count, TODO: this should not count things disallowed by the parent filter
 	
 	public virtual bool Allows(int thingCount)
