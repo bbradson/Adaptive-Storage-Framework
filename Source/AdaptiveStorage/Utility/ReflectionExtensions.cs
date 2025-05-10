@@ -5,8 +5,10 @@
 
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using AdaptiveStorage.Fishery.Utility.Diagnostics;
 using AdaptiveStorage.ModCompatibility;
+using HarmonyLib;
 
 namespace AdaptiveStorage.Utility;
 
@@ -154,4 +156,37 @@ public static class ReflectionExtensions
 			nameof(Thing.DynamicDrawPhaseAt),
 #endif
 			"DrawAt");
+
+	public static MethodBase FindDelegateMethod(this MethodBase containingMethod, FieldInfo delegateField)
+		=> FindDelegateMethod(containingMethod, fieldInfo => fieldInfo == delegateField, delegateField.Name);
+
+	public static MethodBase FindDelegateMethod(this MethodBase containingMethod, string fieldName)
+		=> FindDelegateMethod(containingMethod, fieldInfo => fieldInfo.Name == fieldName, fieldName);
+
+	public static MethodBase FindDelegateMethod(this MethodBase containingMethod, Predicate<FieldInfo> predicate,
+		string fieldName)
+	{
+		var body = PatchProcessor.ReadMethodBody(containingMethod).ToList();
+
+		var fieldIndex = body.FindIndex(code
+			=> (code.Key == OpCodes.Stfld || code.Key == OpCodes.Stsfld)
+			&& code.Value is FieldInfo fieldInfo
+			&& predicate(fieldInfo));
+
+		if (fieldIndex < 0)
+		{
+			ThrowHelper.ThrowInvalidOperationException($"No assignment to field '{
+				fieldName}' found in method '{containingMethod.Name}'");
+		}
+
+		var methodIndex = body.FindLastIndex(fieldIndex, static code => code.Key == OpCodes.Ldftn);
+
+		if (methodIndex < 0)
+		{
+			ThrowHelper.ThrowInvalidOperationException($"No function found with assignment to field '{
+				fieldName}' in method '{containingMethod.Name}'");
+		}
+
+		return (MethodBase)body[methodIndex].Value;
+	}
 }
