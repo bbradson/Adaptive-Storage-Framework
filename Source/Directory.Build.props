@@ -63,17 +63,17 @@
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.IncrementYIfWillExceedMaxWidth" />
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.IncrementPosition" />
 		<Publicize Include="Assembly-CSharp:Verse.WidgetRow.LeftX" />
-		<PUblicize Include="mscorlib:System.Array.UnsafeLoad" />
-		<PUblicize Include="mscorlib:System.Array.UnsafeStore" />
+		<Publicize Include="mscorlib:System.Array.UnsafeLoad" />
+		<Publicize Include="mscorlib:System.Array.UnsafeStore" />
 		<Publicize Include="mscorlib:System.Collections.Generic.List`1._items" />
 		<Publicize Include="mscorlib:System.Collections.Generic.List`1._size" />
 		<Publicize Include="mscorlib:System.Collections.Generic.List`1._version" />
-		<PUblicize Include="mscorlib:System.Collections.Generic.List`1.EnsureCapacity" />
-		<PUblicize Include="mscorlib:System.String.m_firstChar" />
-		<PUblicize Include="mscorlib:System.Runtime.CompilerServices.Unsafe" />
-		<PUblicize Include="mscorlib:System.Reflection.Emit.Label.label" />
-		<PUblicize Include="mscorlib:System.Runtime.CompilerServices.JitHelpers.UnsafeEnumCast" />
-		<PUblicize Include="mscorlib:System.Runtime.CompilerServices.JitHelpers.UnsafeEnumCastLong" />
+		<Publicize Include="mscorlib:System.Collections.Generic.List`1.EnsureCapacity" />
+		<Publicize Include="mscorlib:System.String.m_firstChar" />
+		<Publicize Include="mscorlib:System.Runtime.CompilerServices.Unsafe" />
+		<Publicize Include="mscorlib:System.Reflection.Emit.Label.label" />
+		<Publicize Include="mscorlib:System.Runtime.CompilerServices.JitHelpers.UnsafeEnumCast" />
+		<Publicize Include="mscorlib:System.Runtime.CompilerServices.JitHelpers.UnsafeEnumCastLong" />
 		<Publicize Include="UnityEngine.CoreModule:UnityEngine.Graphics.Internal_DrawMesh_Injected" />
 		<Publicize Include="0Harmony:HarmonyLib.CodeInstructionExtensions.constantLoadingCodes" />
 	</ItemGroup>
