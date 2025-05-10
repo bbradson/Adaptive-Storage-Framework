@@ -7,7 +7,7 @@ Included in the framework are two abstract ThingDefs in https://github.com/bbrad
 
 Alternatively, it's technically enough to set the `<thingClass>` to `AdaptiveStorage.ThingClass`. Consider looking into the defs to see what fields get set by default in there though.
 
-For now, the wiki is still being written. Most data is available in the https://github.com/bbradson/Adaptive-Storage-Framework/blob/main/info.txt[info.txt] file.
+For now, the wiki is still being written. The entry point for buildings is generally the https://github.com/bbradson/Adaptive-Storage-Framework/blob/main/Docs/modules/ROOT/pages/GraphicsDef.adoc[GraphicsDef] file.
 GraphicsDefs are declared for all things rendering, with the ThingDef attachment made through its targetDef field. The Extension for other functions is added to the modExtensions field of ThingDefs it's meant for.
 
 Having god mode active in-game causes additional buttons for dev functions to show up on selected storage buildings.
