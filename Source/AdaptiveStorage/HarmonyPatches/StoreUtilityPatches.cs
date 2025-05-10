@@ -28,8 +28,7 @@ public static class StoreUtilityPatches
 		[HarmonyPrefix]
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool Prefix(Thing t, ISlotGroup? slotGroup)
-			=> slotGroup != null
-				&& (slotGroup.Settings.owner is not ThingClass adaptive || adaptive.HasCapacityForThing(t));
+			=> slotGroup?.Settings.owner is not ThingClass adaptive || adaptive.HasCapacityForThing(t);
 
 		// [HarmonyTranspiler]
 		// public static CodeInstructions Transpiler(CodeInstructions instructions, MethodBase method,
@@ -156,6 +155,6 @@ public static class StoreUtilityPatches
 		}
 
 		public static bool IsValidStackDestination(Thing thing)
-			=> thing.StoringAdaptiveStorage() is { } building && building.ContainsAndAllows(thing);
+			=> thing.StoringAdaptiveStorage() is not { } building || building.ContainsAndAllows(thing);
 	}
 }
