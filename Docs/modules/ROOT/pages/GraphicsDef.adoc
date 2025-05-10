@@ -140,6 +140,9 @@ contents by using their various filtering fields starting with `allowed` and `fo
 	<!-- optional -->
 	<showContainedItems>true</showContainedItems>
 
+	<!-- show the ThingDef's graphic, in addition to any graphic declared on the GraphicsDef -->
+	<showBaseGraphic>false</showBaseGraphic>
+
 	<!-- for use with masks, picks up stuff color when empty and item color when storing things -->
 	<useDominantContentColor>false</useDominantContentColor>
 
@@ -147,6 +150,10 @@ contents by using their various filtering fields starting with `allowed` and `fo
 	<!-- See StorageGraphicData for more details -->
 	<colorOneSource>Default</colorOneSource>
 	<colorTwoSource>Default</colorTwoSource>
+
+	<!-- default stacks items of matching defs diagonally, items of varying defs in a circle and places
+		weapons horizontally next to each other in alternating heights -->
+	<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour>
 
 	<!-- weight for randomly selecting this GraphicsDef, including all its contents, when building a
 		structure -->
@@ -173,7 +180,7 @@ contents by using their various filtering fields starting with `allowed` and `fo
 		<thingDefs>etc</thingDefs>
 		<categories>etc</categories>
 		<disallowedCategories>etc</disallowedCategories>
-		etc
+		<!-- etc -->
 	</allowedFilter>
 
 	<!-- Accepts Any, All, Majority, Minority, MajorityOrEqual, MinorityOrEqual, Equal, None, AnyNot,
@@ -215,6 +222,24 @@ contents by using their various filtering fields starting with `allowed` and `fo
 		<li>West</li>
 		<li>East</li>
 	</allowedRotations>
+
+	<!-- how to display the label shown on the map for the building. The default is to display the total
+		count of contained items for buildings with visible contents or more than 3 different items,
+		and otherwise item names along with counts for each of them -->
+	<contentLabelStyle>DEFNAME</contentLabelStyle>
+
+	<!-- deciding when to use this GraphicsDef on a building based on the stuff material its built from
+		-->
+	<stuffFilter>
+		<thingDefs>etc</thingDefs>
+	</stuffFilter>
+
+	<!-- deciding when to use this GraphicsDef on a building based on conditions the building itself has
+		to fulfil on the filter -->
+	<buildingFilter>
+		<allowedQualities>Awful~Legendary</allowedQualities>
+		<disallowCheaperThan>500</disallowCheaperThan>
+	</buildingFilter>
 
 </AdaptiveStorage.GraphicsDef>
 ----

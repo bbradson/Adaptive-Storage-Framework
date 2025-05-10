@@ -56,6 +56,14 @@ the building. Does not work on corpses, unfortunately.
 <maxDrawSize>(1.0,1.0)</maxDrawSize>
 ----
 
+* A factor on `drawSize` for stored item graphics to apply when having more than one item in a single cell. The default
+is 0.8.
++
+[source,xml]
+----
+<multipleItemsDrawSizeFactor>0.8</multipleItemsDrawSizeFactor>
+----
+
 * The method to use when deciding item offsets. `Default` stacks items of matching defs diagonally, items of varying
 defs in a circle and places weapons horizontally next to each other in alternating heights.
 +
@@ -117,6 +125,16 @@ should be left out to use that one default implementation.
 <workerClass>AdaptiveStorage.ItemGraphicWorker</workerClass>
 ----
 
+
+* Some items like weapons get rotated by 90° when stored. This controls the direction and conditions in a limited
+manner. Supported values are Default, Force, ForceReverse, Ignore and Reverse. The default for adaptive storage
+buildings is Reverse. Vanilla shelves use Default.
++
+[source,xml]
+----
+<rotateInShelvesMode>Reverse</rotateInShelvesMode>
+----
+
 .Click to see the full node described here, with comments. Do not copy everything.
 [%collapsible]
 ====
@@ -134,7 +152,10 @@ should be left out to use that one default implementation.
 		like corpses. Independent from the building. Currently only works for items other than
 		corpses, ironically. -->
 	<maxDrawSize>(1.0,1.0)</maxDrawSize><!-- scale down any item texture that is larger than this -->
-	<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour> <!-- default stacks items of
+	<multipleItemsDrawSizeFactor>0.8</multipleItemsDrawSizeFactor><!-- factor on `drawSize` for
+		stored item graphics to apply when having more than one item in a single cell. The
+		default is 0.8 -->
+	<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour><!-- default stacks items of
 		matching defs diagonally, items of varying defs in a circle and places weapons
 		horizontally next to each other in alternating heights -->
 
@@ -162,6 +183,11 @@ should be left out to use that one default implementation.
 
 	<workerClass>AdaptiveStorage.ItemGraphicWorker</workerClass><!-- The C# class that applies all of
 		the values here. Should be left out to use the default implementation -->
+
+	<rotateInShelvesMode>Reverse</rotateInShelvesMode><!-- Some items like weapons get rotated by 90°
+		when stored. This controls the direction and conditions in a limited manner. Supported
+		values are Default, Force, ForceReverse, Ignore and Reverse. The default for adaptive
+		storage buildings is Reverse. Vanilla shelves use Default -->
 </li>
 ----
 ====
