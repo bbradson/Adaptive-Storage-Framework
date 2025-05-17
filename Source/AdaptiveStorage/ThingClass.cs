@@ -279,7 +279,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		}
 	}
 
-	private void InitializeTemperatureControlConditions()
+	protected virtual void InitializeTemperatureControlConditions()
 	{
 		_temperatureControlConditions.Clear();
 
