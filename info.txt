@@ -10,7 +10,7 @@
 		<li>ETC</li>
 	</targetDefs>
 
-	<!-- storage graphics, required -->
+	<!-- storage graphics, defining what to display for the building when built. optional -->
 	<graphics>
 		<li>
 			<graphicData>
@@ -47,7 +47,7 @@
 							<textureOrientation>South</textureOrientation><!-- for items with south/west/east/north textures, like corpses. Independent from the building. Currently only works for items other than corpses, ironically. -->
 							<maxDrawSize>(1.0,1.0)</maxDrawSize> <!-- scale down any item texture that is larger than this -->
 							<stackBehaviour>Default/Circle/Stack/Weapons</stackBehaviour> <!-- default stacks items of matching defs diagonally, items of varying defs in a circle and places weapons horizontally next to each other in alternating heights -->
-							<stackOffset>(0.0,0.0,0.0)</stackOffset><!-- offset inbetween each stacked item when using Stack as stackBehaviour. Defaults are (0.11,0.004054054,0.24). The middle value can be set to 0 to specify the default too -->
+							<stackOffset>(0.0,0.0,0.0)</stackOffset><!-- offset in between each stacked item when using Stack as stackBehaviour. Defaults are (0.11,0.004054054,0.24). The middle value can be set to 0 to specify the default too -->
 
 							<!-- optionally with different values depending on rotation -->
 							<stackOffsetEast>(0.0,0.0,0.0)</stackOffsetEast>
