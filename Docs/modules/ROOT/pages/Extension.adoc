@@ -107,8 +107,10 @@ affect the architect tab and blueprints.
 
 * Changing temperature of stored items, to prevent rotting, and other deterioration effects. Use-cases include cooling
 down items in a fridge and heating up eggs in an incubator. Having an optional power comp automatically causes these to
-require power. They work without power too. Expected are positive numbers for offsets, but it is technically possible to
-reverse their behaviour through negative values too.
+require power, CompRefuelable adds a fuel requirement, CompFlickable adds flicking support. `requiresPower`,
+`requiresSwitchOn` and `requiresFuel` can be set to false to ignore the relevant comp, and do nothing when not having
+those comps. Expected are positive numbers for offsets, but it is technically possible to reverse their behaviour
+through negative values too.
 +
 [source,xml]
 ----
@@ -117,6 +119,10 @@ reverse their behaviour through negative values too.
 				<heatingOffset>0.0</heatingOffset>
 				<coolingMin>NegativeInfinity</coolingMin>
 				<heatingMax>PositiveInfinity</heatingMax>
+
+				<requiresPower>true</requiresPower>
+				<requiresSwitchOn>true</requiresSwitchOn>
+				<requiresFuel>true</requiresFuel>
 			</temperature>
 ----
 +
@@ -216,6 +222,12 @@ if (temperature > coolingMin)
 					down to -->
 				<heatingMax>PositiveInfinity</heatingMax><!-- max temperature to heat up
 					to -->
+				<requiresPower>true</requiresPower><!-- optional override to ignore power
+					comp when available -->
+				<requiresSwitchOn>true</requiresSwitchOn><!-- optional override to ignore
+					comp flickable when available -->
+				<requiresFuel>true</requiresFuel><!-- optional override to ignore comp
+					refuelable when available -->
 			</temperature>
 		</li>
 	</modExtensions>

@@ -6,6 +6,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using AdaptiveStorage.Fishery;
 using AdaptiveStorage.ModCompatibility;
 
 namespace AdaptiveStorage;
@@ -195,7 +196,34 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 
 	public CompQuality? CompQuality { get; private set; }
 
-	public CompPowerTrader? CompPowerTrader { get; private set; }
+	private Func<bool>[] _temperatureControlConditions = [];
+
+	public event Func<bool> TemperatureControlConditions
+	{
+		add => _temperatureControlConditions = [.._temperatureControlConditions, value];
+		remove
+		{
+			using var conditions = _temperatureControlConditions.ToPooledList();
+			
+			if (conditions.Remove(value))
+				_temperatureControlConditions = conditions.ToArray();
+		}
+	}
+
+	public bool SatisfiesTemperatureControlConditions
+	{
+		get
+		{
+			var conditions = _temperatureControlConditions;
+			for (var i = 0; i < conditions.Length; i++)
+			{
+				if (!conditions[i]())
+					return false;
+			}
+
+			return true;
+		}
+	}
 
 	public QualityCategory QualityCategory => CompQuality?.Quality ?? QualityCategory.Normal;
 
@@ -227,7 +255,8 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			Extension = def.GetModExtension<Extension>();
 			Size = def.Size;
 			CompQuality = GetComp<CompQuality>();
-			CompPowerTrader = GetComp<CompPowerTrader>();
+			
+			InitializeTemperatureControlConditions();
 			InitializeMaxItemsByCell();
 			TotalSlots = _maxItemsByCell.Sum();
 			CurrentSlotLimit = _currentSlotLimit;
@@ -248,6 +277,23 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		{
 			Log.Error(ex.ToString());
 		}
+	}
+
+	private void InitializeTemperatureControlConditions()
+	{
+		_temperatureControlConditions.Clear();
+
+		if (Extension is not { temperature: { } temperature })
+			return;
+		
+		if (temperature.requiresPower && GetComp<CompPowerTrader>() is { } compPowerTrader)
+			TemperatureControlConditions += () => compPowerTrader.PowerOn;
+
+		if (temperature.requiresSwitchOn && GetComp<CompFlickable>() is { } compFlickable)
+			TemperatureControlConditions += () => compFlickable.SwitchIsOn;
+
+		if (temperature.requiresFuel && GetComp<CompRefuelable>() is { } compRefuelable)
+			TemperatureControlConditions += () => compRefuelable.HasFuel;
 	}
 
 	private void NotifyReceivedThing(Thing thing, StorageCell cell) => ReceivedThing?.Invoke(thing);
@@ -699,7 +745,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		Extension = def.GetModExtension<Extension>();
 		Size = def.Size;
 		CompQuality = GetComp<CompQuality>();
-		CompPowerTrader = GetComp<CompPowerTrader>();
+		InitializeTemperatureControlConditions();
 		_fixedStorageSettings = PrepareFixedStorageSettings();
 		Renderer!.Notify_DefsHotReloaded();
 		_godModeGizmos = new(this);

@@ -46,5 +46,10 @@ public class Extension : DefModExtension
 			heatingOffset,
 			coolingMin = float.NegativeInfinity,
 			heatingMax = float.PositiveInfinity;
+
+		public bool
+			requiresPower = true,
+			requiresSwitchOn = true,
+			requiresFuel = true;
 	}
 }

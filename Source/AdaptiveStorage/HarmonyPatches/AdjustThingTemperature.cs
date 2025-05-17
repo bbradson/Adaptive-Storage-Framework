@@ -25,7 +25,7 @@ public static class AdjustThingTemperature
 		if (__instance.StoringAdaptiveStorage() is
 		{
 			Extension.temperature: { } temperatureProperties,
-			CompPowerTrader: not { PowerOn: false }
+			SatisfiesTemperatureControlConditions: true
 		})
 		{
 			__result = GetNewTemperature(__result, temperatureProperties);
