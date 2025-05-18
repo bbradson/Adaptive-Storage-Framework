@@ -177,6 +177,6 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 		Scribe_Values.Look(ref _contentLabelStyleName, nameof(ContentLabelStyle));
 		Scribe_Values.Look(ref _hideLabelsUntilMouseOver, nameof(HideLabelsUntilMouseOver));
 		Scribe_Values.Look(ref _hideLabelsWhenZoomedOut, nameof(HideLabelsWhenZoomedOut), true);
-		Scribe_Values.Look(ref _labelHidingMaxZoomLevel, nameof(LabelHidingMaxZoomLevel));
+		Scribe_Values.Look(ref _labelHidingMaxZoomLevel, nameof(LabelHidingMaxZoomLevel), 1);
 	}
 }
