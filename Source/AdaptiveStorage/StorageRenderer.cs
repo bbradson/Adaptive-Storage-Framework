@@ -120,7 +120,29 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public bool AnyPrintDatasDirty { get; private set; } = true;
 
-	public bool BuildingGraphicsDirty { get; set; } = true;
+	public bool BuildingGraphicsDirty
+	{
+		get => _buildingGraphicsDirty || ParentStatsDirty;
+		set
+		{
+			_buildingGraphicsDirty = value;
+			var parent = Parent;
+			_previousColorOne = parent.DrawColor;
+			_previousColorTwo = parent.DrawColorTwo;
+		}
+	}
+
+	private bool ParentStatsDirty // TODO: Move into GraphicsDefSelector
+		=> Parent is var parent
+			&& (parent.DrawColor != _previousColorOne
+				|| parent.DrawColorTwo != _previousColorTwo
+				|| (CurrentGraphicVariation is { buildingFilter: { } filter } && !filter.Allows(parent)));
+
+	private bool _buildingGraphicsDirty = true;
+	
+	private Color
+		_previousColorOne,
+		_previousColorTwo;
 
 	public StorageRenderer(ThingClass parent, ThingCollection thingCollection)
 	{
