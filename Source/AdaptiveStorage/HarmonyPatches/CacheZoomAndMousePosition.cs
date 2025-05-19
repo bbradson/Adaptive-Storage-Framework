@@ -4,6 +4,8 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 
 namespace AdaptiveStorage.HarmonyPatches;
@@ -17,8 +19,13 @@ public static class CacheZoomAndMousePosition
 		var codes = instructions.ToList();
 		var cameraDriverMethod
 			= AccessTools.DeclaredPropertyGetter(typeof(CameraDriver), nameof(CameraDriver.CurrentViewRect));
+		var cameraDriverReturnType = cameraDriverMethod.ReturnType;
 
-		var targetIndex = codes.FindIndex(code => code.Calls(cameraDriverMethod));
+		var targetIndex = codes.FindIndex(code
+			=> (code.opcode == OpCodes.Call || code.opcode == OpCodes.Callvirt)
+			&& code.operand is MethodInfo method
+			&& method.ReturnType == cameraDriverReturnType);
+		
 		if (targetIndex > 0)
 		{
 			targetIndex++;
