@@ -137,7 +137,9 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 			var cameraZoomRangeIndex = Array.IndexOf(_cameraZoomRangeSteps, _labelHidingMaxZoomLevel);
 			listing.CollectionSlider(_cameraZoomRangeSteps, ref cameraZoomRangeIndex,
 				Strings.Translated.ASF_MaxZoomLevelSetting, Strings.Translated.ASF_MaxZoomLevelDescription,
-				static zoomLevel => GetZoomLevelValue(zoomLevel).ToString());
+				static zoomLevel => Current.CameraDriver is var driver && driver != null && driver.config is { } config
+					? GetZoomLevelValue(zoomLevel, config.sizeRange).ToString()
+					: string.Empty);
 			_labelHidingMaxZoomLevel = _cameraZoomRangeSteps[cameraZoomRangeIndex];
 		}
 
