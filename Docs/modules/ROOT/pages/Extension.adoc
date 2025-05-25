@@ -117,8 +117,8 @@ through negative values too.
 			<temperature>
 				<coolingOffset>0.0</coolingOffset>
 				<heatingOffset>0.0</heatingOffset>
-				<coolingMin>NegativeInfinity</coolingMin>
-				<heatingMax>PositiveInfinity</heatingMax>
+				<coolingMin>-Infinity</coolingMin>
+				<heatingMax>+Infinity</heatingMax>
 
 				<requiresPower>true</requiresPower>
 				<requiresSwitchOn>true</requiresSwitchOn>
@@ -218,9 +218,9 @@ if (temperature > coolingMin)
 					-->
 				<heatingOffset>0.0</heatingOffset><!-- offset to heat contained items by
 					-->
-				<coolingMin>NegativeInfinity</coolingMin><!-- min temperature to cool
+				<coolingMin>-Infinity</coolingMin><!-- min temperature to cool
 					down to -->
-				<heatingMax>PositiveInfinity</heatingMax><!-- max temperature to heat up
+				<heatingMax>+Infinity</heatingMax><!-- max temperature to heat up
 					to -->
 				<requiresPower>true</requiresPower><!-- optional override to ignore power
 					comp when available -->
