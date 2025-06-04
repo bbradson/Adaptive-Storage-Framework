@@ -21,6 +21,9 @@ A: Yes! LWM is compatible and will not interfere with any of our features, in fa
 Q: Is this compatible with [insert storage mod here]?  
 A: ASF only adds extra functionalities to be used. It doesn’t alter already existing features by itself, especially not making any changes to haul AI or similar. Almost all of its code is about rendering and UI. It should be compatible with most mods out there.  
 Multiplayer, Combat Extended, Vanilla Expanded, Pick Up And Haul are definitely compatible. Performance mods are compatible too.  
+
+Q: Does this require a new save?  
+A: The framework and any mods adding buildings are safe to add at any point midgame. Removal of building adding mods is only safe when either having absolutely no buildings from the mod to remove placed, or when keeping the framework. Then save and load that new save to automatically clear out leftover references to buildings. The framework is safe to remove whenever having nothing depending on it in a game.  
   
 Q: How do I tweak storage stats?  
 A: Unlike deep storage, this doesn't have a custom made settings menu only for buildings made with the mod. It is instead compatible with [RIMMSqol](https://steamcommunity.com/sharedfiles/filedetails/?id=1084452457) however. Every storage building can have the majority of its stats freely adjusted there.  
