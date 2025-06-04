@@ -43,13 +43,18 @@ public static class InspectTabUtility
 	public static void TryOpen(ISelectable selectable) // for automatic tab opening, similar to LWM's
 		// https://github.com/lilwhitemouse/RimWorld-LWM.DeepStorage/blob/master/DeepStorage/Deep_Storage_ITab.cs#L237-L306
 	{
-		if (!AdaptiveStorageFrameworkSettings.AutomaticallyOpenContentsTab || Find.Selector.NumSelected > 1)
+		if (!AdaptiveStorageFrameworkSettings.AutomaticallyOpenContentsTab
+			|| Find.Selector.NumSelected > 1
+			|| selectable.GetInspectTabs() is not { } inspectTabs)
+		{
 			return;
+		}
 
-		using var tabs = selectable.GetInspectTabs().ToPooledList();
+		using var tabs = inspectTabs.ToPooledList();
 
-		if (tabs.Exists(static tab
-			=> InspectPaneUtility.IsOpen(tab, (MainTabWindow_Inspect)MainButtonDefOf.Inspect.TabWindow)))
+		if (tabs.Count == 0
+			|| tabs.Exists(static tab
+				=> InspectPaneUtility.IsOpen(tab, (MainTabWindow_Inspect)MainButtonDefOf.Inspect.TabWindow)))
 		{
 			return;
 		}
