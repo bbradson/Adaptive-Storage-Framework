@@ -3,16 +3,16 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Reflection;
 using System.Text;
 using AdaptiveStorage.Fishery;
 using AdaptiveStorage.Fishery.Pools;
-using HarmonyLib;
 
 namespace AdaptiveStorage;
 
 public static class InspectStringUtility
 {
-	public static string GetString(Building_Storage building)
+	public static unsafe string GetString(Building_Storage building)
 	{
 		var text = _thingWithCompsGetInspectString(building);
 
@@ -157,8 +157,15 @@ public static class InspectStringUtility
 #endif
 	}
 
-	private static readonly Func<ThingWithComps, string> _thingWithCompsGetInspectString
-		= AccessTools.MethodDelegate<Func<ThingWithComps, string>>(
-			AccessTools.DeclaredMethod(typeof(ThingWithComps), nameof(ThingWithComps.GetInspectString)),
-			virtualCall: false);
+	private static readonly unsafe delegate*<ThingWithComps, string> _thingWithCompsGetInspectString
+		= (typeof(ThingWithComps).GetMethod(nameof(ThingWithComps.GetInspectString),
+				BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+			?? throw new MissingMethodException("Failed to find 'ThingWithComps.GetInspectString'"))
+		.GetFunctionPointer<ThingWithComps, string>();
+
+	// Broken as of Harmony 2.3.4 - 2.3.6. It does not support Func types there.
+	// private static readonly Func<ThingWithComps, string> _thingWithCompsGetInspectString
+	// 	= AccessTools.MethodDelegate<Func<ThingWithComps, string>>(
+	// 		AccessTools.DeclaredMethod(typeof(ThingWithComps), nameof(ThingWithComps.GetInspectString)),
+	// 		virtualCall: false);
 }
