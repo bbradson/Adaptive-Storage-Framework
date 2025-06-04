@@ -4,7 +4,9 @@
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
 using AdaptiveStorage.Fishery.Pools;
+#if V1_4
 using AdaptiveStorage.ModCompatibility;
+#endif
 
 namespace AdaptiveStorage;
 
@@ -63,6 +65,7 @@ public static class LegacyStorageUtility
 
 	public static int TotalSlots(this object? obj)
 	{
+		// ReSharper disable once UsePatternMatching
 		var thing = obj as Thing;
 
 		if (thing != null)
@@ -73,15 +76,28 @@ public static class LegacyStorageUtility
 				return 0;
 		}
 
-		if (obj is not ISlotGroupParent slotGroup)
+		if (obj is not ISlotGroupParent
+		{
+			Map: { }
+#if !V1_4
+			map
+#endif
+		} slotGroup)
+		{
 			return 0;
+		}
 
-		return slotGroup.AllSlotCellsList().Count
+		return slotGroup.AllSlotCellsList()
+#if !V1_4
+			.Sum(map, static (map, cell) => cell.GetMaxItemsAllowedInCell(map));
+#else
+				.Count
 			* (thing != null
 				? LWM.Active && LWM.GetCompProperties(thing.def) is { } lwmProps
 					? LWM.GetMaxStacksPerCell(lwmProps)
 					: Math.Max(thing is Building building ? building.MaxItemsInCell : 1,
 						thing.def.building?.maxItemsInCell ?? 1)
 				: 1);
+#endif
 	}
 }

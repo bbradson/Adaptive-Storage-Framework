@@ -273,6 +273,26 @@ public static class CollectionExtensions
 		return result;
 	}
 
+	public static int Sum<TContext, TElement>(this List<TElement> list, TContext context, Func<TContext, TElement, int> selector)
+	{
+		var result = 0;
+		list.UnwrapReadOnlyArray(out var array, out var count);
+		while (--count >= 0)
+			result += selector(context, array.UnsafeLoad(count));
+
+		return result;
+	}
+
+	public static int Sum<TContext, TElement>(this in ReadOnlySpan<TElement> span, TContext context, Func<TContext, TElement, int> selector)
+	{
+		var result = 0;
+		ref var anchor = ref span.DangerousGetPinnableReference();
+		for (var i = span.Length; --i >= 0;)
+			result += selector(context, Unsafe.Add(ref anchor, i));
+
+		return result;
+	}
+
 	public static int Count(this in ReadOnlySpan<int> span, int element)
 	{
 		var result = 0;

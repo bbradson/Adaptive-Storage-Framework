@@ -71,6 +71,16 @@ public static class StorageLimit
 		return codes;
 	}
 
+	// Replacing edificeGrid with haulDestinationManager like this would allow use of non-edifice buildings for storage.
+	// Likely to conflict with other mods though.
+	// public static int GetMaxItemsAllowedInCell(IntVec3 c, Map map)
+	// 	=> map.haulDestinationManager.SlotGroupAt(c)?.parent switch
+	// 	{
+	// 		ThingClass adaptive => adaptive.GetMaxItemsForCell(c),
+	// 		Building building => building.MaxItemsInCell,
+	// 		_ => 1
+	// 	};
+
 	private static bool Assert(bool predicate, string errorText)
 	{
 		if (predicate)
