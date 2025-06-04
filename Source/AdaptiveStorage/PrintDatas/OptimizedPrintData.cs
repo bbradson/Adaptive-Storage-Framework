@@ -247,7 +247,10 @@ public class OptimizedPrintData : PrintData
 	public static HashSet<Type> CompatibleThingTypes { get; } =
 	[
 		..typeof(Thing).WithThingSubclassesNotOverridingPrintOrDraw(),
-		..typeof(ThingWithComps).WithThingSubclassesNotOverridingPrintOrDraw()
+		..typeof(ThingWithComps).WithThingSubclassesNotOverridingPrintOrDraw(),
+#if !V1_4
+		..typeof(Book).WithThingSubclassesNotOverridingPrintOrDraw()
+#endif
 	];
 	
 	public new class Factory : PrintData.Factory
