@@ -2238,7 +2238,7 @@ public static class FishTranspiler
 		Guard.IsNotNull(predicate);
 		Guard.IsNotNull(instructionToInsert);
 
-		return instructions.InsertBefore(predicate, new[] { instructionToInsert }, throwOnFailure);
+		return instructions.InsertBefore(predicate, [instructionToInsert], throwOnFailure);
 	}
 
 	public static CodeInstructions InsertBefore(this CodeInstructions instructions,
@@ -2278,7 +2278,7 @@ public static class FishTranspiler
 		Guard.IsNotNull(predicate);
 		Guard.IsNotNull(instructionToInsert);
 
-		return instructions.InsertAfter(predicate, new[] { instructionToInsert }, throwOnFailure);
+		return instructions.InsertAfter(predicate, [instructionToInsert], throwOnFailure);
 	}
 
 	public static CodeInstructions InsertAfter(this CodeInstructions instructions, Predicate<CodeInstruction> predicate,
@@ -2318,7 +2318,7 @@ public static class FishTranspiler
 		Guard.IsNotNull(predicate);
 		Guard.IsNotNull(replacement);
 
-		return instructions.Replace(predicate, c => new[] { replacement(c) }, throwOnFailure);
+		return instructions.Replace(predicate, c => [replacement(c)], throwOnFailure);
 	}
 
 	public static CodeInstructions Replace(this CodeInstructions instructions, Predicate<CodeInstruction> predicate,
@@ -2358,7 +2358,7 @@ public static class FishTranspiler
 		Guard.IsNotNull(position);
 		Guard.IsNotNull(replacement);
 
-		return instructions.ReplaceAt(position, c => new[] { replacement(c) }, throwOnFailure);
+		return instructions.ReplaceAt(position, c => [replacement(c)], throwOnFailure);
 	}
 
 	public static CodeInstructions ReplaceAt(this CodeInstructions instructions,

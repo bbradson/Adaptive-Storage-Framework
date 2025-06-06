@@ -33,29 +33,29 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public int CurrentGraphicIndex
 	{
-		get => _currentGraphicIndex;
+		get;
 		set
 		{
-			if (_currentGraphicIndex == value)
+			if (field == value)
 				return;
 
-			_currentGraphicIndex = value;
+			field = value;
 			CurrentGraphicChanged?.Invoke();
 		}
-	}
+	} = -1;
 
 	public int CurrentVariationIndex
 	{
-		get => _currentVariationIndex;
+		get;
 		set
 		{
-			if (_currentVariationIndex == value)
+			if (field == value)
 				return;
 
-			_currentVariationIndex = value;
+			field = value;
 			CurrentGraphicChanged?.Invoke();
 		}
-	}
+	} = -1;
 
 	[MemberNotNull(nameof(CurrentVariationGraphics))]
 	public GraphicsDef? CurrentGraphicVariation { get; set; }
@@ -111,10 +111,7 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	private readonly IntFishTable<PrintData> _printDatasByThing = [];
 
-	private int
-		_currentVariationIndex = -1,
-		_currentGraphicIndex = -1,
-		_lastMapMeshDirtyFrame = -1;
+	private int _lastMapMeshDirtyFrame = -1;
 
 	private Thing? _previousSpawnedParent;
 
@@ -122,15 +119,15 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	public bool BuildingGraphicsDirty
 	{
-		get => _buildingGraphicsDirty || ParentStatsDirty;
+		get => field || ParentStatsDirty;
 		set
 		{
-			_buildingGraphicsDirty = value;
+			field = value;
 			var parent = Parent;
 			_previousColorOne = parent.DrawColor;
 			_previousColorTwo = parent.DrawColorTwo;
 		}
-	}
+	} = true;
 
 	private bool ParentStatsDirty // TODO: Move into GraphicsDefSelector
 		=> Parent is var parent
@@ -138,8 +135,6 @@ public class StorageRenderer : ITransformable.ITransformable
 				|| parent.DrawColorTwo != _previousColorTwo
 				|| (CurrentGraphicVariation is { buildingFilter: { } filter } && !filter.Allows(parent)));
 
-	private bool _buildingGraphicsDirty = true;
-	
 	private Color
 		_previousColorOne,
 		_previousColorTwo;
@@ -234,8 +229,7 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	private void DynamicDrawPhaseOnItems(List<PrintData> printDatas, DrawPhase phase, in TransformData transformData)
 		=> ForEachAtItemBase(printDatas, phase, transformData,
-			static (PrintData data, DrawPhase phase, in TransformData transform)
-				=> data.DynamicDrawPhaseAt(phase, transform));
+			static (data, phase, in transform) => data.DynamicDrawPhaseAt(phase, transform));
 #endif
 
 	public virtual void DrawAt(in TransformData transformData)
@@ -268,8 +262,7 @@ public class StorageRenderer : ITransformable.ITransformable
 	}
 
 	private void DrawItems(List<PrintData> printDatas, in TransformData transformData)
-		=> ForEachAtItemBase(printDatas, 0, transformData,
-			static (PrintData data, int _, in TransformData transform) => data.DrawAt(transform));
+		=> ForEachAtItemBase(printDatas, 0, transformData, static (data, _, in transform) => data.DrawAt(transform));
 
 	private void ForEachAtItemBase<T>(List<PrintData> printDatas, T context, in TransformData transformData,
 		PrintAction<T> action)
@@ -336,7 +329,7 @@ public class StorageRenderer : ITransformable.ITransformable
 
 	private void PrintItems(List<PrintData> printDatas, SectionLayer layer, in TransformData transformData)
 		=> ForEachAtItemBase(printDatas, layer, transformData,
-			static (PrintData data, SectionLayer layer, in TransformData transform) => data.PrintAt(layer, transform));
+			static (data, layer, in transform) => data.PrintAt(layer, transform));
 
 	private void PrintBuilding(SectionLayer layer, in TransformData transform)
 	{

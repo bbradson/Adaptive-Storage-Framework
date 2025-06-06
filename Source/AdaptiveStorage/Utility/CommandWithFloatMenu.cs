@@ -3,8 +3,6 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
-using System.Linq;
-
 namespace AdaptiveStorage.Utility;
 
 public class CommandWithFloatMenu : Command_Action
@@ -13,7 +11,7 @@ public class CommandWithFloatMenu : Command_Action
 
 	public Func<IEnumerable<FloatMenuOption>>
 		floatMenuOptionsGetter,
-		floatMenuOptionsInitializer = static () => Enumerable.Empty<FloatMenuOption>();
+		floatMenuOptionsInitializer = static () => [];
 
 	public override IEnumerable<FloatMenuOption> RightClickFloatMenuOptions => floatMenuOptionsGetter();
 

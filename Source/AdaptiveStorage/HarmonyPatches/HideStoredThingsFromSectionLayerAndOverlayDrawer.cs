@@ -13,11 +13,11 @@ namespace AdaptiveStorage.HarmonyPatches;
 public static class HideStoredThingsFromSectionLayerAndOverlayDrawer
 {
 	public static IEnumerable<MethodBase> TargetMethods { [HarmonyTargetMethods] get; }
-		= new[]
-		{
+		=
+		[
 			AccessTools.Method(typeof(SectionLayer_ThingsGeneral), nameof(SectionLayer_ThingsGeneral.TakePrintFrom)),
 			AccessTools.Method(typeof(OverlayDrawer), nameof(OverlayDrawer.RenderForbiddenOverlay))
-		};
+		];
 
 	[HarmonyPrefix]
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]

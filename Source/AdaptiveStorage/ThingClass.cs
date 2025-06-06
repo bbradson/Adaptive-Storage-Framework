@@ -229,7 +229,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 
 	public int CellCount => _maxItemsByCell.Length;
 
-	private int[] _maxItemsByCell = Array.Empty<int>();
+	private int[] _maxItemsByCell = [];
 
 	private int
 		_cachedLabelHitPoints = -69,
@@ -338,7 +338,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 		}
 		else
 		{
-			newGUIOverlayLabels = Array.Empty<string>();
+			newGUIOverlayLabels = [];
 		}
 
 		return _cachedGUIOverlayLabels = newGUIOverlayLabels;

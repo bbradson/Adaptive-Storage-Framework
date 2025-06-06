@@ -28,13 +28,13 @@ public class ContentsITab : ITab_ContentsBase
 			var currentSelObjects = AllSelObjects;
 			if (currentSelObjects._version != _selObjectsVersion)
 			{
-				UpdateSelectedStorages(_selectedStorages);
+				UpdateSelectedStorages(field);
 				_selObjectsVersion = currentSelObjects._version;
 			}
 
-			return _selectedStorages;
+			return field;
 		}
-	}
+	} = [];
 
 	public override IList<Thing> container
 	{
@@ -80,7 +80,6 @@ public class ContentsITab : ITab_ContentsBase
 	// protected float _truncatedLabelCacheWidth;
 
 	private int _selObjectsVersion = -3;
-	private readonly List<object> _selectedStorages = [];
 
 	public ContentsITab()
 	{
@@ -310,7 +309,7 @@ public class ContentsITab : ITab_ContentsBase
 			if (Mouse.IsOver(rect))
 				DrawHighlightTexture(rect);
 
-			if (thingDef.DrawMatSingle != null && thingDef.DrawMatSingle.mainTexture != null)
+			if (thingDef.DrawMatSingle is var mat && mat && mat.mainTexture)
 				Widgets.ThingIcon(new(4f, curY, ThingIconSize, ThingIconSize), thing);
 
 			DrawMassLabel(mass, ref rect);

@@ -783,8 +783,9 @@ public class TreeNode_Editor : TreeNode
 		}
 	}
 
+	[field: MaybeNull]
 	public Type ObjectType
-		=> _objectType
+		=> field
 			??= OwningField is not null
 				? OwningField.FieldType
 				: IsListItem && ListRootObject.GetType() is var type
@@ -878,7 +879,6 @@ public class TreeNode_Editor : TreeNode
 	public EditTreeNodeType NodeType { get; set; }
 	public int IndexToDelete { get; set; } = -1;
 
-	private Type? _objectType;
 	private byte _hasNewButton;
 	private byte _hasDeleteButton;
 }

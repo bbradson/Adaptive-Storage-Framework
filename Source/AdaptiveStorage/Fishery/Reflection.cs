@@ -43,8 +43,7 @@ public static class Reflection
 			PrivateDeclaredInstance = AnyDeclaredInstance & ~SystemBindingFlags.Public,
 			PrivateDeclaredStatic = AnyDeclaredStatic & ~SystemBindingFlags.Public;
 	}
-	
-	private static Assembly[] _allAssemblies = Array.Empty<Assembly>();
+
 	private static object _allAssembliesLock = new();
 
 	public static CodeInstructions GetCodeInstructions(Delegate method, ILGenerator? generator = null)
@@ -76,12 +75,12 @@ public static class Reflection
 		{
 			lock (_allAssembliesLock)
 			{
-				return _allAssemblies.Length == AppDomain.CurrentDomain.GetAssemblies().Length
-					? _allAssemblies
-					: _allAssemblies = AccessTools.AllAssemblies().ToArray();
+				return field.Length == AppDomain.CurrentDomain.GetAssemblies().Length
+					? field
+					: field = AccessTools.AllAssemblies().ToArray();
 			}
 		}
-	}
+	} = [];
 
 	public static Type? Type(string assembly, string typeFullName)
 		=> System.Type.GetType(string.Concat(typeFullName, ", ", assembly));
@@ -299,7 +298,7 @@ public static class Reflection
 	{
 		Guard.IsNotNull(type);
 
-		parameters ??= Array.Empty<Type>();
+		parameters ??= [];
 		var flags = searchForStatic ? AccessTools.all & ~SystemBindingFlags.Instance : AccessTools.all & ~SystemBindingFlags.Static;
 
 		return TryGetConstructor(type, flags, paramTypes => paramTypes.AreAssignableFrom(parameters))

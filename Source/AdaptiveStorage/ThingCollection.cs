@@ -19,9 +19,9 @@ public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, I
 	
 	private readonly ThingClass _parent;
 	private readonly int _parentSizeX, _parentSizeZ;
-	private ThingDef[] _defs = Array.Empty<ThingDef>();
-	private Thing[] _things = Array.Empty<Thing>();
-	private int[] _positions = Array.Empty<int>();
+	private ThingDef[] _defs = [];
+	private Thing[] _things = [];
+	private int[] _positions = [];
 	private readonly IntFishTable<int> _indices = [];
 	private readonly List<int> _cellWiseThingIDNumbers = [];
 	private readonly List<Thing> _cellWiseThings = [];

@@ -3,6 +3,7 @@
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Multiplayer.API;
 
@@ -62,19 +63,18 @@ public class GodModeGizmos(ThingClass parent)
 
 	public class Command_AddStack(ThingClass parent) : Command_Action
 	{
-		private (ThingDef def, FloatMenuOption option)[]? _floatMenuOptionsByDef;
-		private IEnumerable<FloatMenuOption>? _filteredFloatMenuOptions, _unfilteredFloatMenuOptions;
-
+		[field: MaybeNull]
 		private (ThingDef def, FloatMenuOption option)[] FloatMenuOptionsByDef
-			=> _floatMenuOptionsByDef
+			=> field
 				??= parent.GetParentStoreSettings().filter.AllowedThingDefs
 					.Select(def => (def,
 						new FloatMenuOption(def.label, () => GenSpawn.Spawn(ThingMakerUtility.Make(def)
 							.TryMakeMinified(), parent.FreeMapCells.First(), parent.Map))))
 					.ToArray();
 
+		[field: MaybeNull]
 		private IEnumerable<FloatMenuOption> FilteredFloatMenuOptions
-			=> _filteredFloatMenuOptions ??= InitializeFilteredFloatMenuOptions();
+			=> field ??= InitializeFilteredFloatMenuOptions();
 
 		private IEnumerable<FloatMenuOption> InitializeFilteredFloatMenuOptions()
 		{
@@ -85,8 +85,9 @@ public class GodModeGizmos(ThingClass parent)
 				.Select(static tuple => tuple.option);
 		}
 
+		[field: MaybeNull]
 		private IEnumerable<FloatMenuOption> UnfilteredFloatMenuOptions
-			=> _unfilteredFloatMenuOptions ??= FloatMenuOptionsByDef.Select(static tuple => tuple.option);
+			=> field ??= FloatMenuOptionsByDef.Select(static tuple => tuple.option);
 
 		public override IEnumerable<FloatMenuOption> RightClickFloatMenuOptions
 			=> !parent.AnyFreeSlots

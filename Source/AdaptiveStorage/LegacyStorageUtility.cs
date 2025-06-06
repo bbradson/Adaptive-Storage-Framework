@@ -34,7 +34,7 @@ public static class LegacyStorageUtility
 			}
 		}
 
-		return list.Count > 0 ? list.ToArray() : Array.Empty<Thing>();
+		return list.Count > 0 ? list.ToArray() : [];
 	}
 
 	private static void AddThingsFromSlotGroup(ISlotGroupParent slotGroupParent, List<Thing> list)

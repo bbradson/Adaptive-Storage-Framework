@@ -8,16 +8,11 @@ using AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 namespace AdaptiveStorage.PrintDatas;
 
+[PublicAPI]
 public abstract class PrintData : ITransformable.ITransformable
 {
-	private Vector3 _drawOffset;
-	private Rot4 _thingRotation = Rot4.Invalid;
+	private Vector2 _maxDrawSize = Vector2.positiveInfinity;
 
-	private Vector2
-		_drawScale = Vector2.one,
-		_maxDrawSize = Vector2.positiveInfinity;
-
-	private float _extraRotation;
 	private ShadowData? _shadowData;
 	
 	public Thing Thing { get; protected set; }
@@ -48,16 +43,16 @@ public abstract class PrintData : ITransformable.ITransformable
 
 	public Vector2 DrawScale
 	{
-		get => _drawScale;
+		get;
 		set
 		{
-			if (value == _drawScale)
+			if (value == field)
 				return;
-			
-			_drawScale = value;
+
+			field = value;
 			UpdateMatrix();
 		}
-	}
+	} = Vector2.one;
 
 	public Vector2 RotatedDrawScale => ShouldRotateDrawSize ? DrawScale.Rotated() : DrawScale;
 
@@ -73,10 +68,10 @@ public abstract class PrintData : ITransformable.ITransformable
 
 	public Vector3 DrawOffset
 	{
-		get => _drawOffset;
+		get;
 		set
 		{
-			_drawOffset = value;
+			field = value;
 			UpdateMatrix();
 		}
 	}
@@ -94,26 +89,26 @@ public abstract class PrintData : ITransformable.ITransformable
 
 	public Rot4 ThingRotation
 	{
-		get => _thingRotation;
+		get;
 		set
 		{
-			if (value == _thingRotation)
+			if (value == field)
 				return;
 
-			_thingRotation = value;
+			field = value;
 			SetThingRotation(value);
 		}
-	}
+	} = Rot4.Invalid;
 
 	public float ExtraRotation
 	{
-		get => _extraRotation;
+		get;
 		set
 		{
-			if (Mathf.Approximately(value, _extraRotation))
+			if (Mathf.Approximately(value, field))
 				return;
 
-			_extraRotation = value;
+			field = value;
 			UpdateMatrix();
 		}
 	}

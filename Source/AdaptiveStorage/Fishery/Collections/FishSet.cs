@@ -411,7 +411,7 @@ public partial class IntFishSet : ISet<int>, IReadOnlyCollection<int>, ICollecti
 		}
 
 		if (longestTailIndex < 0)
-			return Array.Empty<int>();
+			return [];
 
 		var resultArray = new int[longestTailLength];
 		for (var i = 0;; i++)
