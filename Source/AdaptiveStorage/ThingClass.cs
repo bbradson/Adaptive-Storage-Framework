@@ -259,7 +259,10 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			InitializeTemperatureControlConditions();
 			InitializeMaxItemsByCell();
 			TotalSlots = _maxItemsByCell.Sum();
-			CurrentSlotLimit = _currentSlotLimit;
+			
+			var currentSlotLimit = _currentSlotLimit;
+			_currentSlotLimit = int.MaxValue;
+			CurrentSlotLimit = currentSlotLimit;
 
 			var storedThings = _storedThings = new(this);
 			storedThings.Added += NotifyReceivedThing;
