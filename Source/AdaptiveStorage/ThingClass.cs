@@ -261,7 +261,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 			TotalSlots = _maxItemsByCell.Sum();
 			
 			var currentSlotLimit = _currentSlotLimit;
-			_currentSlotLimit = int.MaxValue;
+			_currentSlotLimit++;
 			CurrentSlotLimit = currentSlotLimit;
 
 			var storedThings = _storedThings = new(this);
