@@ -10,6 +10,7 @@ using System.Threading;
 
 // ReSharper disable InconsistentNaming
 
+// ReSharper disable once CheckNamespace
 namespace AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 /// <summary>

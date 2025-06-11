@@ -1,15 +1,19 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.33209.295
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdaptiveStorage/AdaptiveStorage.1.6", "AdaptiveStorage\AdaptiveStorage.1.6.csproj", "{C86B8F75-1B6F-4F67-9305-2732168A938C}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdaptiveStorage/AdaptiveStorage.1.5", "AdaptiveStorage/AdaptiveStorage.1.5.csproj", "{C0F52CB9-6857-4033-BAD6-62B410ADF253}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AdaptiveStorage/AdaptiveStorage.1.4", "AdaptiveStorage/AdaptiveStorage.1.4.csproj", "{A038654F-7155-4AE5-84B2-2A226C519B59}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITransformable/ITransformable.1.4", "ITransformable/ITransformable.1.4.csproj", "{083ADAB8-90B0-45BF-9AC5-A8E800B24FC6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITransformable/ITransformable.1.6", "ITransformable\ITransformable.1.6.csproj", "{F6C01321-862B-4542-A124-2CCA658056FF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITransformable/ITransformable.1.5", "ITransformable/ITransformable.1.5.csproj", "{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ITransformable/ITransformable.1.4", "ITransformable/ITransformable.1.4.csproj", "{083ADAB8-90B0-45BF-9AC5-A8E800B24FC6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +37,14 @@ Global
 		{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19F353F4-BF71-4FAB-BC9C-95EECFFEB3DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6C01321-862B-4542-A124-2CCA658056FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6C01321-862B-4542-A124-2CCA658056FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6C01321-862B-4542-A124-2CCA658056FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6C01321-862B-4542-A124-2CCA658056FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C86B8F75-1B6F-4F67-9305-2732168A938C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C86B8F75-1B6F-4F67-9305-2732168A938C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C86B8F75-1B6F-4F67-9305-2732168A938C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C86B8F75-1B6F-4F67-9305-2732168A938C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

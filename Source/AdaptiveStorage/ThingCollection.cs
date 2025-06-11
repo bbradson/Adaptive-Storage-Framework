@@ -6,12 +6,13 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
-using AdaptiveStorage.Fishery;
-using AdaptiveStorage.Fishery.Collections;
-using AdaptiveStorage.Fishery.Pools;
 using AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 namespace AdaptiveStorage;
+
+using Fishery;
+using Fishery.Collections;
+using Fishery.Pools;
 
 public class ThingCollection : ThingOwner, IList<Thing>, IReadOnlyList<Thing>, IList<ThingDef>, IReadOnlyList<ThingDef>
 {

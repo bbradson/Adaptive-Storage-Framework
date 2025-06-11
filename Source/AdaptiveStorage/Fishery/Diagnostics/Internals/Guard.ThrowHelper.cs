@@ -4,6 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 
+// ReSharper disable once CheckNamespace
 namespace AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 public partial class Guard
@@ -33,7 +34,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNull<T>(T value, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(T).ToTypeString()}) must be null, was {AssertString(value)} ({value!.GetType().ToTypeString()}).",
+				$"Parameter {AssertString(name)} ({typeof(T).ToTypeString()}) must be null, was {AssertString(value)} ({
+					value!.GetType().ToTypeString()}).",
 				name);
 
 		/// <summary>
@@ -44,7 +46,8 @@ public partial class Guard
 		public static void ThrowArgumentExceptionForIsNull<T>(T? value, string name)
 			where T : struct
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(T?).ToTypeString()}) must be null, was {AssertString(value)} ({typeof(T).ToTypeString()}).",
+				$"Parameter {AssertString(name)} ({typeof(T?).ToTypeString()}) must be null, was {
+					AssertString(value)} ({typeof(T).ToTypeString()}).",
 				name);
 
 		/// <summary>
@@ -63,7 +66,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsOfType<T>(object value, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must be of type {typeof(T).ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must be of type {typeof(T).ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -73,7 +77,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotOfType<T>(object value, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must not be of type {typeof(T).ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must not be of type {typeof(T).ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -82,7 +87,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsOfType(object value, Type type, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must be of type {type.ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must be of type {type.ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -91,7 +97,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotOfType(object value, Type type, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must not be of type {type.ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must not be of type {type.ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -101,7 +108,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsAssignableToType<T>(object value, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must be assignable to type {typeof(T).ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must be assignable to type {typeof(T).ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -111,7 +119,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotAssignableToType<T>(object value, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must not be assignable to type {typeof(T).ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must not be assignable to type {typeof(T).ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -120,7 +129,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsAssignableToType(object value, Type type, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must be assignable to type {type.ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must be assignable to type {type.ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -129,7 +139,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotAssignableToType(object value, Type type, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} must not be assignable to type {type.ToTypeString()}, was {value.GetType().ToTypeString()}.",
+				$"Parameter {AssertString(name)} must not be assignable to type {type.ToTypeString()}, was {
+					value.GetType().ToTypeString()}.",
 				name);
 
 		/// <summary>
@@ -140,7 +151,8 @@ public partial class Guard
 		public static void ThrowArgumentExceptionForIsReferenceEqualTo<T>(string name)
 			where T : class
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(T).ToTypeString()}) must be the same instance as the target object.",
+				$"Parameter {AssertString(name)} ({
+					typeof(T).ToTypeString()}) must be the same instance as the target object.",
 				name);
 
 		/// <summary>
@@ -151,7 +163,8 @@ public partial class Guard
 		public static void ThrowArgumentExceptionForIsReferenceNotEqualTo<T>(string name)
 			where T : class
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(T).ToTypeString()}) must not be the same instance as the target object.",
+				$"Parameter {AssertString(name)} ({
+					typeof(T).ToTypeString()}) must not be the same instance as the target object.",
 				name);
 
 		/// <summary>

@@ -14,7 +14,7 @@ using HarmonyLib;
 namespace AdaptiveStorage.HarmonyPatches;
 
 [HarmonyPatch(typeof(MinifyUtility),
-#if V1_4
+#if !V1_5
 	nameof(MinifyUtility.MakeMinified)
 #else
 	nameof(MinifyUtility.MakeMinified_NewTemp)

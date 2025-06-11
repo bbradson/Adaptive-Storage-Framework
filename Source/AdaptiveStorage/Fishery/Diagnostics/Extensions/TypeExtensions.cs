@@ -5,6 +5,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
+// ReSharper disable once CheckNamespace
 namespace AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 /// <summary>

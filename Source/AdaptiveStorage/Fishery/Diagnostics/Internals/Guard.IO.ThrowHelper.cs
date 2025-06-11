@@ -5,6 +5,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 
+// ReSharper disable once CheckNamespace
 namespace AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 public partial class Guard
@@ -41,7 +42,8 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsAtStartPosition(Stream stream, string name)
 			=> throw new ArgumentException(
-				$"Stream {AssertString(name)} ({stream.GetType().ToTypeString()}) must be at position {AssertString(0)}, was at {AssertString(stream.Position)}.",
+				$"Stream {AssertString(name)} ({stream.GetType().ToTypeString()}) must be at position {
+					AssertString(0)}, was at {AssertString(stream.Position)}.",
 				name);
 	}
 }

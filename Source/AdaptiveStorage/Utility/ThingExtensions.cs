@@ -34,12 +34,22 @@ public static class ThingExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool InMapBounds(this Thing thing)
 	{
+#if V1_4 || V1_5
 		var cellIndices = thing.TryGetMap()?.cellIndices;
 		if (cellIndices is null)
 			return false;
 
 		var position = thing.Position;
 		return ((uint)position.x < (uint)cellIndices.mapSizeX) & ((uint)position.z < (uint)cellIndices.mapSizeZ);
+#else
+		var map = thing.TryGetMap();
+		if (map is null)
+			return false;
+
+		var cellIndices = map.cellIndices;
+		var position = thing.Position;
+		return ((uint)position.x < (uint)cellIndices.sizeX) & ((uint)position.z < (uint)cellIndices.sizeZ);
+#endif
 	}
 
 	public static TextureAtlasGroup GetAtlasGroup(this Thing thing) => thing.def.category.ToAtlasGroup();

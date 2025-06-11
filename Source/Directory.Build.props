@@ -32,6 +32,8 @@
 		<Publicize Include="Assembly-CSharp:RimWorld.Planet.CaravanThingsTabUtility.DrawMass" />
 		<Publicize Include="Assembly-CSharp:Verse.CellIndices.mapSizeX" />
 		<Publicize Include="Assembly-CSharp:Verse.CellIndices.mapSizeZ" />
+		<Publicize Include="Assembly-CSharp:Verse.CellIndices.sizeX" />
+		<Publicize Include="Assembly-CSharp:Verse.CellIndices.sizeZ" />
 		<Publicize Include="Assembly-CSharp:Verse.DefDatabase`1.SetIndices" />
 		<Publicize Include="Assembly-CSharp:Verse.Graphic.AngleFromRot" />
 		<Publicize Include="Assembly-CSharp:Verse.Graphic_Collection.MultiGraphicType" />
@@ -70,6 +72,7 @@
 		<Publicize Include="mscorlib:System.Collections.Generic.List`1._version" />
 		<Publicize Include="mscorlib:System.Collections.Generic.List`1.EnsureCapacity" />
 		<Publicize Include="mscorlib:System.String.m_firstChar" />
+		<Publicize Include="mscorlib:System.String._firstChar" />
 		<Publicize Include="mscorlib:System.Runtime.CompilerServices.Unsafe" />
 		<Publicize Include="mscorlib:System.Reflection.Emit.Label.label" />
 		<Publicize Include="mscorlib:System.Runtime.CompilerServices.JitHelpers.UnsafeEnumCast" />

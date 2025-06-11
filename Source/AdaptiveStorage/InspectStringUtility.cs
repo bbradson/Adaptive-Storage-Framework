@@ -5,10 +5,11 @@
 
 using System.Reflection;
 using System.Text;
-using AdaptiveStorage.Fishery;
-using AdaptiveStorage.Fishery.Pools;
 
 namespace AdaptiveStorage;
+
+using Fishery;
+using Fishery.Pools;
 
 public static class InspectStringUtility
 {

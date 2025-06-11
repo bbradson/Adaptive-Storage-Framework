@@ -665,7 +665,13 @@ public static class CollectionExtensions
 		if (count < 1)
 			return;
 		
-		list.AddRangeInternal(ref value.m_firstChar, count);
+		list.AddRangeInternal(
+#if V1_4 || V1_5
+			ref value.m_firstChar,
+#else
+			ref value._firstChar,
+#endif
+			count);
 	}
 
 	public static unsafe StringBuilder Append(this StringBuilder builder, ReadOnlySpan<char> span)
@@ -738,6 +744,16 @@ public static class CollectionExtensions
 		list._size++;
 		list._version++;
 	}
+
+#if !V1_4 && !V1_5
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static ref T DangerousGetPinnableReference<T>(this Span<T> span)
+		=> ref Unsafe.AsRef(span.GetPinnableReference());
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static ref T DangerousGetPinnableReference<T>(this ReadOnlySpan<T> span)
+		=> ref Unsafe.AsRef(span.GetPinnableReference());
+#endif
 }
 
 public delegate bool PredicateWithRefContext<TContext, TElement>(ref TContext context, TElement element);

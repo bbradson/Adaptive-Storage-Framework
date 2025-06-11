@@ -4,6 +4,7 @@
 
 using System.Threading.Tasks;
 
+// ReSharper disable once CheckNamespace
 namespace AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 public partial class Guard

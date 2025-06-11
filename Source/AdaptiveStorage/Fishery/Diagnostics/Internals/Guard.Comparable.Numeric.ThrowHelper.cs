@@ -4,6 +4,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 
+// ReSharper disable once CheckNamespace
 namespace AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 public partial class Guard
@@ -16,7 +17,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsCloseTo(int value, int target, uint delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(int).ToTypeString()}) must be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs((double)((long)value - target)))}.",
+				$"Parameter {AssertString(name)} ({typeof(int).ToTypeString()}) must be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs((double)((long)value - target)))}.",
 				name);
 
 		/// <summary>
@@ -25,7 +28,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotCloseTo(int value, int target, uint delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(int).ToTypeString()}) must not be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs((double)((long)value - target)))}.",
+				$"Parameter {AssertString(name)} ({typeof(int).ToTypeString()}) must not be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs((double)((long)value - target)))}.",
 				name);
 
 		/// <summary>
@@ -34,7 +39,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsCloseTo(long value, long target, ulong delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(long).ToTypeString()}) must be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs((decimal)value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(long).ToTypeString()}) must be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs((decimal)value - target))}.",
 				name);
 
 		/// <summary>
@@ -43,7 +50,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotCloseTo(long value, long target, ulong delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(long).ToTypeString()}) must not be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs((decimal)value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(long).ToTypeString()}) must not be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs((decimal)value - target))}.",
 				name);
 
 		/// <summary>
@@ -52,7 +61,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsCloseTo(float value, float target, float delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(float).ToTypeString()}) must be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs(value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(float).ToTypeString()}) must be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs(value - target))}.",
 				name);
 
 		/// <summary>
@@ -61,7 +72,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotCloseTo(float value, float target, float delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(float).ToTypeString()}) must not be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs(value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(float).ToTypeString()}) must not be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs(value - target))}.",
 				name);
 
 		/// <summary>
@@ -70,7 +83,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsCloseTo(double value, double target, double delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(double).ToTypeString()}) must be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs(value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(double).ToTypeString()}) must be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs(value - target))}.",
 				name);
 
 		/// <summary>
@@ -79,7 +94,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotCloseTo(double value, double target, double delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(double).ToTypeString()}) must not be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs(value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(double).ToTypeString()}) must not be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs(value - target))}.",
 				name);
 
 		/// <summary>
@@ -88,7 +105,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsCloseTo(nint value, nint target, nuint delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(nint).ToTypeString()}) must be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs(value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(nint).ToTypeString()}) must be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs(value - target))}.",
 				name);
 
 		/// <summary>
@@ -97,7 +116,9 @@ public partial class Guard
 		[DoesNotReturn]
 		public static void ThrowArgumentExceptionForIsNotCloseTo(nint value, nint target, nuint delta, string name)
 			=> throw new ArgumentException(
-				$"Parameter {AssertString(name)} ({typeof(nint).ToTypeString()}) must not be within a distance of {AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {AssertString(Math.Abs(value - target))}.",
+				$"Parameter {AssertString(name)} ({typeof(nint).ToTypeString()}) must not be within a distance of {
+					AssertString(delta)} from {AssertString(target)}, was {AssertString(value)} and had a distance of {
+						AssertString(Math.Abs(value - target))}.",
 				name);
 	}
 }

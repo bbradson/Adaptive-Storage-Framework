@@ -3,10 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
+// ReSharper disable UseNullableAttributesSupportedByCompiler
 #if V1_2
 using JetBrains.Annotations;
 #endif
 
+// ReSharper disable once CheckNamespace
 namespace AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 /// <summary>
