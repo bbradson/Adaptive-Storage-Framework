@@ -6,7 +6,7 @@
 		<RootNamespace>AdaptiveStorage</RootNamespace>
 		<Authors>Bradson</Authors>
 		<Copyright>Copyright (c) 2023 Bradson</Copyright>
-		<Version>1.2.4</Version>
+		<Version>1.2.5</Version>
 		<DefaultItemExcludes>$(DefaultItemExcludes);obj/**/*.*</DefaultItemExcludes>
 		<BaseIntermediateOutputPath>obj\$(MSBuildProjectName)\$(Configuration)\</BaseIntermediateOutputPath>
 		<MSBuildProjectExtensionsPath>obj\$(MSBuildProjectName)\$(Configuration)\</MSBuildProjectExtensionsPath>

@@ -435,13 +435,63 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 #endif
 
 		Spawning?.Invoke(map, spawnMode);
-		base.SpawnSetup(map, (spawnMode & SpawnMode.RespawningAfterLoad) != 0);
+
+		if (storageGroup is { Map: null })
+			TryFixInvalidStorageGroup(map);
+
+		try
+		{
+			base.SpawnSetup(map, (spawnMode & SpawnMode.RespawningAfterLoad) != 0);
+		}
+		catch (Exception ex)
+		{
+			Log.Error($"Exception caught in vanilla SpawnSetup section of building '{this}' at {Position} on map '{
+				map}':\n{ex}");
+		}
 
 		if ((spawnMode & SpawnMode.PackContents) != 0)
 			UnpackStoredItems(map);
 
 		InitializeStoredThings();
 		PostSpawned?.Invoke(map, spawnMode);
+	}
+
+	private void TryFixInvalidStorageGroup(Map map)
+	{
+		Log.Error($"Loaded building '{this}' at {Position} on map '{map}' with an invalid storage group "
+			+ $"containing a null map. This is likely the result of the map or its groups having been saved "
+			+ $"incorrectly by another mod. Attempting to fix.");
+
+		var mapGroups = map.storageGroups.groups;
+		mapGroups.RemoveAll(static group => group.members.NullOrEmpty());
+
+		for (var i = mapGroups.Count; --i >= 0;)
+		{
+			var loadedGroup = mapGroups[i];
+			var groupMembers = loadedGroup.members;
+
+			var index = groupMembers.FindIndex(member
+				=> member is Building building && building.thingIDNumber == thingIDNumber);
+
+			if (index < 0)
+				continue;
+
+			storageGroup = loadedGroup;
+			loadedGroup.map ??= map;
+			groupMembers[index] = this;
+			
+			ref var groupSettings = ref loadedGroup.settings;
+			if (groupSettings is null)
+			{
+				groupSettings = new(loadedGroup);
+				groupSettings.CopyFrom(((IStorageGroupMember)this).ThingStoreSettings);
+			}
+			
+			break;
+		}
+
+		if (storageGroup.Map is null)
+			storageGroup = null;
 	}
 
 	private void UnpackStoredItems(Map map)

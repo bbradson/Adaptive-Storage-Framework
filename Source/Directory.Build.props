@@ -29,6 +29,8 @@
 		<Publicize Include="Assembly-CSharp:RimWorld.MinifiedThing.get_CrateFrontGraphic" />
 		<Publicize Include="Assembly-CSharp:RimWorld.OverlayDrawer.RenderForbiddenOverlay" />
 		<Publicize Include="Assembly-CSharp:RimWorld.Selector.SelectableObjectsUnderMouse" />
+		<Publicize Include="Assembly-CSharp:RimWorld.StorageGroup.map" />
+		<Publicize Include="Assembly-CSharp:RimWorld.StorageGroup.settings" />
 		<Publicize Include="Assembly-CSharp:RimWorld.Planet.CaravanThingsTabUtility.DrawMass" />
 		<Publicize Include="Assembly-CSharp:Verse.CellIndices.mapSizeX" />
 		<Publicize Include="Assembly-CSharp:Verse.CellIndices.mapSizeZ" />
@@ -53,6 +55,7 @@
 		<Publicize Include="Assembly-CSharp:Verse.PawnRenderer+PreRenderResults" />
 		<Publicize Include="Assembly-CSharp:Verse.PlayDataLoader.ResetStaticDataPost" />
 		<Publicize Include="Assembly-CSharp:Verse.SectionLayer_ThingsGeneral.TakePrintFrom" />
+		<Publicize Include="Assembly-CSharp:Verse.StorageGroupManager.groups" />
 		<Publicize Include="Assembly-CSharp:Verse.Text.tmpTextGUIContent" />
 		<Publicize Include="Assembly-CSharp:Verse.Thing.mapIndexOrState" />
 		<Publicize Include="Assembly-CSharp:Verse.ThingFilter.allowedDefs" />
