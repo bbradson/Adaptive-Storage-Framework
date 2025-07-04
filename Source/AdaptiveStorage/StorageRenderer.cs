@@ -277,13 +277,15 @@ public class StorageRenderer : ITransformable.ITransformable
 	}
 
 	public delegate void PrintAction<T>(PrintData printData, T context, in TransformData transformData);
-	
+
 	public Color GetColorFromSource(ContentColorSource colorSource)
 		=> colorSource switch
 		{
 			ContentColorSource.ColorOne => Parent.DrawColor,
 			ContentColorSource.ColorTwo => Parent.DrawColorTwo,
 			ContentColorSource.White => Color.white,
+			ContentColorSource.Stuff => Parent.Stuff is { } stuff ? Parent.def.GetColorForStuff(stuff) : Color.white,
+			ContentColorSource.GraphicData => Parent.def.graphicData?.color ?? Color.white,
 			_ => ContentColors![(int)colorSource - 1]
 		};
 

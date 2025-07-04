@@ -15,6 +15,8 @@ public enum ContentColorSource
 	ColorTwo = -2,
 	None = -3,
 	White = None,
+	Stuff = -4,
+	GraphicData = -5,
 	First = 1,
 	Second = 2,
 	Third = 3,

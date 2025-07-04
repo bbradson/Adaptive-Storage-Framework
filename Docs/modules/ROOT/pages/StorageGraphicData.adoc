@@ -25,9 +25,13 @@ areas.
 ** Default
 *** Use the color returned outside of the StorageGraphicData, equal to not declaring a colorSource value
 ** ColorOne
-*** Use the building's vanilla colorOne, normally stuff
+*** Use the building's vanilla colorOne, normally stuff or paint colors
 ** ColorTwo
 *** Use the building's vanilla colorTwo, normally that's just white
+** Stuff
+*** Use the building's stuff color
+** GraphicData
+*** Use the color declared in the building's graphicData
 ** None
 *** Return white, essentially leading to no coloring.
 ** First
