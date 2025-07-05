@@ -13,6 +13,7 @@ global using RimWorld;
 global using UnityEngine;
 global using Verse;
 global using CodeInstructions = System.Collections.Generic.IEnumerable<HarmonyLib.CodeInstruction>;
+using HarmonyLib;
 
 namespace AdaptiveStorage;
 
@@ -25,8 +26,20 @@ public static class OnStartup
 		// sw.Start();
 		
 		// TODO: move parts of patching elsewhere. StaticConstructorOnStartup blocks the UI thread
-		
-		AdaptiveStorageFrameworkMod.Harmony.PatchAll(typeof(AdaptiveStorageFrameworkMod).Assembly);
+
+		var harmony = AdaptiveStorageFrameworkMod.Harmony;
+		foreach (var type in AccessTools.GetTypesFromAssembly(typeof(AdaptiveStorageFrameworkMod).Assembly))
+		{
+			try
+			{
+				harmony.CreateClassProcessor(type).Patch();
+			}
+			catch (Exception ex)
+			{
+				Log.Error($"Exception applying patches for type '{
+					type.FullName}'. This is often the result of an outdated game version or mod versions.\n{ex}");
+			}
+		}
 		
 		// sw.Stop();
 		// Log.Message($"Initializing ASF took: {sw.ElapsedMilliseconds} ms"); // less than 100 ms though
