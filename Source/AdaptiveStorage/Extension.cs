@@ -10,7 +10,7 @@ public class Extension : DefModExtension
 {
 	public List<GraphicsDef>? graphics;
 
-	public bool lockStorageSettingsToStuff;
+	public bool lockStorageSettingsToStuff, highlightRoomWhenSelected;
 
 	public LabelFormat labelFormat;
 
@@ -26,16 +26,50 @@ public class Extension : DefModExtension
 
 	public void Initialize(ThingDef parent)
 	{
-		if (graphics is null)
-			return;
-
-		for (var i = graphics.Count; i-- > 0;)
-			graphics[i].targetDefs.AddDistinct(parent);
+		if (graphics != null)
+		{
+			for (var i = graphics.Count; --i >= 0;)
+				graphics[i].targetDefs.AddDistinct(parent);
+		}
 		
 		maxItemsByCell?.Initialize([parent]);
 
 		if (temperature is { coolingOffset: 0f, heatingOffset: 0f })
 			temperature = null;
+
+		ref var blueprintClass = ref parent.building.blueprintClass;
+
+#if !V1_4 && !V1_5
+		if (typeof(Blueprint_StorageWithRoomHighlight).IsAssignableFrom(blueprintClass))
+			highlightRoomWhenSelected = true;
+#endif
+		
+		if (!typeof(Blueprint).IsAssignableFrom(blueprintClass))
+			blueprintClass = typeof(Blueprint);
+	}
+
+	public StorageSettings? TryCreateStuffLockedStorageSettings(Thing thing)
+		=> lockStorageSettingsToStuff && thing.GetStuffToUse() is { } stuff
+			? CreateStuffLockedStorageSettings(stuff)
+			: null;
+
+	public static StorageSettings CreateStuffLockedStorageSettings(ThingDef stuff)
+	{
+		var fixedStorageSettings = new StorageSettings();
+		var filter = fixedStorageSettings.filter = ThingFilter.CreateOnlyEverStorableThingFilter();
+		filter.SetDisallowAll();
+		filter.SetAllow(stuff, true);
+		return fixedStorageSettings;
+	}
+
+	public void TryHighlightRoomWhenSelected(Thing thing)
+	{
+		if (!highlightRoomWhenSelected || Find.Selector.SingleSelectedThing != thing)
+			return;
+
+		var room = thing.GetRoom();
+		if (room is { ProperRoom: true, PsychologicallyOutdoors: false })
+			room.DrawFieldEdges();
 	}
 
 	[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]

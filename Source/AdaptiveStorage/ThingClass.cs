@@ -352,26 +352,13 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	private string UpdateLabelNoCount()
 	{
 		_cachedLabelHitPoints = HitPoints;
-		return _cachedLabel = Stuff is null
-			? base.LabelNoCount
-			: (Extension?.labelFormat ?? LabelFormat.Default) switch
-			{
-				LabelFormat.NoStuff => def.label
-					+ GenLabel.LabelExtras(this,
-#if V1_4
-					1,
-#endif
-						true, true),
-				LabelFormat.StuffAsNoun => (string)Strings.Translated.ThingMadeOfStuffLabel.Formatted(Stuff.label,
-						def.label)
-					+ GenLabel.LabelExtras(this,
-#if V1_4
-						1,
-#endif
-						true, true),
-				LabelFormat.Default => base.LabelNoCount,
-				var labelFormat => throw new($"Invalid LabelFormat: {labelFormat}")
-			};
+		return _cachedLabel = Extension.TryGenerateCustomLabel(this) ?? base.LabelNoCount;
+	}
+
+	public override void DrawExtraSelectionOverlays()
+	{
+		base.DrawExtraSelectionOverlays();
+		Extension?.TryHighlightRoomWhenSelected(this);
 	}
 
 	/// <summary>
@@ -380,18 +367,7 @@ public class ThingClass : Building_Storage, ISlotGroupParent, ITransformable.ITr
 	public new StorageSettings GetParentStoreSettings() => _fixedStorageSettings ??= PrepareFixedStorageSettings();
 
 	private StorageSettings PrepareFixedStorageSettings()
-		=> Stuff != null && def.GetModExtension<Extension>() is { lockStorageSettingsToStuff: true }
-			? CreateStuffLockedStorageSettings()
-			: base.GetParentStoreSettings();
-
-	private StorageSettings CreateStuffLockedStorageSettings()
-	{
-		var fixedStorageSettings = new StorageSettings();
-		var filter = fixedStorageSettings.filter = ThingFilter.CreateOnlyEverStorableThingFilter();
-		filter.SetDisallowAll();
-		filter.SetAllow(Stuff, true);
-		return fixedStorageSettings;
-	}
+		=> def.GetModExtension<Extension>()?.TryCreateStuffLockedStorageSettings(this) ?? base.GetParentStoreSettings();
 
 	public new bool Accepts(Thing t) => HasCapacityForThing(t) && base.Accepts(t);
 

@@ -111,6 +111,9 @@ public static class ThingExtensions
 		}
 	}
 
+	public static ThingDef? GetStuffToUse(this Thing thing)
+		=> thing is IConstructible constructible ? constructible.EntityToBuildStuff() : thing.Stuff;
+
 	public static bool OverridesPostDraw(this ThingComp thingComp)
 		=> _thingCompsWithPostDraw.Contains(thingComp.GetType());
 
