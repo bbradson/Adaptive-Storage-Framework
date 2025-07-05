@@ -37,15 +37,25 @@ public class Extension : DefModExtension
 		if (temperature is { coolingOffset: 0f, heatingOffset: 0f })
 			temperature = null;
 
-		ref var blueprintClass = ref parent.building.blueprintClass;
+		if (parent.building is { } buildingProperties)
+		{
+			ref var blueprintClass = ref buildingProperties.blueprintClass;
 
 #if !V1_4 && !V1_5
-		if (typeof(Blueprint_StorageWithRoomHighlight).IsAssignableFrom(blueprintClass))
-			highlightRoomWhenSelected = true;
+			if (typeof(Blueprint_StorageWithRoomHighlight).IsAssignableFrom(blueprintClass))
+				highlightRoomWhenSelected = true;
 #endif
 		
-		if (!typeof(Blueprint).IsAssignableFrom(blueprintClass))
-			blueprintClass = typeof(Blueprint);
+			if (!typeof(Blueprint).IsAssignableFrom(blueprintClass))
+				blueprintClass = typeof(Blueprint);
+		}
+
+		if (parent.frameDef is { } frameDef)
+		{
+			ref var frameClass = ref frameDef.thingClass;
+			if (!typeof(Frame).IsAssignableFrom(frameClass))
+				frameClass = typeof(Frame);
+		}
 	}
 
 	public StorageSettings? TryCreateStuffLockedStorageSettings(Thing thing)

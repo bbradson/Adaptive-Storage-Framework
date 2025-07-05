@@ -21,6 +21,7 @@
 		<PackageReference Include="Krafs.Publicizer" Version="2.*" />
 		<Publicize Include="Assembly-CSharp:RimWorld.Building_Storage.cachedOccupiedCells" />
 		<Publicize Include="Assembly-CSharp:RimWorld.FilthMonitor" />
+		<Publicize Include="Assembly-CSharp:RimWorld.Frame.BuildDef" />
 		<Publicize Include="Assembly-CSharp:RimWorld.InspectPaneUtility.IsOpen" />
 		<Publicize Include="Assembly-CSharp:RimWorld.ITab_ContentsBase.thingsToSelect" />
 		<Publicize Include="Assembly-CSharp:RimWorld.ITab_Storage.HiddenSpecialThingFilters" />
