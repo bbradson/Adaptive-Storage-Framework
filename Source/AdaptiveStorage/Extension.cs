@@ -23,6 +23,8 @@ public class Extension : DefModExtension
 	public CellTable<ValuesByQuality>? maxItemsByCell;
 
 	public TemperatureProperties? temperature;
+	
+	public Type frameClass = typeof(Frame);
 
 	public void Initialize(ThingDef parent)
 	{
@@ -50,12 +52,9 @@ public class Extension : DefModExtension
 				blueprintClass = typeof(Blueprint);
 		}
 
+		// ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
 		if (parent.frameDef is { } frameDef)
-		{
-			ref var frameClass = ref frameDef.thingClass;
-			if (!typeof(Frame).IsAssignableFrom(frameClass))
-				frameClass = typeof(Frame);
-		}
+			frameDef.thingClass = frameClass ?? typeof(Frame);
 	}
 
 	public StorageSettings? TryCreateStuffLockedStorageSettings(Thing thing)
