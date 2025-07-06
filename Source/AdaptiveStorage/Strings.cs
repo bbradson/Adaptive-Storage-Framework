@@ -63,6 +63,8 @@ public static class Strings
 		public static readonly string
 
 		#region Vanilla
+			BlueprintLabelExtra,
+			FrameLabelExtra,
 			LinkedStorageSettings,
 			StoresThings,
 			StorageGroupLabel,

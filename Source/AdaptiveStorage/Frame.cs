@@ -9,7 +9,11 @@ public class Frame : RimWorld.Frame, IStorageGroupMember, IStoreSettingsParent
 {
 	public Extension? Extension { get; private set; }
 
-	public override string LabelNoCount => Extension.TryGenerateCustomLabel(this) ?? base.LabelNoCount;
+	public override string Label
+		=> LabelFormatUtility.GenerateBaseConstructibleLabel(BuildDef, EntityToBuildStuff(), Extension,
+			StyleSourcePrecept) is { } baseLabel
+			? baseLabel + Strings.Translated.FrameLabelExtra
+			: base.Label;
 
 	private StorageSettings? _fixedStorageSettings;
 
