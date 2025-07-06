@@ -39,9 +39,9 @@ public class Extension : DefModExtension
 		if (temperature is { coolingOffset: 0f, heatingOffset: 0f })
 			temperature = null;
 
-		if (parent.building is { } buildingProperties)
+		if (parent.blueprintDef is { } blueprintDef)
 		{
-			ref var blueprintClass = ref buildingProperties.blueprintClass;
+			ref var blueprintClass = ref blueprintDef.thingClass;
 
 #if !V1_4 && !V1_5
 			if (typeof(Blueprint_StorageWithRoomHighlight).IsAssignableFrom(blueprintClass))
@@ -49,7 +49,12 @@ public class Extension : DefModExtension
 #endif
 		
 			if (!typeof(Blueprint).IsAssignableFrom(blueprintClass))
+			{
 				blueprintClass = typeof(Blueprint);
+				
+				if (parent.building is { } buildingProperties)
+					buildingProperties.blueprintClass = blueprintClass;
+			}
 		}
 
 		// ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
