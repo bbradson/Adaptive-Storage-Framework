@@ -13,6 +13,5 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="PolySharp" Version="1.*" />
-		<PackageReference Include="RimWorld.MultiplayerAPI" Version="0.*" />
 	</ItemGroup>
 </Project>

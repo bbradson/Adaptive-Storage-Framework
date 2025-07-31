@@ -12,6 +12,7 @@
 	<ItemGroup>
 		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.*-*" />
 		<PackageReference Include="Lib.Harmony" Version="2.3.6" ExcludeAssets="runtime" />
+		<PackageReference Include="RimWorld.MultiplayerAPI" Version="0.*" />
 		<Reference Include="1ITransformable">
 			<HintPath>..\..\1.6\Assemblies\1ITransformable.dll</HintPath>
 			<Private>False</Private>
