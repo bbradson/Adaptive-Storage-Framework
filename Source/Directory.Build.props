@@ -9,7 +9,7 @@
 		<EnableNETAnalyzers>True</EnableNETAnalyzers>
 		<AnalysisLevel>preview-recommended</AnalysisLevel>
 		<DebugSymbols>true</DebugSymbols>
-		<DebugType>portable</DebugType>
+		<DebugType>embedded</DebugType>
 		<ErrorReport>prompt</ErrorReport>
 		<WarningLevel>5</WarningLevel>
 		<NoWarn>
