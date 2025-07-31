@@ -142,7 +142,7 @@ public static class InspectStringUtility
 		if (!text.NullOrEmpty())
 			stringBuilder.Append('\n');
 
-#if !V1_5
+#if V1_4
 		stringBuilder.Append(Strings.Translated.LinkedStorageSettings)
 			.Append(": ")
 			.Append(Strings.StorageBuildingCount(group.MemberCount));
