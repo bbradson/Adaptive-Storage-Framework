@@ -19,9 +19,14 @@ public static class ThingExtensions
 		=> thing.IsItem()
 			&& thing.TryGetMap() is { } map
 				? thing is not ISlotGroupParent
-					? map.haulDestinationManager.SlotGroupParentAt(thing.Position) as ThingClass
+					&& map.haulDestinationManager.SlotGroupParentAt(thing.Position) is ThingClass building
+					&& building.StoredThings.Contains(thing)
+					? building
 					: null
-				: thing.holdingOwner?.Owner as ThingClass;
+				: thing.holdingOwner?.Owner is ThingClass building2
+					&& building2.StoredThings.Contains(thing)
+					? building2
+					: null;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool IsInAnyStorageBuilding(this Thing thing)

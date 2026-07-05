@@ -44,6 +44,11 @@ public static class ThingMakerUtility
 			GenSpawn.Spawn(resultingThing = item, dropCell, map);
 		}
 
+		resultingThing.RestoreItemRendering(map);
+
+		foreach (var cell in resultingThing.OccupiedRect())
+			map.mapDrawer.MapMeshDirty(cell, MapMeshFlagDefOf.Things, true, true);
+
 		if (forbid && resultingThing.TryGetComp<CompForbiddable>() is { } compForbiddable)
 			compForbiddable.Forbidden = true;
 
