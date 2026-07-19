@@ -23,5 +23,7 @@
 	<ASF_DefaultLabelStyleDescription>What to display for storage labels on the map. Individual buildings can override this in their config.</ASF_DefaultLabelStyleDescription>
 	<ASF_MaxZoomLevelSetting>Maximum zoom level</ASF_MaxZoomLevelSetting>
 	<ASF_MaxZoomLevelDescription>The maximum zoom level to show labels for. They get hidden past this point.</ASF_MaxZoomLevelDescription>
+	<ASF_JumpToItemsOnSelect>Jump camera to selected items</ASF_JumpToItemsOnSelect>
+	<ASF_JumpToItemsOnSelectDescription>Whether the camera should jump to the item's location when selecting it from the contents tab.</ASF_JumpToItemsOnSelectDescription>
 	<ASF_OtherItems>Other items</ASF_OtherItems><!-- Displayed at the bottom of long storage labels as Other items xY -->
 </LanguageData>

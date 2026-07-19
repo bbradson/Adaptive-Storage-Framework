@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2023 bradson
+// Copyright (c) 2023 bradson
 // This Source Code Form is subject to the terms of the MIT license.
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
@@ -39,6 +39,8 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 
 	public static bool HideLabelsWhenZoomedOut => _hideLabelsWhenZoomedOut;
 
+	public static bool JumpToItemsOnSelect => _jumpToItemsOnSelect;
+
 	private static InspectTabBase? _contentsTab;
 
 	private static Type? _contentsTabType;
@@ -53,7 +55,8 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 		_automaticallyOpenContentsTab = true,
 		_preferGroupTabWhenGrouped,
 		_hideLabelsWhenZoomedOut = true,
-		_hideLabelsUntilMouseOver;
+		_hideLabelsUntilMouseOver,
+		_jumpToItemsOnSelect = true;
 
 	private static int _labelHidingMaxZoomLevel = 1;
 
@@ -156,6 +159,10 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 		listing.CheckboxLabeled(Strings.Translated.ASF_HideLabelsMouseOverSetting, ref _hideLabelsUntilMouseOver,
 			Strings.Translated.ASF_HideLabelsMouseOverDescription);
 
+		listing.Gap();
+		listing.CheckboxLabeled(Strings.Translated.ASF_JumpToItemsOnSelect, ref _jumpToItemsOnSelect,
+			Strings.Translated.ASF_JumpToItemsOnSelectDescription);
+
 		scrollView.Height = listing.CurHeight;
 		listing.End();
 	}
@@ -190,5 +197,6 @@ public class AdaptiveStorageFrameworkSettings : ModSettings
 		Scribe_Values.Look(ref _hideLabelsUntilMouseOver, nameof(HideLabelsUntilMouseOver));
 		Scribe_Values.Look(ref _hideLabelsWhenZoomedOut, nameof(HideLabelsWhenZoomedOut), true);
 		Scribe_Values.Look(ref _labelHidingMaxZoomLevel, nameof(LabelHidingMaxZoomLevel), 1);
+		Scribe_Values.Look(ref _jumpToItemsOnSelect, nameof(JumpToItemsOnSelect), true);
 	}
 }

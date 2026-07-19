@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2023 bradson
+// Copyright (c) 2023 bradson
 // This Source Code Form is subject to the terms of the MIT license.
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
@@ -406,7 +406,22 @@ public class ContentsITab : ITab_ContentsBase
 		if (!thingsToSelect.Any())
 			return;
 		
-		ITab_Pawn_FormingCaravan.SelectNow(thingsToSelect);
+		if (AdaptiveStorageFrameworkSettings.JumpToItemsOnSelect)
+		{
+			ITab_Pawn_FormingCaravan.SelectNow(thingsToSelect);
+		}
+		else
+		{
+			Find.Selector.ClearSelection();
+			for (var i = 0; i < thingsToSelect.Count; i++)
+			{
+				var thing = thingsToSelect[i];
+				if (thing.Spawned)
+				{
+					Find.Selector.Select(thing, false, true);
+				}
+			}
+		}
 		thingsToSelect.Clear();
 	}
 

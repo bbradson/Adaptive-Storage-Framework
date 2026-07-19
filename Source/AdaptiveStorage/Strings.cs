@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2023 bradson
+// Copyright (c) 2023 bradson
 // This Source Code Form is subject to the terms of the MIT license.
 // If a copy of the license was not distributed with this file,
 // You can obtain one at https://opensource.org/licenses/MIT/.
@@ -99,6 +99,8 @@ public static class Strings
 			ASF_DefaultLabelStyleDescription,
 			ASF_MaxZoomLevelSetting,
 			ASF_MaxZoomLevelDescription,
+			ASF_JumpToItemsOnSelect,
+			ASF_JumpToItemsOnSelectDescription,
 			ASF_OtherItems;
 	#endregion
 		
