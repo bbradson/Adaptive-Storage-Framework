@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+	<ASF_XStacks>Стопок: {0}</ASF_XStacks>
+	<ASF_Empty>пусто</ASF_Empty>
+	<ASF_MapFilled>На карте больше нет свободного места.</ASF_MapFilled>
+	<ASF_SettingContentsTabSelection>Вкладка содержимого адаптивных хранилищ:</ASF_SettingContentsTabSelection>
+	<ASF_SettingContentsTabDescription>Это вкладка «Содержимое» на панели в левом нижнем углу при выборе постройки. Если вкладка отключена, содержимое отображается как в основной игре — кнопками «Выбрать X» на панели справа.</ASF_SettingContentsTabDescription>
+	<ASF_MaxNumStacks>максимум стопок на клетку</ASF_MaxNumStacks>
+	<ASF_MaxNumStacksDesc>Максимальное количество стопок в одной клетке. Постройки размером в две клетки вмещают вдвое больше.\n\nУчтите, что другие факторы могут снижать вместимость.</ASF_MaxNumStacksDesc>
+	<ASF_DropSpecificCount>Выгрузить заданное количество</ASF_DropSpecificCount>
+	<ASF_TotalStorageCapacity>общая вместимость хранилища</ASF_TotalStorageCapacity>
+	<ASF_StorageCapacityDescriptionCustomized>Максимальное количество стопок во всём хранилище.\n\nРазмер: {sizeX} × {sizeZ}. Вместимость клеток задана индивидуально.</ASF_StorageCapacityDescriptionCustomized>
+	<ASF_StorageCapacityDescriptionStacksPerCell>Максимальное количество стопок во всём хранилище.\n\nРазмер: {sizeX} × {sizeZ}. Максимум стопок на клетку: {maxItemsInCell}.</ASF_StorageCapacityDescriptionStacksPerCell>
+	<ASF_AutomaticallyOpenContentsTab>Автоматически открывать вкладку содержимого</ASF_AutomaticallyOpenContentsTab>
+	<ASF_AutomaticallyOpenContentsTabDescription>При выборе хранилища автоматически открывать вкладку «Содержимое», а если оно пусто — настройки хранения.</ASF_AutomaticallyOpenContentsTabDescription>
+	<ASF_PreferGroupTabWhenGrouped>Предпочитать вкладку содержимого группы</ASF_PreferGroupTabWhenGrouped>
+	<ASF_PreferGroupTabWhenGroupedDescription>Если хранилище входит в группу, автоматически открывать вкладку содержимого всей группы. Она имеет приоритет перед вкладкой отдельной постройки.</ASF_PreferGroupTabWhenGroupedDescription>
+	<ASF_HideLabelsZoomSetting>Скрывать подписи при отдалении камеры</ASF_HideLabelsZoomSetting>
+	<ASF_HideLabelsZoomDescription>Относится к подписям на карте, например [ количество ] или «Предмет xY». Показывать их только при приближении камеры.</ASF_HideLabelsZoomDescription>
+	<ASF_HideLabelsMouseOverSetting>Показывать подписи только при наведении</ASF_HideLabelsMouseOverSetting>
+	<ASF_HideLabelsMouseOverDescription>Относится к подписям на карте, например [ количество ] или «Предмет xY». Показывать их только при наведении мыши. Если включён мод Toggleable Overlays, действуют его настройки.</ASF_HideLabelsMouseOverDescription>
+	<ASF_DefaultLabelStyleSetting>Стиль подписей по умолчанию</ASF_DefaultLabelStyleSetting>
+	<ASF_DefaultLabelStyleDescription>Определяет, что показывать в подписях хранилищ на карте. Отдельный стиль для построек может задаваться в XML-конфигурации мода.</ASF_DefaultLabelStyleDescription>
+	<ASF_MaxZoomLevelSetting>Максимальное отдаление камеры</ASF_MaxZoomLevelSetting>
+	<ASF_MaxZoomLevelDescription>Максимальная степень отдаления камеры, при которой видны подписи. При дальнейшем отдалении они скрываются.</ASF_MaxZoomLevelDescription>
+	<ASF_OtherItems>Другие предметы</ASF_OtherItems>
+</LanguageData>
