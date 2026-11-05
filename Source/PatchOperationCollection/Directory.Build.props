@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<PropertyGroup>
+		<Authors>bradson</Authors>
+		<TargetFramework>net10.0</TargetFramework>
+		<LangVersion>preview</LangVersion>
+		<Nullable>enable</Nullable>
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<Optimize>true</Optimize>
+		<OutDir>..\..\..\1.7\Assemblies\</OutDir>
+		<DebugSymbols>true</DebugSymbols>
+		<DebugType>portable</DebugType>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Krafs.Rimworld.Ref" Version="1.7.*-*" />
+		<PackageReference Include="Krafs.Publicizer" Version="2.*" />
+		<Publicize Include="Assembly-CSharp:Verse.PatchOperationPathed.xpath" />
+		<Publicize Include="Assembly-CSharp:Verse.XmlInheritance.resolvedNodes" />
+		<Publicize Include="Assembly-CSharp:Verse.XmlInheritance+XmlInheritanceNode" />
+	</ItemGroup>
+</Project>

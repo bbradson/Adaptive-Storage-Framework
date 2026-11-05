@@ -25,13 +25,7 @@ public class ContentsITab : ITab_ContentsBase
 	{
 		get
 		{
-			var currentSelObjects = AllSelObjects;
-			if (currentSelObjects._version != _selObjectsVersion)
-			{
-				UpdateSelectedStorages(field);
-				_selObjectsVersion = currentSelObjects._version;
-			}
-
+			UpdateSelectedStorages(field);
 			return field;
 		}
 	} = [];
@@ -78,8 +72,6 @@ public class ContentsITab : ITab_ContentsBase
 	protected readonly GUIScope.ScrollViewStatus _scrollViewStatus = new();
 	// protected readonly Dictionary<string, TaggedString> _truncatedLabelCache = [];
 	// protected float _truncatedLabelCacheWidth;
-
-	private int _selObjectsVersion = -3;
 
 	public ContentsITab()
 	{
