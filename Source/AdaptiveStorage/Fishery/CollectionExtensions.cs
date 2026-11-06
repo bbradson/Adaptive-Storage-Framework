@@ -4,6 +4,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using System.Text;
 using AdaptiveStorage.Fishery.Pools;
 using AdaptiveStorage.Fishery.Utility.Diagnostics;
@@ -16,9 +17,10 @@ public static class CollectionExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool TryGetItem<T>(this List<T> list, int index, [NotNullWhen(true)] out T? item)
 	{
-		if ((uint)list._size > (uint)index)
+		var span = CollectionsMarshal.AsSpan(list);
+		if ((uint)span.Length > (uint)index)
 		{
-			item = Array.UnsafeLoad(list._items, index)!;
+			item = span[index]!;
 			return true;
 		}
 
@@ -28,21 +30,21 @@ public static class CollectionExtensions
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static T? TryGetItem<T>(this List<T> list, int index)
-		=> (uint)list._size > (uint)index ? Array.UnsafeLoad(list._items, index)! : default;
+		=> (uint)list.Count > (uint)index ? CollectionsMarshal.AsSpan(list)[index]! : default;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static T UnsafeLoad<T>(this List<T> list, int index) => Array.UnsafeLoad(list._items, index);
+	public static T UnsafeLoad<T>(this List<T> list, int index) => CollectionsMarshal.AsSpan(list)[index];
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void UnsafeStore<T>(this List<T> list, int index, T value)
-		=> Array.UnsafeStore(list._items, index, value);
+		=> list.ItemsUnchecked()[index] = value;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static bool TryGetItem<T>(this T[] array, int index, out T? item)
 	{
 		if ((uint)array.Length > (uint)index)
 		{
-			item = Array.UnsafeLoad(array, index);
+			item = array[index];
 			return true;
 		}
 
@@ -52,7 +54,7 @@ public static class CollectionExtensions
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static T? TryGetItem<T>(this T[] array, int index)
-		=> (uint)array.Length > (uint)index ? Array.UnsafeLoad(array, index) : default;
+		=> (uint)array.Length > (uint)index ? array[index] : default;
 
 	public static T[] ToArray<T>(this IEnumerable<T> enumerable, int length)
 	{
@@ -133,20 +135,22 @@ public static class CollectionExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void AddRangeFast<T>(this List<T> list, List<T> range)
 	{
-		if (range._size < 1)
+		if (range.Count < 1)
 			return;
 
-		list.EnsureCapacity(list._size + range._size);
+		var oldCount = list.Count;
+		list.EnsureCapacity(oldCount + range.Count);
 
-		range.UnsafeCopyTo(list, list._size);
+		range.UnsafeCopyTo(list, oldCount);
 
-		list._size += range._size;
-		list._version++;
+		CollectionsMarshal.SetCount(list, oldCount + range.Count);
+		list.BumpVersion();
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void UnsafeCopyTo<T>(this List<T> source, List<T> destination, int destinationStartIndex)
-		=> UnsafeBlockCopy(ref source._items[0], ref destination._items[destinationStartIndex], source._size);
+		=> UnsafeBlockCopy(ref source.ItemsUnchecked()[0], ref destination.ItemsUnchecked()[destinationStartIndex],
+			source.Count);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void UnsafeCopyTo<T>(this T[] source, T[] destination, int destinationStartIndex)
@@ -163,17 +167,21 @@ public static class CollectionExtensions
 	/// modified.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static T[] ItemsUnchecked<T>(this List<T> list) => list._items;
+	public static T[] ItemsUnchecked<T>(this List<T> list) => (T[])ListInternals<T>.Items.GetValue(list)!;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static void BumpVersion<T>(this List<T> list)
+		=> ListInternals<T>.Version.SetValue(list, (int)ListInternals<T>.Version.GetValue(list)! + 1);
 
 	/// <summary>
 	/// Returns a span pointing to a list's internal _items array. Keep in mind list.Version() needs to change every
 	/// time items are modified.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static Span<T> AsSpanUnchecked<T>(this List<T> list) => new(list._items, 0, list._size);
+	public static Span<T> AsSpanUnchecked<T>(this List<T> list) => new(list.ItemsUnchecked(), 0, list.Count);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static ReadOnlySpan<T> AsReadOnlySpan<T>(this List<T> list) => new(list._items, 0, list._size);
+	public static ReadOnlySpan<T> AsReadOnlySpan<T>(this List<T> list) => new(list.ItemsUnchecked(), 0, list.Count);
 
 	public static void ReplaceContentsWith<T>(this List<T> list, [AllowNull] List<T> collection)
 	{
@@ -181,35 +189,38 @@ public static class CollectionExtensions
 			return;
 
 		if (collection is null
-			|| (collection._size is var collectionCount
+			|| (collection.Count is var collectionCount
 				&& collectionCount == 0))
 		{
 			list.Clear();
 			return;
 		}
 
-		if (collectionCount <= list._size)
+		if (collectionCount <= list.Count)
 		{
-			if (collectionCount < list._size)
-				list.RemoveRange(collectionCount, list._size - collectionCount);
+			if (collectionCount < list.Count)
+				list.RemoveRange(collectionCount, list.Count - collectionCount);
 
 			collection.UnsafeCopyTo(list, 0);
 		}
 		else
 		{
-			list._items = new T[collectionCount];
+			list.EnsureCapacity(collectionCount);
 			collection.UnsafeCopyTo(list, 0);
-			list._size = collectionCount;
+			CollectionsMarshal.SetCount(list, collectionCount);
 		}
 
-		list._version++;
+		list.BumpVersion();
 	}
 
 	public static void ReplaceContentsWith<TThis, TOther>(this List<TThis> list, [AllowNull] TOther collection)
 		where TOther : ICollection<TThis>
 	{
 		if (typeof(TOther) == typeof(List<TThis>))
+		{
 			list.ReplaceContentsWith(Unsafe.As<List<TThis>>(collection));
+			return;
+		}
 
 		if (ReferenceEquals(list, collection))
 			return;
@@ -222,20 +233,20 @@ public static class CollectionExtensions
 			return;
 		}
 
-		if (collectionCount <= list._size)
+		if (collectionCount <= list.Count)
 		{
-			if (collectionCount < list._size)
-				list.RemoveRange(collectionCount, list._size - collectionCount);
-			collection.CopyTo(list._items, 0);
+			if (collectionCount < list.Count)
+				list.RemoveRange(collectionCount, list.Count - collectionCount);
+			collection.CopyTo(list.ItemsUnchecked(), 0);
 		}
 		else
 		{
-			list._items = new TThis[collectionCount];
-			collection.CopyTo(list._items, 0);
-			list._size = collectionCount;
+			list.EnsureCapacity(collectionCount);
+			collection.CopyTo(list.ItemsUnchecked(), 0);
+			CollectionsMarshal.SetCount(list, collectionCount);
 		}
 
-		list._version++;
+		list.BumpVersion();
 	}
 
 	public static PooledList<T> ToPooledList<T>(this T[] source) => new(source);
@@ -251,39 +262,16 @@ public static class CollectionExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static void Clear<T>(this T[] array) => Array.Clear(array, 0, array.Length);
 
-	// public static List<T> Copy<T>(this List<T> source)
-	// {
-	// 	Guard.IsNotNull(source);
-	// 	
-	// 	var destination = new List<T>(source._size);
-	//
-	// 	if (source._size == 0)
-	// 		return destination;
-	// 	
-	// 	// Unsafe.CopyBlock(ref Unsafe.As<T, byte>(ref destination._items[0]),
-	// 	// 	ref Unsafe.As<T, byte>(ref source._items[0]), (uint)sizeof(T) * (uint)source._size);
-	// 	
-	// 	AdaptiveStorage.Fishery.CollectionExtensions.UnsafeBlockCopy(ref source._items[0],	// does a type check that causes issues
-	// 		ref destination._items[0], source._size);							// when called from transpiled methods
-	// 	
-	// 	destination._size = source._size;
-	// 	
-	// 	return destination;
-	// }
-
-	public static unsafe List<T> Copy<T>(this List<T> source)
+	public static List<T> Copy<T>(this List<T> source)
 	{
 		Guard.IsNotNull(source);
 
-		var destination = new List<T>(source._size);
+		var destination = new List<T>(source.Count);
 
-		if (source._size == 0)
+		if (source.Count == 0)
 			return destination;
 
-		Unsafe.CopyBlock(ref Unsafe.As<T, byte>(ref destination._items[0]),
-			ref Unsafe.As<T, byte>(ref source._items[0]), (uint)(source._size * sizeof(T)));
-
-		destination._size = source._size;
+		destination.AddRange(CollectionsMarshal.AsSpan(source));
 
 		return destination;
 	}
@@ -293,38 +281,37 @@ public static class CollectionExtensions
 
 	public static void UnwrapReadOnlyArray<T>(this List<T> list, out T[] array, out int count)
 	{
-		array = list._items;
-		count = list._size;
+		array = list.ItemsUnchecked();
+		count = list.Count;
 		Guard.IsLessThanOrEqualTo((uint)count, (uint)array.Length);
 	}
 
 	public static ref T GetArrayDataReference<T>(this List<T> list, out nint count)
 	{
-		count = list._size;
-		var items = list._items;
+		count = list.Count;
+		var items = list.ItemsUnchecked();
 		Guard.IsLessThanOrEqualTo((uint)count, (uint)items.Length);
 		return ref items[0];
-		// return Unsafe.AddByteOffset(ref Unsafe.As<System.Pinnable<T>>(list._items).Data,
-		// 	SpanHelpers.PerTypeValues<T>.ArrayAdjustment);
 	}
-	
-	public static ref T GetArrayDataReference<T>(this List<T> list) => ref list._items[0];
+
+	public static ref T GetArrayDataReference<T>(this List<T> list) => ref list.ItemsUnchecked()[0];
 
 	public static void Fill<T>(this List<T> list, T value, int count)
 	{
 		Guard.IsNotNull(list);
 		Guard.IsGreaterThanOrEqualTo(count, 0);
 
-		ref var listSize = ref list._size;
-		if (listSize + count >= list._items.Length)
+		var listSize = list.Count;
+		if (listSize + count >= list.ItemsUnchecked().Length)
 			list.EnsureCapacity(listSize + count);
 
-		var listItems = list._items;
-		
+		var listItems = list.ItemsUnchecked();
+
 		for (var i = count; --i >= 0;)
 			listItems[listSize++] = value;
-		
-		list._version++;
+
+		CollectionsMarshal.SetCount(list, listSize);
+		list.BumpVersion();
 	}
 
 	public static void Fill<T>(this T[] array, T value)
@@ -338,16 +325,16 @@ public static class CollectionExtensions
 
 		do
 		{
-			array.UnsafeStore(i, value);
+			array[i] = value;
 		}
 		while (--i >= 0);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static T UnsafeLoad<T>(this T[] array, int index) => Array.UnsafeLoad(array, index);
+	public static T UnsafeLoad<T>(this T[] array, int index) => array[index];
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static void UnsafeStore<T>(this T[] array, int index, T value) => Array.UnsafeStore(array, index, value);
+	public static void UnsafeStore<T>(this T[] array, int index, T value) => array[index] = value;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static TTo UnsafeCast<TFrom, TTo>(this TFrom obj)
@@ -365,11 +352,12 @@ public static class CollectionExtensions
 		if (range.Length < 1)
 			return;
 
-		list.EnsureCapacity(list._size + range.Length);
-		range.UnsafeCopyTo(list._items, list._size);
+		var oldCount = list.Count;
+		list.EnsureCapacity(oldCount + range.Length);
+		range.UnsafeCopyTo(list.ItemsUnchecked(), oldCount);
 
-		list._size += range.Length;
-		list._version++;
+		CollectionsMarshal.SetCount(list, oldCount + range.Length);
+		list.BumpVersion();
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -398,11 +386,13 @@ public static class CollectionExtensions
 
 	private static void AddRangeInternal<T>(this List<T> list, ref T collectionReference, int count)
 	{
-		list.EnsureCapacity(list._size + count);
-		UnsafeBlockCopy(ref collectionReference, ref list._items[list._size], count);
+		var oldCount = list.Count;
+		list.EnsureCapacity(oldCount + count);
+		var listItems = list.ItemsUnchecked();
+		UnsafeBlockCopy(ref collectionReference, ref listItems[oldCount], count);
 
-		list._size += count;
-		list._version++;
+		CollectionsMarshal.SetCount(list, oldCount + count);
+		list.BumpVersion();
 	}
 
 	public static void AddRange<T, TInput>(this List<T> list, List<TInput> collection, Func<TInput, T> selector)
@@ -413,8 +403,8 @@ public static class CollectionExtensions
 		nint count = collection.Count;
 		if (count < 1)
 			return;
-		
-		list.AddRangeInternal(ref collection._items[0], count, selector);
+
+		list.AddRange(CollectionsMarshal.AsSpan(collection), selector);
 	}
 	
 	public static void AddRange<T, TInput>(this List<T> list, TInput[] collection, Func<TInput, T> selector)
@@ -444,15 +434,16 @@ public static class CollectionExtensions
 	private static unsafe void AddRangeInternal<T, TInput>(this List<T> list, ref TInput collectionReference,
 		nint count, Func<TInput, T> selector)
 	{
-		ref var listSize = ref list._size;
+		var listSize = list.Count;
 		list.EnsureCapacity(listSize + (int)count);
-		var listItems = list._items;
+		var listItems = list.ItemsUnchecked();
 
 		count *= sizeof(TInput);
 		for (nint i = 0; i < count; i += sizeof(TInput))
-			listItems.UnsafeStore(listSize++, selector(Unsafe.AddByteOffset(ref collectionReference, i)));
+			listItems[listSize++] = selector(Unsafe.AddByteOffset(ref collectionReference, i));
 
-		list._version++;
+		CollectionsMarshal.SetCount(list, listSize);
+		list.BumpVersion();
 	}
 	
 	public static void AddRange<T, TInput>(this List<T> list, IEnumerable<TInput> collection, Func<TInput, T> selector)
@@ -484,8 +475,8 @@ public static class CollectionExtensions
 				break;
 			}
 		}
-		
-		list._version++;
+
+		list.BumpVersion();
 	}
 
 	private static void AddRangeInternal<T, TInput>(List<T> list, Func<TInput, T> selector, ICollection<TInput> iCollection)
@@ -494,12 +485,14 @@ public static class CollectionExtensions
 		if (count < 1)
 			return;
 
-		ref var listSize = ref list._size;
+		var listSize = list.Count;
 		list.EnsureCapacity(listSize + count);
-		var listItems = list._items;
-				
+		var listItems = list.ItemsUnchecked();
+
 		foreach (var element in iCollection)
-			listItems.UnsafeStore(listSize++, selector(element));
+			listItems[listSize++] = selector(element);
+
+		CollectionsMarshal.SetCount(list, listSize);
 	}
 
 	public static int RemoveAll<TContext, TElement>(this List<TElement> list, ref TContext context,
@@ -540,8 +533,8 @@ public static class CollectionExtensions
 		}
 
 		var result = size - freeIndex;
-		list._size = freeIndex;
-		list._version++;
+		CollectionsMarshal.SetCount(list, freeIndex);
+		list.BumpVersion();
 		return result;
 	}
 
@@ -583,8 +576,8 @@ public static class CollectionExtensions
 		}
 
 		var result = size - freeIndex;
-		list._size = freeIndex;
-		list._version++;
+		CollectionsMarshal.SetCount(list, freeIndex);
+		list.BumpVersion();
 		return result;
 	}
 
@@ -664,14 +657,8 @@ public static class CollectionExtensions
 		var count = value.Length;
 		if (count < 1)
 			return;
-		
-		list.AddRangeInternal(
-#if V1_4 || V1_5
-			ref value.m_firstChar,
-#else
-			ref value._firstChar,
-#endif
-			count);
+
+		list.AddRangeInternal(ref MemoryMarshal.GetReference(value.AsSpan()), count);
 	}
 
 	public static unsafe StringBuilder Append(this StringBuilder builder, ReadOnlySpan<char> span)
@@ -686,7 +673,7 @@ public static class CollectionExtensions
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static StringBuilder Append(this StringBuilder builder, List<char> value)
-		=> builder.Append(value._items, 0, value._size);
+		=> builder.Append(CollectionsMarshal.AsSpan(value));
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static StringBuilder Append<T>(this StringBuilder builder, T? value)
@@ -700,8 +687,8 @@ public static class CollectionExtensions
 	{
 		Guard.IsInRange(index, 0, list.Count);
 
-		list._version++;
-		return ref list._items[index];
+		list.BumpVersion();
+		return ref list.ItemsUnchecked()[index];
 	}
 
 	[Obsolete("Renamed to GetReferenceUnsafe")]
@@ -709,14 +696,15 @@ public static class CollectionExtensions
 	public static ref T GetReferenceUnverifiable<T>(this List<T> list, int index) => ref list.GetReferenceUnsafe(index);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	public static ref T GetReferenceUnsafe<T>(this List<T> list, int index) => ref list._items[index];
+	public static ref T GetReferenceUnsafe<T>(this List<T> list, int index) => ref list.ItemsUnchecked()[index];
 
 	public static void RemoveAtFastUnordered<T>(this List<T> list, int index)
 	{
-		ref var lastBucket = ref list._items[list._size - 1];
+		var items = list.ItemsUnchecked();
+		ref var lastBucket = ref items[list.Count - 1];
 		list[index] = lastBucket;
 		lastBucket = default!;
-		list._size--;
+		CollectionsMarshal.SetCount(list, list.Count - 1);
 	}
 
 	public static bool RemoveFastUnordered<T>(this List<T> list, T item)
@@ -731,18 +719,19 @@ public static class CollectionExtensions
 
 	public static void InsertFastUnordered<T>(this List<T> list, int index, T item)
 	{
-		if ((uint)index > (uint)list._size)
+		if ((uint)index > (uint)list.Count)
 			ThrowHelper.ThrowArgumentOutOfRangeException();
 
-		if (list._size == list._items.Length)
-			list.EnsureCapacity(list._size + 1);
+		if (list.Count == list.ItemsUnchecked().Length)
+			list.EnsureCapacity(list.Count + 1);
 
-		ref var targetBucket = ref list._items[index];
+		var items = list.ItemsUnchecked();
+		ref var targetBucket = ref items[index];
 
-		list._items[list._size] = targetBucket;
+		items[list.Count] = targetBucket;
 		targetBucket = item;
-		list._size++;
-		list._version++;
+		CollectionsMarshal.SetCount(list, list.Count + 1);
+		list.BumpVersion();
 	}
 
 #if !V1_4 && !V1_5

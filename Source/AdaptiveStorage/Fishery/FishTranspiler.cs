@@ -2506,8 +2506,15 @@ public static class FishTranspiler
 			|| opcode == OpCodes.Calli
 			|| opcode == OpCodes.Callvirt;
 
+	public static readonly HashSet<OpCode> ConstantLoadingOpcodes =
+	[
+		OpCodes.Ldc_I4_M1, OpCodes.Ldc_I4_0, OpCodes.Ldc_I4_1, OpCodes.Ldc_I4_2, OpCodes.Ldc_I4_3,
+		OpCodes.Ldc_I4_4, OpCodes.Ldc_I4_5, OpCodes.Ldc_I4_6, OpCodes.Ldc_I4_7, OpCodes.Ldc_I4_8,
+		OpCodes.Ldc_I4, OpCodes.Ldc_I4_S, OpCodes.Ldc_I8, OpCodes.Ldc_R4, OpCodes.Ldc_R8
+	];
+
 	public static bool LoadsConstant(this OpCode opcode)
-		=> CodeInstructionExtensions.constantLoadingCodes.Contains(opcode)
+		=> ConstantLoadingOpcodes.Contains(opcode)
 			|| opcode == OpCodes.Ldstr
 			|| opcode == OpCodes.Ldnull
 			|| opcode == OpCodes.Ldtoken;

@@ -165,8 +165,8 @@ public class OptimizedPrintData : PrintData
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private void Draw(ref Matrix4x4 matrix)
-		=> Graphics.Internal_DrawMesh_Injected(_mesh, 0, ref matrix, Material, 0, null, null,
-			ShadowCastingMode.On, true, null, LightProbeUsage.BlendProbes, null);
+		=> Graphics.DrawMesh(_mesh, matrix, Material, 0, null, 0, null, ShadowCastingMode.On, true, null,
+			LightProbeUsage.BlendProbes, null);
 
 	public override void NotifyMaterialPossiblyChanged()
 	{

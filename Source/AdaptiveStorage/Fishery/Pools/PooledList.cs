@@ -3,6 +3,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Runtime.InteropServices;
 using AdaptiveStorage.Fishery.Utility.Diagnostics;
 
 namespace AdaptiveStorage.Fishery.Pools;
@@ -145,13 +146,12 @@ public struct PooledList<T>()
 		List.UnwrapReadOnlyArray(out var inputItems, out var count);
 		var output = new PooledList<TOutput>(count);
 		var outputList = output.List;
-		var outputItems = outputList._items;
+		CollectionsMarshal.SetCount(outputList, count);
+		var outputItems = CollectionsMarshal.AsSpan(outputList);
 
 		for (var i = 0; i < count; i++)
-			outputItems.UnsafeStore(i, converter(inputItems.UnsafeLoad(i)));
+			outputItems[i] = converter(inputItems[i]);
 
-		outputList._size = count;
-		outputList._version++;
 		return output;
 	}
 

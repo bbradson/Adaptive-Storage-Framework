@@ -72,15 +72,15 @@ public static class Equals
 		public static bool RuntimeMethodHandle(RuntimeMethodHandle x, RuntimeMethodHandle y) => x.Value == y.Value;
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool Label(Label x, Label y) => x.label == y.label;
+		public static bool Label(Label x, Label y) => x.Equals(y);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool Enum<T>(T x, T y) where T : struct
-			=> JitHelpers.UnsafeEnumCast(x) == JitHelpers.UnsafeEnumCast(y);
+			=> Unsafe.As<T, int>(ref x) == Unsafe.As<T, int>(ref y);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool LongEnum<T>(T x, T y) where T : struct
-			=> JitHelpers.UnsafeEnumCastLong(x) == JitHelpers.UnsafeEnumCastLong(y);
+			=> Unsafe.As<T, long>(ref x) == Unsafe.As<T, long>(ref y);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool EquatableValueType<T>(T x, T y) where T : struct, IEquatable<T> => x.Equals(y);

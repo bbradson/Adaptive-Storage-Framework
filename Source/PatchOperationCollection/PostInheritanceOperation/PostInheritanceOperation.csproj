@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup><Version>1.1.0</Version></PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Lib.Harmony" Version="2.3.6" ExcludeAssets="runtime" />
+    </ItemGroup>
+</Project>
