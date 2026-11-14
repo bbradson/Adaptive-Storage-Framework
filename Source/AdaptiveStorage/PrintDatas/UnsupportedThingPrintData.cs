@@ -65,8 +65,19 @@ public class UnsupportedThingPrintData : PrintData
 		try
 		{
 			thing.Rotation = ThingRotation.Rotated(transform.RotationDirection);
+			var drawLoc = transform.Position + DrawOffset.ScaledBy(transformData.Scale);
+
+			// ParallelPreDraw runs on worker threads (DynamicDrawManager.PreDrawVisibleThings). Graphic.Scaled
+			// mutates the def's shared Graphic.drawSize in place, so concurrent scopes on things of the same def
+			// interleave their save/restore and leave the drawSize permanently scaled.
+			if (phase == DrawPhase.ParallelPreDraw)
+			{
+				action(thing, phase, drawLoc, flip);
+				return;
+			}
+
 			using (graphic?.Scaled(transform.Scale * RotatedDrawScale))
-				action(thing, phase, transform.Position + DrawOffset.ScaledBy(transformData.Scale), flip);
+				action(thing, phase, drawLoc, flip);
 		}
 		finally
 		{
